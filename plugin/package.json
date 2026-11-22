@@ -7,5 +7,10 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": ["cordis.patch.yml"]
+    }
   }
 }

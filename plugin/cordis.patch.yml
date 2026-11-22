@@ -1,0 +1,12 @@
+# dsh-plugin-core-system —— core_system 控制面桥接层（profile layer）。
+# 装载语义与 @deepseek-ai/dsh-base 同构：本 patch 作为一层 insert 叠进 profile 树
+# （组合逻辑见 @deepseek-ai/dsh-app-boot 的 profile.ts；行 id 供上层 patch 按 id 覆写 config，
+#  覆写整体替换该行 config，不合并——部署锚点由此按 profile 注入）。
+# 部署锚点（cored 二进制路径、scheme 源路径、监听地址）不在本文件内置：
+# 经各 profile 用户 patch 层按 id 覆写，或经 CORE_SYSTEM_SCHEME / CORE_SYSTEM_CORED_BIN /
+# CORE_SYSTEM_ADDR 环境变量注入（rule.md R-PUB-1/2：真实部署路径与个人决策不入公开仓）。
+- insert:
+    - id: core-system
+      name: dsh-plugin-core-system
+      config:
+        autoSpawn: true
