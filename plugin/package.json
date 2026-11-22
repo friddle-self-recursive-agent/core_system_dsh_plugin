@@ -1,0 +1,11 @@
+{
+  "name": "dsh-plugin-core-system",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "core_system dsh plugin: workflow engine host + core bridge (cored binary built from core_system submodule)",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
+}
