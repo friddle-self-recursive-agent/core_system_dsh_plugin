@@ -10,9 +10,9 @@ core_system_dsh_plugin/
 │   └── cmd/cored     # Go 控制面：go build 产出 cored 二进制
 ├── plugin/           # dsh plugin（TS/ESM，dsh 插件生态）
 │   ├── cordis.patch.yml  # dsh.bundle patch 层（profile layer 声明，id=core-system）
-│   └── src/index.ts  # 入口：cordis 插件 + cored 桥（桥契约见 instance 仓 runtime/cored-bridge.md）
-├── connectors/       # connector 实现（dsh 侧宿主；每 connector 一目录，ops 契约见 concepts/connector.md）
-└── docs/             # 本仓设计说明（细节设计仍在 core_system_instance 仓）
+│   ├── src/index.ts  # 入口：cordis 插件 + cored 桥（桥契约见 instance 仓 runtime/cored-bridge.md）
+│   └── test/         # node --test：桥单元 + 真实 cored 端到端（契约 §3.1 机械验证）
+└── connectors/       # connector 实现（dsh 侧宿主；每 connector 一目录，ops 契约见 concepts/connector.md）
 ```
 
 ## 约定

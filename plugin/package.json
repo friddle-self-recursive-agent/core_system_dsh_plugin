@@ -6,7 +6,8 @@
   "description": "core_system dsh plugin: workflow engine host + core bridge (cored binary built from core_system submodule)",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/bridge.test.ts test/e2e.test.ts"
   },
   "dsh": {
     "bundle": {
