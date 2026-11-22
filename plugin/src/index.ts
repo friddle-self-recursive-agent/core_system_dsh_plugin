@@ -42,8 +42,9 @@ export function parseReadyLine(line: string): { addr: string; schemeVersion: str
 export default async function apply(ctx: any, config: Config = {}) {
   const url = config.coredUrl
   if (url) {
-    const bridge = await probeScheme(url)
-    ctx.coreSystem = bridge
+    const bridge: CoreSystemBridge = { url: '', scheme: null, kinds: null }
+    ctx.provide('coreSystem', bridge)
+    await probeScheme(url, bridge)
     ctx.logger.info('core-system: 已接入运行中的 cored %s（kinds=%s）', url, bridge.kinds?.length ?? '?')
     return
   }
@@ -64,6 +65,10 @@ export default async function apply(ctx: any, config: Config = {}) {
   const child: ChildProcess = spawn(coredBin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
   ctx.logger.info('core-system: 拉起 cored（bin=%s scheme=%s pid=%s）', coredBin, schemePath, child.pid)
 
+  // 服务先声明后填值（cordis：未 provide 的属性不可 set）；fiber 卸载即自动注销。
+  const bridge: CoreSystemBridge = { url: '', scheme: null, kinds: null }
+  ctx.provide('coreSystem', bridge)
+
   // 退场回收：无论插件因何种原因卸载，子进程一并带走。
   ctx.effect(() => {
     return () => {
@@ -76,11 +81,10 @@ export default async function apply(ctx: any, config: Config = {}) {
     ctx.logger.error('core-system: cored 未在 %dms 内就绪（bin=%s），桥接失败', readyTimeoutMs, coredBin)
     return
   }
-  const base = `http://${ready.addr}`
-  ctx.logger.info('core-system: cored 就绪 %s（scheme_version=%s kinds=%d）', base, ready.schemeVersion, ready.kinds)
+  bridge.url = `http://${ready.addr}`
+  ctx.logger.info('core-system: cored 就绪 %s（scheme_version=%s kinds=%d）', bridge.url, ready.schemeVersion, ready.kinds)
 
-  const bridge = await probeScheme(base)
-  ctx.coreSystem = bridge
+  await probeScheme(bridge.url, bridge)
   ctx.logger.info(
     'core-system: scheme 查询完成 —— %s/%s（kinds=%d：%s）',
     (bridge.scheme as any)?.apiVersion ?? '?',
@@ -139,9 +143,8 @@ async function waitForReady(
   })
 }
 
-/** 就绪后转发一次 scheme 查询：概览 + 对象类型清单（只读面）。 */
-async function probeScheme(base: string): Promise<CoreSystemBridge> {
-  const bridge: CoreSystemBridge = { url: base, scheme: null, kinds: null }
+/** 就绪后转发一次 scheme 查询：概览 + 对象类型清单（只读面），结果就地填入 bridge。 */
+async function probeScheme(base: string, bridge: CoreSystemBridge): Promise<void> {
   try {
     const res = await fetch(`${base}/v1/scheme`)
     if (res.ok) bridge.scheme = (await res.json()) as Record<string, unknown>
@@ -151,5 +154,4 @@ async function probeScheme(base: string): Promise<CoreSystemBridge> {
       bridge.kinds = (body.kinds ?? []).map((k) => k.name)
     }
   } catch {} // 查询失败不阻断宿主启动；结果如实留在 bridge（kinds=null 即未通）
-  return bridge
 }
