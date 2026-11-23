@@ -417,7 +417,8 @@ export function mountAgentCommTools(ctx: any, bridge: CoreSystemBridge): void {
     cancel?: AgentCommDeps['cancel']
     agents?: AgentCommDeps['agents']
   } = {}
-  // 会话控制器（dispatch/interrupt 真通路）：回调式软出现，缺席宿主回调永不启动
+  // 回调式软出现（声明式 inject 加新服务名=apply 停等；ctx.<服务> 直访=without inject 抛错
+  // ——§1.11 补注①护栏语义，agents 同款实证 2026-11-25 探针）。缺席宿主回调永不启动。
   if (typeof ctx.inject === 'function') {
     ctx.inject(['sessionController'], (sub: any) => {
       const sc = Reflect.get(sub, 'sessionController')
@@ -425,9 +426,12 @@ export function mountAgentCommTools(ctx: any, bridge: CoreSystemBridge): void {
       faces.prompt = (req) => sc.prompt(req, AbortSignal.timeout(10_000))
       if (typeof sc.cancel === 'function') faces.cancel = (req) => sc.cancel(req)
     })
+    // 同机活体注册表（to 解析第③步）：缺席回调=活体面解析必拒（诚实降级不冒充）
+    ctx.inject(['agents'], (sub: any) => {
+      const ag = Reflect.get(sub, 'agents')
+      if (ag && typeof ag.get === 'function') faces.agents = ag
+    })
   }
-  // 同机活体注册表（to 解析第③步）：服务在宿主根 ctx，缺席=活体面解析必拒
-  if (ctx.agents && typeof ctx.agents.get === 'function') faces.agents = ctx.agents
 
   const tools = ctx.tools
   if (!tools || typeof tools.register !== 'function') {
