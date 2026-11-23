@@ -2178,7 +2178,7 @@
   // —— 右栏协作面板四 tab ——
   function renderCollabBody(kind, scope, name) {
     var key = edKey(kind, scope, name);
-    var tab = S.docTab[key] || 'llm';
+    var tab = S.docTab[key] || (kind === 'ConnectorOps' ? 'ops' : 'llm');
     var el = $('#collab-body');
     if (!el) return;
     if (tab === 'ops') { el.innerHTML = opsTabHtml(kind, scope, name); if (name === 'agent-comm') hydrateCommLive(kind, scope, name); return; }
@@ -3300,20 +3300,20 @@
     if (it.kind === 'draft') {
       var d = it.draft;
       var src = isConsoleFM(d.fieldManager) ? 'console 草稿' : 'LLM/agent 提案';
-      return '<div class="ap-card" id="apcard-' + esc(it.key) + '">' +
+      return '<div class="ap-card" id="apcard-' + esc(cssId(it.key)) + '">' +
         '<div class="ap-head"><span class="ap-title mono">' + esc(d.kind) + '/' + esc(d.name) + '</span>' +
         '<span class="chip warn small">待审</span><span class="chip mute small">' + esc(src) + '</span></div>' +
         '<div class="ap-meta"><span>scope：<b class="mono">' + esc(d.scope || '—') + '</b></span>' +
         '<span>fieldManager：<b class="mono">' + esc(d.fieldManager) + '</b></span>' +
         '<span class="mono faint">' + esc(String(d.updatedAt || '').replace('T', ' ').slice(0, 19)) + '</span>' +
         '<span class="lk mono small" data-act="go" data-go="doc/' + esc(d.kind) + '/' + esc(d.scope || '') + '/' + esc(d.name) + '">对象编辑器 →</span></div>' +
-        '<div class="ap-body" id="apdiff-' + esc(it.key) + '">' + liveSkeletonRows(2, 0) + '</div>' +
+        '<div class="ap-body" id="apdiff-' + esc(cssId(it.key)) + '">' + liveSkeletonRows(2, 0) + '</div>' +
         '<div class="ap-acts"><button class="btn ok" data-act="ap-approve" data-key="' + esc(it.key) + '">批准（=Apply）</button>' +
         '<button class="btn danger" data-act="ap-reject" data-key="' + esc(it.key) + '">驳回（弃稿）</button>' +
         '<span class="small faint" style="align-self:center">批准=dry-run 三检查→fromDraft 落库（Revision+1 · DocApplied）；驳回=弃稿（零文档面动作）</span></div></div>';
     }
     var e = it.event;
-    return '<div class="ap-card resolved" id="apcard-' + esc(it.key) + '">' +
+    return '<div class="ap-card resolved" id="apcard-' + esc(cssId(it.key)) + '">' +
       '<div class="ap-head"><span class="ap-title mono">' + esc(e.involved) + '</span>' +
       '<span class="chip warn small">待审（人审档）</span><span class="chip danger small small">无稿</span></div>' +
       '<div class="ap-meta"><span>来源：<b class="mono">' + esc(e.source) + '</b></span><span>level：<b class="mono">' + esc(e.level) + '</b></span>' +
@@ -3327,6 +3327,8 @@
     return 'doc/' + segs.slice(0, -1).map(encodeURIComponent).join('/') + '/' + encodeURIComponent(segs[segs.length - 1]);
   }
   function apKeyOf(d) { return d.kind + '/' + (d.scope || '') + '/' + d.name; }
+  /* DOM id 安全化（对象键含 '/' '.'——querySelector 语义非法；esc 只防 HTML 注入） */
+  function cssId(key) { return String(key).replace(/[^A-Za-z0-9_-]/g, '_'); }
   function screenApprovals(view) {
     LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '审批' }]);
@@ -3352,7 +3354,7 @@
       LIVE.fetchObject(d.kind, d.scope, d.name).catch(function () { return null; }),
     ]).then(function (rs) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
-      var el = $('#apdiff-' + key);
+      var el = $('#apdiff-' + cssId(key));
       if (!el) return;
       var dr = rs[0], face = rs[1];
       var base = face ? String(face.content || '') : '（对象不在册——apply 将 404）';
@@ -3360,7 +3362,7 @@
       el.innerHTML = (dr ? '' : '<div class="small faint">稿正文读面缺席（超时）——重进即现读</div>') + apDiffHtml(diffLines(base, working)) +
         '<div class="small faint" style="margin-top:4px">基准=r' + (dr ? dr.baseResourceVersion : '?') + ' · 稿 ' + working.length + 'B vs 面 ' + base.length + 'B（现读，不缓存）</div>';
     }, function (e) {
-      var el = $('#apdiff-' + key);
+      var el = $('#apdiff-' + cssId(key));
       if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">diff 读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
     });
   }
