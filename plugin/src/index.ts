@@ -433,11 +433,13 @@ export function mountAgentCommTools(ctx: any, bridge: CoreSystemBridge): void {
     })
     // 四 op 工具注册（tools 服务就绪后；撞名=warn+跳过该 op 其余照常）
     ctx.inject(['tools'], (sub: any) => {
+      console.error('[core-system-diag] inject([tools]) 回调触发')
       const tools = Reflect.get(sub, 'tools')
-      if (!tools || typeof tools.register !== 'function') return // 防御面：inject 已保证，缺席即不注册
+      if (!tools || typeof tools.register !== 'function') { console.error('[core-system-diag] tools 服务缺席'); return }
       registerAgentCommTools(ctx, tools, (kind, args, caller) =>
         executeAgentCommOp(kind, args, { core: bridge, ...faces, callerAgentId: caller }, mailbox))
     })
+    console.error('[core-system-diag] agent-comm inject 挂起（sessionController/agents/tools 三回调已登记）')
   } else if (ctx.tools && typeof ctx.tools.register === 'function') {
     // 无 inject 能力宿主（测试假体/极简壳）：tools 直取容错
     registerAgentCommTools(ctx, ctx.tools, (kind, args, caller) =>
@@ -509,11 +511,13 @@ function registerAgentCommTools(
             type: 'object',
             additionalProperties: false,
             properties: {
-              ok: { type: 'boolean', required: true },
-              op: { type: 'string', required: true },
-              envelopeId: { type: 'string', required: true },
-              to: { type: 'string', required: true },
-              detail: { type: 'json' },
+              // output schema DSL 约束（2026-11-25 探针实证）：properties 节点不收 required
+              // （required 只在隐式参数根）；'json' 类型不被 output 接受→对象开面。
+              ok: { type: 'boolean' },
+              op: { type: 'string' },
+              envelopeId: { type: 'string' },
+              to: { type: 'string' },
+              detail: { type: 'object', additionalProperties: true },
               error: { type: 'string' },
             },
           },
@@ -533,10 +537,10 @@ function registerAgentCommTools(
       })
       registered++
     } catch (e) {
-      ctx.logger?.warn?.('core-system: agent-comm 工具 %s 注册跳过（撞名或宿主拒绝）：%s', d.name, String((e as Error)?.message ?? e))
+      console.error('[core-system-diag] 工具 %s 注册失败：%s', d.name, String((e as Error)?.stack ?? e).slice(0, 500))
     }
   }
-  ctx.logger?.info?.('core-system: agent-comm 四 op 工具已注册（%d/4：dispatch/query/interrupt/inbox——cross-agent.md §5 v0.1）', registered)
+  console.error('[core-system-diag] agent-comm 注册完成 %d/4', registered)
 }
 
 /** 宿主侧装配（软出现：web profile 才有 webServer/connection；headless 宿主零影响）。
