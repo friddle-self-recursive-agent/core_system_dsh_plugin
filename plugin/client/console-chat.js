@@ -81,12 +81,11 @@
     return out;
   }
 
-  /** 会话适配器：faces={sessions, remote, webTerminals}（dsh client 服务面，全部可注入假体）。
+  /** 会话适配器：faces={sessions, webTerminals}（dsh client 服务面，全部可注入假体）。
    *  faces 可缺席（headless/未装配宿主）——ready()=false，调用面返回诚实降级不抛错。 */
   function createAdapter(faces) {
     faces = faces || {};
     var sessions = faces.sessions || null;
-    var remote = faces.remote || null;
     var webTerminals = faces.webTerminals || null;
     var SOURCE = 'core-console'; // SessionReferenceSource 消费者标签（declaration-merge 扩展名）
 
@@ -159,29 +158,26 @@
         );
       }).then(function (r) { return r || { ok: false, error: 'rename 未返回' }; }, function (e) { return { ok: false, error: String((e && e.message) || e) }; });
     }
-    /** 转录事件页读面（remote.session.page；records=[{type,event}]）→ 投影行。
-     *  faces 缺席/读面失败=诚实降级（ok:false+error），不冒充空转录。 */
-    function page(sessionId, opt) {
-      opt = opt || {};
-      if (!remote || typeof remote !== 'object') {
-        return Promise.resolve({ ok: false, error: '宿主转录读面缺席（ctx.remote 未在册）' });
-      }
-      var arg = { address: { sessionId: String(sessionId) }, maxMessages: opt.maxMessages || 200 };
-      if (opt.throughSeq !== undefined) arg.throughSeq = opt.throughSeq;
-      var p;
-      try {
-        if (!remote.session || typeof remote.session.page !== 'function') {
-          return Promise.resolve({ ok: false, error: '宿主转录读面缺席（remote.session 未在册）' });
-        }
-        p = remote.session.page(arg, undefined);
-      } catch (e) { return Promise.resolve({ ok: false, error: '转录读面不可用: ' + String((e && e.message) || e) }); }
-      return Promise.resolve(p).then(
-        function (result) {
-          if (!result || !result.ok) return { ok: false, error: String((result && result.error && (result.error.message || result.error.code)) || 'page 读面失败') };
-          return { ok: true, records: (result.value && result.value.records) || [], hasMore: !!(result.value && result.value.hasMore) };
+    /** 会话持有（sessions.retain——转录活体源）：ref.binding.eventSource=事件窗 ObservableSnapshot
+     *  （retain 自带初始历史开窗；订阅=活体更新，不轮询不复制状态）。faces 缺席/retain 抛错=诚实降级。 */
+    function hold(sessionId) {
+      if (!ready() || typeof sessions.retain !== 'function') return null;
+      var ref;
+      try { ref = sessions.retain(String(sessionId), { source: SOURCE }); } catch (e) { return null; }
+      return {
+        sessionId: String(sessionId),
+        ready: ref.ready || Promise.resolve(ref.binding),
+        snapshot: function () {
+          var snap = ref.binding.eventSource && typeof ref.binding.eventSource.getSnapshot === 'function'
+            ? ref.binding.eventSource.getSnapshot() : null;
+          return snap ? { entries: snap.entries || [], hasMore: !!snap.hasMore } : { entries: [], hasMore: false };
         },
-        function (e) { return { ok: false, error: String((e && e.message) || e) }; }
-      );
+        subscribe: function (fn) {
+          if (!ref.binding.eventSource || typeof ref.binding.eventSource.subscribe !== 'function') return function () {};
+          return ref.binding.eventSource.subscribe(fn) || function () {};
+        },
+        release: function () { try { ref.release(); } catch (e) { /* 已离场 */ } }
+      };
     }
     /** 终端 roster（ctx.webTerminals.watch；face 缺席=null=诚实降级）。返回 {unsubscribe, get}。 */
     function terminals(sessionId) {
@@ -198,7 +194,7 @@
     }
     return {
       ready: ready, listSnapshot: listSnapshot, subscribe: subscribe, refresh: refresh,
-      create: create, prompt: prompt, rename: rename, page: page, terminals: terminals, SOURCE: SOURCE
+      create: create, prompt: prompt, rename: rename, hold: hold, terminals: terminals, SOURCE: SOURCE
     };
   }
 
@@ -254,7 +250,6 @@
     var cf = (typeof __CC !== 'undefined' && __CC.chatFaces) || null;
     var tf = (typeof __CC !== 'undefined' && __CC.termFaces) || null;
     if (cf && cf.sessions) faces.sessions = cf.sessions;
-    if (cf && cf.remote) faces.remote = cf.remote;
     if (tf && tf.webTerminals) faces.webTerminals = tf.webTerminals;
     var adapter = createAdapter(faces);
     __CC.chatAdapter = adapter;

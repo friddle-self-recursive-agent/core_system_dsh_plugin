@@ -1542,12 +1542,11 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     return out;
   }
 
-  /** 会话适配器：faces={sessions, remote, webTerminals}（dsh client 服务面，全部可注入假体）。
+  /** 会话适配器：faces={sessions, webTerminals}（dsh client 服务面，全部可注入假体）。
    *  faces 可缺席（headless/未装配宿主）——ready()=false，调用面返回诚实降级不抛错。 */
   function createAdapter(faces) {
     faces = faces || {};
     var sessions = faces.sessions || null;
-    var remote = faces.remote || null;
     var webTerminals = faces.webTerminals || null;
     var SOURCE = 'core-console'; // SessionReferenceSource 消费者标签（declaration-merge 扩展名）
 
@@ -1620,29 +1619,26 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
         );
       }).then(function (r) { return r || { ok: false, error: 'rename 未返回' }; }, function (e) { return { ok: false, error: String((e && e.message) || e) }; });
     }
-    /** 转录事件页读面（remote.session.page；records=[{type,event}]）→ 投影行。
-     *  faces 缺席/读面失败=诚实降级（ok:false+error），不冒充空转录。 */
-    function page(sessionId, opt) {
-      opt = opt || {};
-      if (!remote || typeof remote !== 'object') {
-        return Promise.resolve({ ok: false, error: '宿主转录读面缺席（ctx.remote 未在册）' });
-      }
-      var arg = { address: { sessionId: String(sessionId) }, maxMessages: opt.maxMessages || 200 };
-      if (opt.throughSeq !== undefined) arg.throughSeq = opt.throughSeq;
-      var p;
-      try {
-        if (!remote.session || typeof remote.session.page !== 'function') {
-          return Promise.resolve({ ok: false, error: '宿主转录读面缺席（remote.session 未在册）' });
-        }
-        p = remote.session.page(arg, undefined);
-      } catch (e) { return Promise.resolve({ ok: false, error: '转录读面不可用: ' + String((e && e.message) || e) }); }
-      return Promise.resolve(p).then(
-        function (result) {
-          if (!result || !result.ok) return { ok: false, error: String((result && result.error && (result.error.message || result.error.code)) || 'page 读面失败') };
-          return { ok: true, records: (result.value && result.value.records) || [], hasMore: !!(result.value && result.value.hasMore) };
+    /** 会话持有（sessions.retain——转录活体源）：ref.binding.eventSource=事件窗 ObservableSnapshot
+     *  （retain 自带初始历史开窗；订阅=活体更新，不轮询不复制状态）。faces 缺席/retain 抛错=诚实降级。 */
+    function hold(sessionId) {
+      if (!ready() || typeof sessions.retain !== 'function') return null;
+      var ref;
+      try { ref = sessions.retain(String(sessionId), { source: SOURCE }); } catch (e) { return null; }
+      return {
+        sessionId: String(sessionId),
+        ready: ref.ready || Promise.resolve(ref.binding),
+        snapshot: function () {
+          var snap = ref.binding.eventSource && typeof ref.binding.eventSource.getSnapshot === 'function'
+            ? ref.binding.eventSource.getSnapshot() : null;
+          return snap ? { entries: snap.entries || [], hasMore: !!snap.hasMore } : { entries: [], hasMore: false };
         },
-        function (e) { return { ok: false, error: String((e && e.message) || e) }; }
-      );
+        subscribe: function (fn) {
+          if (!ref.binding.eventSource || typeof ref.binding.eventSource.subscribe !== 'function') return function () {};
+          return ref.binding.eventSource.subscribe(fn) || function () {};
+        },
+        release: function () { try { ref.release(); } catch (e) { /* 已离场 */ } }
+      };
     }
     /** 终端 roster（ctx.webTerminals.watch；face 缺席=null=诚实降级）。返回 {unsubscribe, get}。 */
     function terminals(sessionId) {
@@ -1659,7 +1655,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     }
     return {
       ready: ready, listSnapshot: listSnapshot, subscribe: subscribe, refresh: refresh,
-      create: create, prompt: prompt, rename: rename, page: page, terminals: terminals, SOURCE: SOURCE
+      create: create, prompt: prompt, rename: rename, hold: hold, terminals: terminals, SOURCE: SOURCE
     };
   }
 
@@ -1715,7 +1711,6 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     var cf = (typeof __CC !== 'undefined' && __CC.chatFaces) || null;
     var tf = (typeof __CC !== 'undefined' && __CC.termFaces) || null;
     if (cf && cf.sessions) faces.sessions = cf.sessions;
-    if (cf && cf.remote) faces.remote = cf.remote;
     if (tf && tf.webTerminals) faces.webTerminals = tf.webTerminals;
     var adapter = createAdapter(faces);
     __CC.chatAdapter = adapter;
@@ -4159,7 +4154,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     return chatAdCached;
   }
   // 会话 UI 态（内存 UI 态，不落库=console 零持久状态）
-  S.chatTranscript = {};  // sessionId -> {at, ok, error, items}
+  S.chatTranscript = {};  // sessionId -> {at, items, hasMore}
+  S.chatHold = null;      // {sessionId, handle}（retain 持有——转录活体源，随屏切换释放）
   S.chatOwned = {};       // agent -> [sessionId]（console 发起=归属证据②）
   S.chatBusy = {};        // sessionId -> true（prompt 在途）
   S.chatMode = {};        // agent -> 'queue'|'steer'（缺省 queue）
@@ -4357,29 +4353,52 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     view.innerHTML = '<div class="chat-layout">' + left + center + right + '</div>';
     if (u.tab !== 'term' && u.sessionId) loadTranscript(agentName, u.sessionId, u.view);
   }
-  /** 转录装载+注水（session 事件页读面 → projectTranscript → chat-body）。调用链 throw-safe：
-   *  faces 护栏/读面异常折为降级注记（骨架不停挂——E5 探针实证的停挂教训）。 */
+  /** 转录装载+订阅（sessions.retain 持有 → binding.eventSource 事件窗活体投影）。
+   *  调用链 throw-safe（faces 护栏/读面异常折为降级注记——骨架不停挂）；订阅=活体更新不轮询。
+   *  同一会话已持有=复用持有（不重复 retain）。 */
   function loadTranscript(agentName, sessionId, viewType) {
     var declaredOps = agentDeclaredOps(agentName);
-    Promise.resolve().then(function () { return chatAd().page(sessionId, {}); }).then(function (res) {
-      var body = $('#chat-body');
-      if (!body || body.dataset.sess !== sessionId) return; // 路由/选择已变=丢弃
-      if (!res || !res.ok) {
-        body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录读面暂不可达</div><div class="small faint">' +
-          esc(String((res && res.error) || '未知')) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
-        bindChatInput(agentName, sessionId);
-        return;
+    var body = $('#chat-body');
+    if (!body) return;
+    try {
+      var h = S.chatHold;
+      if (!h || h.sessionId !== sessionId) {
+        if (h) { try { h.handle.release(); } catch (e) { /* 已离场 */ } }
+        var handle = chatAd().hold(sessionId);
+        if (!handle) throw new Error('宿主会话面缺席（ctx.sessions 未在册）');
+        S.chatHold = { sessionId: sessionId, handle: handle };
+        h = S.chatHold;
       }
-      S.chatTranscript[sessionId] = { at: Date.now(), items: CHAT().projectTranscript(res.records, declaredOps), records: res.records.length };
-      paintTranscript(agentName, sessionId, viewType);
-    }).catch(function (e) {
-      var body = $('#chat-body');
-      if (body && body.dataset.sess === sessionId) {
-        body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录装载异常</div><div class="small faint">' +
-          esc(String((e && e.message) || e)) + '</div></div></div>' + chatInputBar(agentName);
-        bindChatInput(agentName, sessionId);
-      }
-    });
+      var paint = function () {
+        var el = $('#chat-body');
+        if (!el || el.dataset.sess !== sessionId) return;
+        var snap = h.handle.snapshot();
+        S.chatTranscript[sessionId] = { at: Date.now(), items: CHAT().projectTranscript(snap.entries, declaredOps), hasMore: snap.hasMore };
+        paintTranscript(agentName, sessionId, viewType);
+      };
+      h.handle.ready.then(function () {
+        var cur = S.chatHold;
+        if (!cur || cur.sessionId !== sessionId) return;
+        paint();
+        h.handle.subscribe(function () { paint(); }); // 活体：新事件（含助手流式落定）即重绘
+      }, function (e) {
+        var el = $('#chat-body');
+        if (el && el.dataset.sess === sessionId) {
+          el.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录读面暂不可达</div><div class="small faint">' +
+            esc(String((e && e.message) || e)) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
+          bindChatInput(agentName, sessionId);
+        }
+      });
+      paint(); // 开窗快照可能已在（retain 即填）
+    } catch (e) {
+      body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录装载异常</div><div class="small faint">' +
+        esc(String((e && e.message) || e)) + '</div></div></div>' + chatInputBar(agentName);
+      bindChatInput(agentName, sessionId);
+    }
+  }
+  function releaseChatHold() {
+    var h = S.chatHold;
+    if (h) { try { h.handle.release(); } catch (e) { /* 已离场 */ } S.chatHold = null; }
   }
   function paintTranscript(agentName, sessionId, viewType) {
     var body = $('#chat-body');
@@ -4819,16 +4838,12 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       '<div class="dh-actions"><button class="btn primary" data-act="chat-sess-go" data-id="' + esc(sid) + '"' + (owner ? ' data-agent="' + esc(owner) + '"' : ' disabled') + '>切回 Chat 视图 →</button></div></div>' +
       '<div class="card"><div class="card-h"><span class="h-title">Trajectory（session 事件页读面 · 与聊天流同源不同呈现）</span></div>' +
       '<div class="card-b"><div id="sess-traj">' + liveSkeletonRows(3) + '</div></div></div></div>';
-    // 转录注水：归属 agent 缺席时用空声明集（全部工具卡按普通卡渲染——不冒充 ConnectorOps 判据）
+    // 转录注水（retain 持有+事件窗快照）：归属 agent 缺席时用空声明集（工具卡按普通卡渲染——不冒充判据）
     var declaredOps = owner ? agentDeclaredOps(owner) : [];
-    ad.page(sid, {}).then(function (res) {
+    var paint = function (snap) {
       var el = $('#sess-traj');
-      if (!el) return;
-      if (!res.ok) {
-        el.innerHTML = '<div class="small faint">转录读面暂不可达（' + esc(res.error) + '）</div>';
-        return;
-      }
-      var items = CHAT().projectTranscript(res.records, declaredOps);
+      if (!el) { releaseChatHold(); return; }
+      var items = CHAT().projectTranscript(snap.entries, declaredOps);
       var html = items.map(function (it) {
         var kindCls = it.kind === 'user' || it.kind === 'context' ? 'user' : it.kind === 'assistant' ? 'agent' : 'tool';
         var label = it.kind === 'tool' ? (it.op + (it.connectorOps ? ' · ConnectorOps' : '')) : it.kind;
@@ -4839,10 +4854,24 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       }).join('');
       var toolUses = items.filter(function (it) { return it.kind === 'tool'; }).length;
       el.innerHTML = '<div class="statbar" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px">' +
-        '<div class="stat"><div class="st-num">' + items.length + '</div><div class="st-label">转录行（事件读面）</div></div>' +
+        '<div class="stat"><div class="st-num">' + items.length + '</div><div class="st-label">转录行（事件窗）</div></div>' +
         '<div class="stat"><div class="st-num">' + toolUses + '</div><div class="st-label">工具调用</div></div></div>' +
         (html || '<div class="empty"><div class="e-title">轨迹为空</div></div>');
+    };
+    releaseChatHold();
+    var handle = chatAd().hold(sid);
+    if (!handle) { $('#sess-traj').innerHTML = '<div class="small faint">宿主会话面缺席（ctx.sessions 未在册）——轨迹诚实降级</div>'; return; }
+    S.chatHold = { sessionId: sid, handle: handle };
+    handle.ready.then(function () {
+      var cur = S.chatHold;
+      if (!cur || cur.sessionId !== sid) return;
+      paint(handle.snapshot());
+      handle.subscribe(function () { paint(handle.snapshot()); });
+    }, function (e) {
+      var el = $('#sess-traj');
+      if (el) el.innerHTML = '<div class="small faint">转录读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
     });
+    paint(handle.snapshot());
   }
   ACTIONS['chat-sess-go'] = function (el) {
     var u = S.chatUi[el.dataset.agent] = S.chatUi[el.dataset.agent] || {};
@@ -5164,6 +5193,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     window.removeEventListener('hashchange', render);
     clearTimers();
     stopFollowTimers();
+    try { releaseChatHold(); } catch (e) { /* 已离场 */ }
     if (__CC.conn) { __CC.conn.stop(); __CC.conn = null; }
     if (__CC.live) __CC.live.onChange = null;
     if (ROOT) ROOT.innerHTML = '';
@@ -5380,14 +5410,14 @@ function ConsolePanel() {
   return React.createElement('div', { className: 'cc-app cc-host', ref: consoleRef, style: { height: '100%' } })
 }
 
-exports.inject = ['slots', 'layout', 'sessions', 'remote', 'remote.session']
+exports.inject = ['slots', 'layout', 'sessions']
 exports.apply = function applyClient(ctx) {
   // E5 会话数据面（console-adoption.md §1.11；§3.7 裁决：数据源=dsh session store 不复制状态）：
-  // ctx.sessions=宿主会话清单/创建/prompt 真通路；ctx.remote.session=转录事件页读面。
-  // faces 声明式注入（exports.inject——cordis 服务护栏：未声明即访问抛 without inject，E5 探针实证）；
-  // 缺席宿主读取抛错=chat 屏 ready()=false 诚实降级（不冒充数据）。
+  // ctx.sessions=宿主会话清单/创建/prompt 真通路 + retain 持有的事件窗（转录活体源——
+  // binding.eventSource，不触 remote.* 命名空间护栏：E5 探针实证 remote.session 未声明即访问抛错）。
+  // faces 声明式注入（exports.inject——cordis 服务护栏）；缺席宿主读取抛错=chat 屏 ready()=false 诚实降级。
   try {
-    __CC.chatFaces = { sessions: ctx.sessions, remote: ctx.remote }
+    __CC.chatFaces = { sessions: ctx.sessions }
   } catch (e) { /* 无该面的宿主：chat 降级 */ }
   try {
     // 终端 roster 面（可选能力）：回调式注入（不在 exports.inject 声明——缺席宿主不阻塞面板）

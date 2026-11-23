@@ -50,9 +50,27 @@ function fakeSessions(rows, opts = {}) {
     }),
   }
 }
-/** 假 remote 面（remote.session.page）。 */
-function fakeRemote(records, opts = {}) {
-  return { session: { page: async (arg) => { opts.pageArgs?.push(arg); if (opts.pageFails) return { ok: false, error: { code: 'x', message: 'boom' } }; return { ok: true, value: { records, hasMore: false } } } } }
+/** 假 retain 持有（binding.eventSource 事件窗——retain 自带初始历史开窗）。 */
+function fakeSessionsHold(rows, records, opts = {}) {
+  const base = fakeSessions(rows, opts)
+  base.retain = (id, o) => {
+    opts.retained?.push({ id, source: o && o.source })
+    return {
+      sessionId: id,
+      ready: Promise.resolve({ sessionId: id, session: base.using ? undefined : undefined, eventSource: makeSource(records) }),
+      binding: { eventSource: makeSource(records) },
+      release: () => { opts.released = (opts.released || 0) + 1 },
+    }
+  }
+  return base
+}
+function makeSource(records) {
+  let listeners = []
+  let snap = { entries: records, hasMore: false, revision: 1, change: { kind: 'replace', entries: records } }
+  return {
+    getSnapshot: () => snap,
+    subscribe: (fn) => { listeners.push(fn); return () => { listeners = listeners.filter((l) => l !== fn) } },
+  }
 }
 
 const EV = (type, seq, data, time = 1760000000000 + seq) => ({ type: 'event', event: { type, seq, time, data } })
@@ -90,8 +108,7 @@ test('E5 适配器：faces 缺席=ready()=false 诚实降级（create/prompt 判
   assert.match(created.error, /缺席|未在册/)
   const prompted = await ad.prompt('s1', 'hi', 'queue')
   assert.equal(prompted.ok, false)
-  const page = await ad.page('s1', {})
-  assert.equal(page.ok, false)
+  assert.equal(ad.hold('s1'), null, '会话面缺席=hold 降级 null')
   assert.equal(ad.terminals('s1'), null, 'webTerminals 缺席=roster 降级 null')
   assert.deepEqual(ad.listSnapshot(), { ready: false, rows: [] })
 })
@@ -196,10 +213,35 @@ test('E5 终端 roster 面：webTerminals.watch 桥接+退订；face 缺席=null
   assert.equal(unsubbed, true)
 })
 
+test('E5 会话持有（retain+eventSource）：事件窗快照投影 + 订阅活体 + release 对称', async () => {
+  const chat = loadChat()
+  const opts = { retained: [] }
+  const records = [
+    { type: 'event', event: { type: 'user/message', seq: 1, time: 1760000000000, data: { message: { role: 'user', content: [{ type: 'text', text: 'hello' }], source: { kind: 'user' } } } } },
+    { type: 'event', event: { type: 'assistant/message', seq: 2, time: 1760000000001, data: { message: { role: 'assistant', content: [{ type: 'text', text: 'hi' }] } } } },
+    { type: 'transient', event: { kind: 'assistant/live-chunk' } },
+  ]
+  const ad = chat.createAdapter({ sessions: fakeSessionsHold([{ id: 's1', displayTitle: 't' }], records, opts) })
+  const h = ad.hold('s1')
+  assert.ok(h, 'sessions 在场=hold 在册')
+  assert.deepEqual(opts.retained.map((r) => r.source), ['core-console'], 'retain 携消费者标签')
+  await h.ready
+  const snap = h.snapshot()
+  assert.equal(snap.entries.length, 3)
+  const items = chat.projectTranscript(snap.entries, [])
+  assert.equal(items.length, 2, 'transient 行不上 durable 投影')
+  assert.equal(items[0].text, 'hello')
+  let notified = 0
+  const off = h.subscribe(() => { notified++ })
+  off()
+  h.release()
+  assert.equal(opts.released, 1, 'release 对称（屏切换/卸载释放持有）')
+})
+
 test('E5 host bundle 静态面：chat 屏真数据换装（mock 会话名/假 token 行/仿 gotty 终端摘除）', () => {
   const dist = readFileSync(join(PLUGIN, 'dist/client.js'), 'utf8')
   assert.ok(dist.includes('ctx.sessions'), 'entry 注入宿主会话面')
-  assert.ok(dist.includes('remote.session'), '转录读面=remote.session.page')
+  assert.ok(dist.includes('eventSource'), '转录读面=retain 持有的事件窗（活体）')
   assert.ok(dist.includes('status.currentSession'), '身份=SessionId 文档面回填面在册')
   assert.ok(dist.includes('运行器四选'), 'runner 四选 UI')
   assert.ok(dist.includes('gotty=跨机兜底'), '§5.7 #6 主案/兜底标注')

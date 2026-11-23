@@ -2421,7 +2421,8 @@
     return chatAdCached;
   }
   // 会话 UI 态（内存 UI 态，不落库=console 零持久状态）
-  S.chatTranscript = {};  // sessionId -> {at, ok, error, items}
+  S.chatTranscript = {};  // sessionId -> {at, items, hasMore}
+  S.chatHold = null;      // {sessionId, handle}（retain 持有——转录活体源，随屏切换释放）
   S.chatOwned = {};       // agent -> [sessionId]（console 发起=归属证据②）
   S.chatBusy = {};        // sessionId -> true（prompt 在途）
   S.chatMode = {};        // agent -> 'queue'|'steer'（缺省 queue）
@@ -2619,29 +2620,52 @@
     view.innerHTML = '<div class="chat-layout">' + left + center + right + '</div>';
     if (u.tab !== 'term' && u.sessionId) loadTranscript(agentName, u.sessionId, u.view);
   }
-  /** 转录装载+注水（session 事件页读面 → projectTranscript → chat-body）。调用链 throw-safe：
-   *  faces 护栏/读面异常折为降级注记（骨架不停挂——E5 探针实证的停挂教训）。 */
+  /** 转录装载+订阅（sessions.retain 持有 → binding.eventSource 事件窗活体投影）。
+   *  调用链 throw-safe（faces 护栏/读面异常折为降级注记——骨架不停挂）；订阅=活体更新不轮询。
+   *  同一会话已持有=复用持有（不重复 retain）。 */
   function loadTranscript(agentName, sessionId, viewType) {
     var declaredOps = agentDeclaredOps(agentName);
-    Promise.resolve().then(function () { return chatAd().page(sessionId, {}); }).then(function (res) {
-      var body = $('#chat-body');
-      if (!body || body.dataset.sess !== sessionId) return; // 路由/选择已变=丢弃
-      if (!res || !res.ok) {
-        body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录读面暂不可达</div><div class="small faint">' +
-          esc(String((res && res.error) || '未知')) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
-        bindChatInput(agentName, sessionId);
-        return;
+    var body = $('#chat-body');
+    if (!body) return;
+    try {
+      var h = S.chatHold;
+      if (!h || h.sessionId !== sessionId) {
+        if (h) { try { h.handle.release(); } catch (e) { /* 已离场 */ } }
+        var handle = chatAd().hold(sessionId);
+        if (!handle) throw new Error('宿主会话面缺席（ctx.sessions 未在册）');
+        S.chatHold = { sessionId: sessionId, handle: handle };
+        h = S.chatHold;
       }
-      S.chatTranscript[sessionId] = { at: Date.now(), items: CHAT().projectTranscript(res.records, declaredOps), records: res.records.length };
-      paintTranscript(agentName, sessionId, viewType);
-    }).catch(function (e) {
-      var body = $('#chat-body');
-      if (body && body.dataset.sess === sessionId) {
-        body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录装载异常</div><div class="small faint">' +
-          esc(String((e && e.message) || e)) + '</div></div></div>' + chatInputBar(agentName);
-        bindChatInput(agentName, sessionId);
-      }
-    });
+      var paint = function () {
+        var el = $('#chat-body');
+        if (!el || el.dataset.sess !== sessionId) return;
+        var snap = h.handle.snapshot();
+        S.chatTranscript[sessionId] = { at: Date.now(), items: CHAT().projectTranscript(snap.entries, declaredOps), hasMore: snap.hasMore };
+        paintTranscript(agentName, sessionId, viewType);
+      };
+      h.handle.ready.then(function () {
+        var cur = S.chatHold;
+        if (!cur || cur.sessionId !== sessionId) return;
+        paint();
+        h.handle.subscribe(function () { paint(); }); // 活体：新事件（含助手流式落定）即重绘
+      }, function (e) {
+        var el = $('#chat-body');
+        if (el && el.dataset.sess === sessionId) {
+          el.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录读面暂不可达</div><div class="small faint">' +
+            esc(String((e && e.message) || e)) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
+          bindChatInput(agentName, sessionId);
+        }
+      });
+      paint(); // 开窗快照可能已在（retain 即填）
+    } catch (e) {
+      body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录装载异常</div><div class="small faint">' +
+        esc(String((e && e.message) || e)) + '</div></div></div>' + chatInputBar(agentName);
+      bindChatInput(agentName, sessionId);
+    }
+  }
+  function releaseChatHold() {
+    var h = S.chatHold;
+    if (h) { try { h.handle.release(); } catch (e) { /* 已离场 */ } S.chatHold = null; }
   }
   function paintTranscript(agentName, sessionId, viewType) {
     var body = $('#chat-body');
@@ -3081,16 +3105,12 @@
       '<div class="dh-actions"><button class="btn primary" data-act="chat-sess-go" data-id="' + esc(sid) + '"' + (owner ? ' data-agent="' + esc(owner) + '"' : ' disabled') + '>切回 Chat 视图 →</button></div></div>' +
       '<div class="card"><div class="card-h"><span class="h-title">Trajectory（session 事件页读面 · 与聊天流同源不同呈现）</span></div>' +
       '<div class="card-b"><div id="sess-traj">' + liveSkeletonRows(3) + '</div></div></div></div>';
-    // 转录注水：归属 agent 缺席时用空声明集（全部工具卡按普通卡渲染——不冒充 ConnectorOps 判据）
+    // 转录注水（retain 持有+事件窗快照）：归属 agent 缺席时用空声明集（工具卡按普通卡渲染——不冒充判据）
     var declaredOps = owner ? agentDeclaredOps(owner) : [];
-    ad.page(sid, {}).then(function (res) {
+    var paint = function (snap) {
       var el = $('#sess-traj');
-      if (!el) return;
-      if (!res.ok) {
-        el.innerHTML = '<div class="small faint">转录读面暂不可达（' + esc(res.error) + '）</div>';
-        return;
-      }
-      var items = CHAT().projectTranscript(res.records, declaredOps);
+      if (!el) { releaseChatHold(); return; }
+      var items = CHAT().projectTranscript(snap.entries, declaredOps);
       var html = items.map(function (it) {
         var kindCls = it.kind === 'user' || it.kind === 'context' ? 'user' : it.kind === 'assistant' ? 'agent' : 'tool';
         var label = it.kind === 'tool' ? (it.op + (it.connectorOps ? ' · ConnectorOps' : '')) : it.kind;
@@ -3101,10 +3121,24 @@
       }).join('');
       var toolUses = items.filter(function (it) { return it.kind === 'tool'; }).length;
       el.innerHTML = '<div class="statbar" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px">' +
-        '<div class="stat"><div class="st-num">' + items.length + '</div><div class="st-label">转录行（事件读面）</div></div>' +
+        '<div class="stat"><div class="st-num">' + items.length + '</div><div class="st-label">转录行（事件窗）</div></div>' +
         '<div class="stat"><div class="st-num">' + toolUses + '</div><div class="st-label">工具调用</div></div></div>' +
         (html || '<div class="empty"><div class="e-title">轨迹为空</div></div>');
+    };
+    releaseChatHold();
+    var handle = chatAd().hold(sid);
+    if (!handle) { $('#sess-traj').innerHTML = '<div class="small faint">宿主会话面缺席（ctx.sessions 未在册）——轨迹诚实降级</div>'; return; }
+    S.chatHold = { sessionId: sid, handle: handle };
+    handle.ready.then(function () {
+      var cur = S.chatHold;
+      if (!cur || cur.sessionId !== sid) return;
+      paint(handle.snapshot());
+      handle.subscribe(function () { paint(handle.snapshot()); });
+    }, function (e) {
+      var el = $('#sess-traj');
+      if (el) el.innerHTML = '<div class="small faint">转录读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
     });
+    paint(handle.snapshot());
   }
   ACTIONS['chat-sess-go'] = function (el) {
     var u = S.chatUi[el.dataset.agent] = S.chatUi[el.dataset.agent] || {};
@@ -3426,6 +3460,7 @@
     window.removeEventListener('hashchange', render);
     clearTimers();
     stopFollowTimers();
+    try { releaseChatHold(); } catch (e) { /* 已离场 */ }
     if (__CC.conn) { __CC.conn.stop(); __CC.conn = null; }
     if (__CC.live) __CC.live.onChange = null;
     if (ROOT) ROOT.innerHTML = '';
