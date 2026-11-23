@@ -9,8 +9,10 @@ import assert from 'node:assert/strict'
 import {
   CONSOLE_API_PREFIX, CONSOLE_APPLY_PATH, DEFAULT_APPLY_SUBJECT,
   createApplyHandler, createConsoleApiHandler, mountConsoleRoutes,
+  CONSOLE_COMM_PATH, createCommHandler, createCommState,
   type FetchLike, type HttpReqLike, type HttpResLike,
 } from '../src/index.ts'
+import { makeErrorReply } from '../src/agent-comm.ts'
 
 function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
   const calls: string[] = []
@@ -253,4 +255,39 @@ test('草稿路由：路径穿越不触上游（URL 归一化吃掉 ..→落 exa
   await h({ method: 'GET', url: CONSOLE_DRAFTS_PATH, headers: {} }, r2)
   assert.equal(r2.statusCode, 405)
   assert.equal(r2.headers['allow'], 'POST, DELETE')
+})
+
+// ---------- comm 读路由（E6：console-adoption.md §1.13 L42-04 静态面） ----------
+test('comm 读路由：GET 200 载荷（ops/refs/journal/mailboxPending）∧ token 值永不出现 ∧ 双读一致', async () => {
+  const state = createCommState()
+  state.journal.record({ ts: '2026-11-25T00:00:00Z', op: 'dispatch', from: 'agent/a@global', to: 'agent/b@global', ok: false, envelopeId: 'e1', error: 'to 未注册', hasToken: true })
+  state.mailbox.deliver(makeErrorReply({ from: 'agent/a@global', inReplyTo: 'e1', op: 'dispatch' }, '回执落账'))
+  const h = createCommHandler({ state, reject: () => undefined })
+  const r1 = makeRes()
+  await h({ method: 'GET', url: '/core-console/comm', headers: {} }, r1)
+  assert.equal(r1.statusCode, 200)
+  const body = JSON.parse(r1.body)
+  assert.deepEqual(body.ops, ['dispatch', 'query', 'interrupt', 'inbox'])
+  assert.equal(body.journal.length, 1)
+  assert.equal(body.journal[0].hasToken, true)
+  assert.ok(!('token' in body.journal[0]), 'token 值永不出现（只有 hasToken 布尔）')
+  assert.ok(body.mailboxPending['agent/a@global'] >= 1, 'mailbox pending 计数投影')
+  const r2 = makeRes()
+  await h({ method: 'GET', url: '/core-console/comm', headers: {} }, r2)
+  assert.equal(r2.body, r1.body, '双读一致（幂等快照）')
+})
+
+test('comm 读路由：栅栏缺席=401 拒全部 ∧ 403 透传 ∧ 非 GET=405（allow: GET）', async () => {
+  const state = createCommState()
+  const noReject = createCommHandler({ state })
+  const r1 = makeRes()
+  await noReject({ method: 'GET', url: '/core-console/comm', headers: {} }, r1)
+  assert.equal(r1.statusCode, 401, '栅栏缺席 fail-closed（apply 同款）')
+  const r2 = makeRes()
+  await createCommHandler({ state, reject: () => 403 })({ method: 'GET', url: '/core-console/comm', headers: {} }, r2)
+  assert.equal(r2.statusCode, 403)
+  const r3 = makeRes()
+  await createCommHandler({ state, reject: () => undefined })({ method: 'POST', url: '/core-console/comm', headers: {} }, r3)
+  assert.equal(r3.statusCode, 405)
+  assert.equal(r3.headers.allow, 'GET')
 })

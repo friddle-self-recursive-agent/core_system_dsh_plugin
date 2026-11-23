@@ -8,7 +8,7 @@
 //   5. 插件退场时回收子进程
 // 部署锚点一律经配置或环境注入，不内置真实路径（rule.md R-PUB-1/2）。
 import { spawn, type ChildProcess } from 'node:child_process'
-import { AGENT_COMM_KINDS, Mailbox, executeAgentCommOp, type AgentCommDeps, type AgentCommResult } from './agent-comm.ts'
+import { AGENT_COMM_KINDS, CommJournal, Mailbox, executeAgentCommOp, type AgentCommDeps, type AgentCommResult } from './agent-comm.ts'
 
 export interface Config {
   /** 启动时拉起 cored 子进程（缺省 true）；coredUrl 存在时忽略本项。 */
@@ -119,6 +119,80 @@ export const CONSOLE_DRAFTS_PATH = '/core-console/drafts'
 
 /** 草稿 fieldManager 缺省（客户端缺主时宿主补——无主稿 cored 拒绝 400，兜底保 UX）。 */
 export const DEFAULT_DRAFT_FIELD_MANAGER = 'console:editor'
+
+/** agent-comm 读路由（E6，exact 路径）：`GET /core-console/comm`——agent-comm 运行时
+ *  落账面（CommJournal+mailbox）的浏览器读出口（console 连接页 agent-comm 详情=
+ *  op 面/拓扑/消息日志数据源，console-adoption.md §1.13）。只读 GET（其余 405 allow: GET）；
+ *  connection 栅栏 fail-closed 与 apply 路由同款（handler 内再锁一道）；**token 值永不
+ *  出现于载荷**（落账面只记 hasToken 布尔——凭据红线）。 */
+export const CONSOLE_COMM_PATH = '/core-console/comm'
+
+/** agent-comm 运行时落账状态（一次插件激活一份；mailbox=v0.1 既有落账面，
+ *  journal=E6 comm 流水——同族扩展，console 只渲染）。 */
+export interface CommState {
+  mailbox: Mailbox
+  journal: CommJournal
+}
+
+export function createCommState(): CommState {
+  return { mailbox: new Mailbox(), journal: new CommJournal() }
+}
+
+/** 载荷投影（脱敏边界在此收口：journal 记录已不含 token 值；mailbox 信封若含 token 字段
+ *  则整信封打码——v0.1 mailbox 只落 error reply 无 token，防御面照写）。 */
+function commPayload(state: CommState) {
+  const mailboxPending: Record<string, number> = {}
+  const counts = state.journal.counts()
+  const refs = state.journal.refs()
+  for (const ref of new Set([...refs, ...state.journal.snapshot().map((r) => r.to)])) {
+    const n = state.mailbox.peek(ref).length
+    if (n > 0) mailboxPending[ref] = n
+  }
+  const journal = state.journal.snapshot().map((r) => ({
+    ts: r.ts, op: r.op, from: r.from, to: r.to, ok: r.ok, envelopeId: r.envelopeId,
+    ...(r.error ? { error: r.error } : {}),
+    ...(r.sessionId ? { sessionId: r.sessionId } : {}),
+    hasToken: r.hasToken === true,
+  }))
+  return {
+    ops: [...AGENT_COMM_KINDS],
+    counts,
+    refs,
+    mailboxPending,
+    journal,
+  }
+}
+
+/**
+ * console agent-comm 读 handler（E6，测试注入 state/reject 全独立）：
+ *   浏览器 GET /core-console/comm → connection 鉴权栅栏 → 本进程落账快照（零上游请求）。
+ * 栅栏缺席=fail-closed 拒全部（apply 路由同款）；非 GET=405（allow: GET）。
+ */
+export function createCommHandler(opts: {
+  state: CommState
+  reject?: (req: { headers: unknown }) => 401 | 403 | undefined
+}) {
+  return function commHandler(req: HttpReqLike, res: HttpResLike): void {
+    if (!opts.reject) {
+      res.statusCode = 401
+      res.end()
+      return
+    }
+    const rejection = opts.reject({ headers: req.headers })
+    if (rejection !== undefined) {
+      res.statusCode = rejection
+      res.end()
+      return
+    }
+    if ((req.method ?? 'GET') !== 'GET') {
+      res.statusCode = 405
+      res.setHeader('allow', 'GET')
+      res.end()
+      return
+    }
+    sendJson(res, 200, commPayload(opts.state))
+  }
+}
 
 /** Apply 主体缺省（permission.DefaultAdmin 全权字面量；部署可经 config.applySubject 覆写
  *  为受限 role——cored-bridge.md §3 config.applySubject）。 */
@@ -410,8 +484,9 @@ export const AGENT_COMM_TOOL_NAMES = [...AGENT_COMM_KINDS]
  * 防御面：tools/agents/sessionController 任一缺席宿主=对应能力不注册/解析必拒，不炸宿主；
  * 撞名（dsh 保留 run_code+既有工具）=warn+跳过该 op。
  */
-export function mountAgentCommTools(ctx: any, bridge: CoreSystemBridge): void {
-  const mailbox = new Mailbox()
+export function mountAgentCommTools(ctx: any, bridge: CoreSystemBridge, comm: CommState = createCommState()): void {
+  const mailbox = comm.mailbox
+  const journal = comm.journal
   const faces: {
     prompt?: AgentCommDeps['prompt']
     cancel?: AgentCommDeps['cancel']
@@ -437,13 +512,13 @@ export function mountAgentCommTools(ctx: any, bridge: CoreSystemBridge): void {
       const tools = Reflect.get(sub, 'tools')
       if (!tools || typeof tools.register !== 'function') { console.error('[core-system-diag] tools 服务缺席'); return }
       registerAgentCommTools(ctx, tools, (kind, args, caller) =>
-        executeAgentCommOp(kind, args, { core: bridge, ...faces, callerAgentId: caller }, mailbox))
+        executeAgentCommOp(kind, args, { core: bridge, ...faces, callerAgentId: caller }, mailbox, undefined, journal))
     })
     console.error('[core-system-diag] agent-comm inject 挂起（sessionController/agents/tools 三回调已登记）')
   } else if (ctx.tools && typeof ctx.tools.register === 'function') {
     // 无 inject 能力宿主（测试假体/极简壳）：tools 直取容错
     registerAgentCommTools(ctx, ctx.tools, (kind, args, caller) =>
-      executeAgentCommOp(kind, args, { core: bridge, ...faces, callerAgentId: caller }, mailbox))
+      executeAgentCommOp(kind, args, { core: bridge, ...faces, callerAgentId: caller }, mailbox, undefined, journal))
   }
 }
 
@@ -547,7 +622,7 @@ function registerAgentCommTools(
  *  用 ctx.inject 等待依赖可用——依赖缺席的 profile 上回调永不启动，插件本体不受影响。 */
 export function mountConsoleRoutes(ctx: {
   inject?(deps: string[], apply: (sub: any) => void | (() => void)): unknown
-}, bridge: { url: string }, applySubject: ApplySubject = DEFAULT_APPLY_SUBJECT): void {  if (typeof ctx.inject !== 'function') return // 防御面：无 inject 能力的宿主（测试假体/极简壳）零影响
+}, bridge: { url: string }, applySubject: ApplySubject = DEFAULT_APPLY_SUBJECT, comm?: CommState): void {  if (typeof ctx.inject !== 'function') return // 防御面：无 inject 能力的宿主（测试假体/极简壳）零影响
   ctx.inject(['webServer', 'connection'], (sub: any) => {
     const webServer = Reflect.get(sub, 'webServer') as WebServerLike | undefined
     const connection = Reflect.get(sub, 'connection') as ConnectionLike | undefined
@@ -566,6 +641,10 @@ export function mountConsoleRoutes(ctx: {
         kind: 'prefix', path: CONSOLE_DRAFTS_PATH,
         handler: createDraftsHandler({ bridge, reject }),
       }),
+      ...(comm ? [webServer.register({
+        kind: 'exact', path: CONSOLE_COMM_PATH,
+        handler: createCommHandler({ state: comm, reject }),
+      })] : []),
     ]
     return () => unregisters.forEach((u) => u())
   })
@@ -662,12 +741,15 @@ async function probeScheme(base: string, bridge: CoreSystemBridge): Promise<void
 }
 
 export default async function apply(ctx: any, config: Config = {}) {
+  // agent-comm 运行时落账状态（一次激活一份：mailbox=v0.1 既有 + journal=E6 comm 流水）——
+  // 工具面写、读路由读（GET /core-console/comm），同仓同进程。
+  const comm = createCommState()
   if (config.coredUrl) {
     const bridge = makeBridge()
     bridge.url = config.coredUrl
     ctx.provide('coreSystem', bridge)
-    mountConsoleRoutes(ctx, bridge, config.applySubject)
-    mountAgentCommTools(ctx, bridge)
+    mountConsoleRoutes(ctx, bridge, config.applySubject, comm)
+    mountAgentCommTools(ctx, bridge, comm)
     await probeScheme(bridge.url, bridge)
     ctx.logger.info('core-system: 已接入运行中的 cored %s（kinds=%s）', bridge.url, bridge.kinds?.length ?? '?')
     return
@@ -695,10 +777,10 @@ export default async function apply(ctx: any, config: Config = {}) {
   // console v2 数据通路（E2 读代理+E3 写路由）：webServer+connection 可用的宿主上注册
   // （/core-console/api → cored 读面；/core-console/apply → cored 唯一写入口，主体宿主注入；
   // headless 宿主无 webServer，回调永不启动）。
-  mountConsoleRoutes(ctx, bridge, config.applySubject)
+  mountConsoleRoutes(ctx, bridge, config.applySubject, comm)
   // agent-comm 四 op 工具面（E5b）：ctx.tools 可用的宿主上注册（dispatch/query/interrupt/inbox
   // ——cross-agent.md §5 v0.1；to 解析=文档面 bridge+ctx.agents 活体，sessionController 面=回调软出现）。
-  mountAgentCommTools(ctx, bridge)
+  mountAgentCommTools(ctx, bridge, comm)
 
   // 退场回收：无论插件因何种原因卸载，子进程一并带走。
   ctx.effect(() => {

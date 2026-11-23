@@ -58,6 +58,31 @@
     });
   }
 
+  /** agent-comm 读面（E6：GET /core-console/comm——插件宿主 comm 落账快照，
+   *  连接页 agent-comm 详情=op 面/拓扑/消息日志数据源；token 值永不出现于载荷）。 */
+  function comm() {
+    return fetch('/core-console/comm', { headers: { accept: 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+        return r.json();
+      });
+  }
+
+  /** 草稿弃稿（E6 审批驳回=弃稿：DELETE /core-console/drafts/{kind}/{name}?scope=
+   *  ——写路径仍唯一经宿主路由；零文档面动作，不发明反向写路径）。 */
+  function draftDelete(kind, name, scope) {
+    return fetch('/core-console/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
+      (scope ? '?scope=' + encodeURIComponent(scope) : ''), { method: 'DELETE', credentials: 'same-origin' })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (body) {
+          if (!r.ok && r.status !== 404) return { ok: false, status: r.status, error: String(body && body.error || ('HTTP ' + r.status)) };
+          return { ok: true, status: r.status, data: body };
+        });
+      }, function (e) {
+        return { ok: false, status: null, error: String((e && e.message) || e) };
+      });
+  }
+
   /** 全量装载：scheme kinds → 逐 kind 对象枚举 + 四投影面 + 归档事件。任一子面失败=整轮退化（不半装载——
    *  投影一致性优先于可得性；连接态灯已把失联作常态设计，恢复后下轮整装替换）。 */
   function load() {
@@ -166,6 +191,8 @@
     ensure: ensure,
     fetchObject: fetchObject,
     apply: apply,
+    draftDelete: draftDelete,
+    comm: comm,
     get: jget,
     refs: refList,
     docContent: docContent,

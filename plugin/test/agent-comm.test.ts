@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  AGENT_COMM_VERSION, AGENT_COMM_KINDS, MAILBOX_CAPACITY,
+  AGENT_COMM_VERSION, AGENT_COMM_KINDS, MAILBOX_CAPACITY, COMM_JOURNAL_CAPACITY, CommJournal,
   isUuid, isRfc3339, parseAgentRef, agentRefToString,
   validateEnvelope, makeErrorReply, Mailbox, extractAgentDocFacts, resolveTarget, resolveFrom, executeAgentCommOp,
 } from '../src/agent-comm.ts'
@@ -341,10 +341,42 @@ test('装配：撞名工具=warn+跳过其余 op（防御式注册）', () => {
 })
 
 // ---------- bundle 静态面 ----------
-test('bundle 静态面：src/index.ts 装配 agent-comm 四工具 + client 判别器零改动引用声明集', () => {
+test('bundle 静态面：src/index.ts 装配 agent-comm 四工具（comm 状态共享=E6 落账面）+ client 判别器零改动引用声明集', () => {
   const indexSrc = readFileSync(join(PLUGIN, 'src/index.ts'), 'utf8')
-  assert.match(indexSrc, /mountAgentCommTools\(ctx, bridge\)/, 'apply 双分支装配 agent-comm')
+  assert.match(indexSrc, /mountAgentCommTools\(ctx, bridge, comm\)/, 'apply 双分支装配 agent-comm（共享 CommState）')
   assert.match(indexSrc, /AGENT_COMM_KINDS/)
   const chatSrc = readFileSync(join(PLUGIN, 'client/console-chat.js'), 'utf8')
   assert.match(chatSrc, /declaredOpsOf/, 'E5a 判别器在册（op 名命中声明集→ConnectorOps 卡，零改动）')
+})
+
+// ---------- comm 落账面（E6：console-adoption.md §1.13 L42-04 静态面） ----------
+test('CommJournal：环形 FIFO + 最新优先快照 + op 计数 + refs 去重；token 值永不入账', async () => {
+  const j = new CommJournal()
+  for (let i = 0; i < 210; i++) {
+    j.record({ ts: 't' + i, op: 'dispatch', from: 'agent/a@global', to: 'agent/b@global', ok: i % 2 === 0, envelopeId: 'e' + i })
+  }
+  assert.equal(j.snapshot().length, 200, '容量 200 FIFO 淘汰最旧')
+  assert.equal(j.snapshot()[0].envelopeId, 'e209', '最新优先投影')
+  const c = j.counts().dispatch
+  assert.equal(c.total, 200)
+  assert.equal(c.ok, 100)
+  assert.deepEqual(j.refs(), ['agent/a@global', 'agent/b@global'])
+})
+
+test('CommJournal：executeAgentCommOp 全判别结果落账（accepted+error 两路）∧ from 字段携带', async () => {
+  const { executeAgentCommOp } = await import('../src/agent-comm.ts')
+  const j = new CommJournal()
+  const mb = new Mailbox()
+  const deps = baseDeps()
+  await executeAgentCommOp('dispatch', { to: 'agent/core-headless@global', text: 'x', token: 'tok' }, deps, mb, undefined, j)
+  await executeAgentCommOp('dispatch', { to: 'agent/ghost@global', text: 'x', token: 't' }, baseDeps({ core: fakeCore(null) }), mb, undefined, j)
+  await executeAgentCommOp('dispatch', { to: 'agent/core-headless@global', text: 'x' }, baseDeps(), mb, undefined, j) // 无 token=拒
+  const rows = j.snapshot() // 最新优先投影
+  assert.equal(rows.length, 3, '三次调用三行（全量在册）')
+  assert.ok(rows.every((r) => typeof r.from === 'string' && r.from.length > 0), 'from 全量携带（文档面反查或 session 降级）')
+  assert.equal(rows[2].ok, true, '最新优先：accepted 行=末次调用') // 第一笔=真通路受理
+  assert.equal(rows[2].hasToken, true)
+  assert.equal(rows[0].ok, false) // 无 token=拒（最新行）
+  assert.equal(rows[0].hasToken, false, '无 token 调用 hasToken=false')
+  assert.ok(rows[1].error, 'error 文本在册') // to 未注册=error 落账
 })

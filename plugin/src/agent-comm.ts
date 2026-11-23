@@ -166,6 +166,62 @@ export class Mailbox {
   }
 }
 
+/**
+ * comm 落账面（E6：console 连接页 agent-comm 详情数据源；console-adoption.md §1.13）。
+ * 定位=agent-comm 协议运行时自身记账（mailbox 同族扩展）——每 op 调用落一条流水
+ * （accepted+error 两路全量在册），进程内环形缓冲 FIFO 淘汰；token 值永不落账（只记
+ * hasToken 布尔——凭据红线）；console 只读渲染（GET /core-console/comm），非 console
+ * 自建持久状态（红线 2 边界澄清：落账者=协议运行时，渲染者=console）。
+ */
+export interface CommRecord {
+  ts: string
+  op: AgentCommKind
+  from: string
+  to: string
+  ok: boolean
+  envelopeId: string
+  error?: string
+  sessionId?: string
+  /** dispatch 是否携带 token（值永不落账——凭据只在 envelope 内，落账面不复制）。 */
+  hasToken?: boolean
+}
+
+/** comm 落账容量上限（进程内环形 FIFO；防无界增长，mailbox 同款纪律）。 */
+export const COMM_JOURNAL_CAPACITY = 200
+
+export class CommJournal {
+  private records: CommRecord[] = []
+
+  record(r: CommRecord): void {
+    this.records.push(r)
+    while (this.records.length > COMM_JOURNAL_CAPACITY) this.records.shift()
+  }
+
+  /** 快照（最新优先投影；console 读面载荷）。 */
+  snapshot(): CommRecord[] {
+    return this.records.slice().reverse()
+  }
+
+  /** op 分组计数（连接页 op 面实时计数数据源）。 */
+  counts(): Record<string, { total: number; ok: number }> {
+    const out: Record<string, { total: number; ok: number }> = {}
+    for (const r of this.records) {
+      const e = out[r.op] ?? (out[r.op] = { total: 0, ok: 0 })
+      e.total++
+      if (r.ok) e.ok++
+    }
+    return out
+  }
+
+  /** distinct refs（from/to 并集去重——拓扑节点候选面）。 */
+  refs(): string[] {
+    const set = new Set<string>()
+    for (const r of this.records) { set.add(r.from); set.add(r.to) }
+    set.delete('')
+    return [...set]
+  }
+}
+
 /** to 解析结果（判别联合——机械可分支）。 */
 export type ResolvedTarget =
   | { ok: true; ref: AgentRef; sessionId: string; live: boolean; docPhase: string | null }
@@ -260,6 +316,8 @@ export interface AgentCommResult {
   op: AgentCommKind
   envelopeId: string
   to: string
+  /** from=发起方 ref（E6：comm 落账面拓扑/消息日志数据源——信封组装即定值，全部回执点携带）。 */
+  from?: string
   /** dispatch=prompt 回执；query=快照载荷；interrupt=cancel 回执；inbox=信封列表 */
   detail?: Record<string, unknown>
   error?: string
@@ -280,14 +338,39 @@ export interface AgentCommDeps {
 }
 
 /** 四 op 分派核（工具 execute 共用：校验→from/to 解析→原语落点→回执；测试直注 deps）。 */
-export async function executeAgentCommOp(kind: AgentCommKind, args: unknown, deps: AgentCommDeps, mailbox: Mailbox, envelopeId = randomUUID()): Promise<AgentCommResult> {
+export async function executeAgentCommOp(kind: AgentCommKind, args: unknown, deps: AgentCommDeps, mailbox: Mailbox, envelopeId = randomUUID(), journal?: CommJournal): Promise<AgentCommResult> {
+  // 落账包装（E6）：全部判别结果（accepted+error 两路）进 CommJournal——token 值永不落账
+  // （只记 hasToken 布尔）；落账者=协议运行时自身，console 经读路由只渲染。
+  const rawArgs = args
+  const res = await runAgentCommOp(kind, rawArgs, deps, mailbox, envelopeId)
+  if (journal) {
+    journal.record({
+      ts: new Date().toISOString(),
+      op: kind,
+      from: res.from ?? '',
+      to: res.to,
+      ok: res.ok,
+      envelopeId: res.envelopeId,
+      ...(res.error ? { error: res.error } : {}),
+      ...(res.detail && typeof (res.detail as Record<string, unknown>).sessionId === 'string'
+        ? { sessionId: (res.detail as Record<string, unknown>).sessionId as string }
+        : {}),
+      hasToken: typeof (rawArgs as Record<string, unknown>)?.token === 'string'
+        && (rawArgs as Record<string, unknown>).token.length > 0,
+    })
+  }
+  return res
+}
+
+/** 四 op 分派核本体（executeAgentCommOp 的落账内层；签名=外层同形去 journal）。 */
+async function runAgentCommOp(kind: AgentCommKind, args: unknown, deps: AgentCommDeps, mailbox: Mailbox, envelopeId: string): Promise<AgentCommResult> {
   // ① 组装并校验信封（工具参数 → envelope v0.1）
   const a = (typeof args === 'object' && args !== null ? args : {}) as Record<string, unknown>
   const from = await resolveFrom(deps.callerAgentId, deps.core)
   if (!from) {
     const reply = makeErrorReply({ from, inReplyTo: envelopeId, op: kind }, 'from 不可解析（调用者非注册 agent 会话）——agent-comm 对等面信任已注册发起方')
     mailbox.deliver(reply)
-    return { ok: false, op: kind, envelopeId, to: String(a.to ?? ''), error: 'from 不可解析（调用者非注册 agent 会话）' }
+    return { ok: false, op: kind, envelopeId, to: String(a.to ?? ''), from: from ?? undefined, error: 'from 不可解析（调用者非注册 agent 会话）' }
   }
   const draft: AgentCommEnvelope = {
     v: AGENT_COMM_VERSION,
@@ -310,7 +393,7 @@ export async function executeAgentCommOp(kind: AgentCommKind, args: unknown, dep
   if (!check.ok) {
     const reply = makeErrorReply({ from, inReplyTo: envelopeId, op: kind }, `envelope 校验失败：${check.errors.join('；')}`)
     mailbox.deliver(reply)
-    return { ok: false, op: kind, envelopeId, to: draft.to, error: `envelope 校验失败：${check.errors.join('；')}` }
+    return { ok: false, op: kind, envelopeId, to: draft.to, from, error: `envelope 校验失败：${check.errors.join('；')}` }
   }
   const env = check.envelope
   // ② to 解析（inbox 豁免活体：拉取面对着自己/冷会话也要可用—— mailbox 落账不依赖活体）
@@ -318,20 +401,20 @@ export async function executeAgentCommOp(kind: AgentCommKind, args: unknown, dep
   if (!target.ok) {
     const reply = makeErrorReply({ from, inReplyTo: env.id, op: kind }, target.error)
     mailbox.deliver(reply)
-    return { ok: false, op: kind, envelopeId: env.id, to: env.to, error: target.error }
+    return { ok: false, op: kind, envelopeId: env.id, to: env.to, from, error: target.error }
   }
   // ③ 原语落点（§5.7 #4 对照）
   if (kind === 'dispatch') {
     if (!deps.prompt) {
       const reply = makeErrorReply({ from, inReplyTo: env.id, op: kind }, '宿主未装配会话控制器 prompt 面')
       mailbox.deliver(reply)
-      return { ok: false, op: kind, envelopeId: env.id, to: env.to, error: '宿主未装配会话控制器 prompt 面' }
+      return { ok: false, op: kind, envelopeId: env.id, to: env.to, from, error: '宿主未装配会话控制器 prompt 面' }
     }
     const text = String(env.payload.text ?? '')
     if (!text.trim()) {
       const reply = makeErrorReply({ from, inReplyTo: env.id, op: kind }, 'dispatch payload.text 必带（派任务一次意图）')
       mailbox.deliver(reply)
-      return { ok: false, op: kind, envelopeId: env.id, to: env.to, error: 'dispatch payload.text 必带' }
+      return { ok: false, op: kind, envelopeId: env.id, to: env.to, from, error: 'dispatch payload.text 必带' }
     }
     try {
       await deps.prompt({
@@ -340,11 +423,11 @@ export async function executeAgentCommOp(kind: AgentCommKind, args: unknown, dep
         mode: 'queue', // dispatch=异步派任务（§5.2）↔ followup/delivery:queue
         content: [{ type: 'text', text: text + (env.payload.hint ? `\n\n（hint）${String(env.payload.hint)}` : '') }],
       })
-      return { ok: true, op: kind, envelopeId: env.id, to: env.to, detail: { sessionId: target.sessionId, delivery: 'queue', accepted: true } }
+      return { ok: true, op: kind, envelopeId: env.id, to: env.to, from, detail: { sessionId: target.sessionId, delivery: 'queue', accepted: true } }
     } catch (e) {
       const msg = `prompt 落投失败：${String((e as Error)?.message ?? e)}`
       mailbox.deliver(makeErrorReply({ from, inReplyTo: env.id, op: kind }, msg))
-      return { ok: false, op: kind, envelopeId: env.id, to: env.to, error: msg }
+      return { ok: false, op: kind, envelopeId: env.id, to: env.to, from, error: msg }
     }
   }
   if (kind === 'query') {
@@ -357,7 +440,7 @@ export async function executeAgentCommOp(kind: AgentCommKind, args: unknown, dep
     }
     const mailboxPending = mailbox.peek(env.to).length
     return {
-      ok: true, op: kind, envelopeId: env.id, to: env.to,
+      ok: true, op: kind, envelopeId: env.id, to: env.to, from,
       detail: {
         sessionId: target.sessionId,
         live: Boolean(live),
@@ -373,21 +456,21 @@ export async function executeAgentCommOp(kind: AgentCommKind, args: unknown, dep
     if (!deps.cancel) {
       const reply = makeErrorReply({ from, inReplyTo: env.id, op: kind }, '宿主未装配会话控制器 cancel 面')
       mailbox.deliver(reply)
-      return { ok: false, op: kind, envelopeId: env.id, to: env.to, error: '宿主未装配会话控制器 cancel 面' }
+      return { ok: false, op: kind, envelopeId: env.id, to: env.to, from, error: '宿主未装配会话控制器 cancel 面' }
     }
     try {
       await deps.cancel({ sessionId: target.sessionId })
-      return { ok: true, op: kind, envelopeId: env.id, to: env.to, detail: { sessionId: target.sessionId, cancelled: true } }
+      return { ok: true, op: kind, envelopeId: env.id, to: env.to, from, detail: { sessionId: target.sessionId, cancelled: true } }
     } catch (e) {
       const msg = `cancel 落投失败：${String((e as Error)?.message ?? e)}`
       mailbox.deliver(makeErrorReply({ from, inReplyTo: env.id, op: kind }, msg))
-      return { ok: false, op: kind, envelopeId: env.id, to: env.to, error: msg }
+      return { ok: false, op: kind, envelopeId: env.id, to: env.to, from, error: msg }
     }
   }
   // inbox：拉取消费（mailbox 落账）+ 活体 pending 投影（不消费 dsh inbox——那是目标 agent 的驱动队列）
   const drained = mailbox.drain(env.to)
   return {
-    ok: true, op: kind, envelopeId: env.id, to: env.to,
+    ok: true, op: kind, envelopeId: env.id, to: env.to, from,
     detail: { messages: drained, count: drained.length, sessionId: target.sessionId },
   }
 }

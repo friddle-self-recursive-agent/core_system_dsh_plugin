@@ -20,7 +20,7 @@
     wfRunSel: {},        // workflow -> 选中运行 no
     chatUi: {},          // agent -> {sessionId, view:'chat'|'traj', tab:'chat'|'term', filter:'all', search:''}
     term: {},            // sessionId -> {lines:[], demoIdx, userMode}
-    evFilter: { kinds: {}, level: '', range: '24h', q: '', lanes: {} },
+    evFilter: { kinds: {}, level: "", range: "24h", q: "", lane: "" },
     docFilter: { tags: {}, kind: '', draft: '', q: '' },
     trFilter: { phase: '' },
     wImpLevel: 'all',
@@ -78,7 +78,20 @@
     return names.map(agentByName).filter(Boolean);
   }
   function evCount24h() { return M.events.filter(function (e) { return (Date.now() - e.ts.getTime()) < 86400000; }).length; }
-  function pendingApprovals() { return M.approvals.filter(function (a) { return a.status === '待审'; }); }
+  /* E6 审批待审区（console-adoption.md §1.13）=草稿缓存 ∪ ApprovalNeeded 归档行——
+   * 数据源=cored 读面（LIVE 快照；读面未装=空数组诚实，不读 mock）。 */
+  function approvalNeededObjects() {
+    var st = __CC.live ? __CC.live.state : null;
+    var out = [];
+    if (!st || st.status === 'idle') return out;
+    (st.drafts || []).forEach(function (d) { out.push({ kind: 'draft', key: d.kind + '/' + (d.scope || '') + '/' + d.name, draft: d }); });
+    var seen = {};
+    (st.events || []).forEach(function (e) {
+      if (e.type === 'ApprovalNeeded' && e.involved && !seen[e.involved]) { seen[e.involved] = 1; out.push({ kind: 'event', key: e.involved, event: e }); }
+    });
+    return out;
+  }
+  function pendingApprovals() { return approvalNeededObjects(); }
   function openDrifts() { return M.docs.filter(function (d) { return d.kind === 'DriftReport' && d.status !== 'Closed'; }); }
   function runningWfs() { return M.workflows.filter(function (w) { return w.phase !== 'Idle' && w.enabled; }); }
 
@@ -210,26 +223,6 @@
   }
   function addEvent(lane, kind, level, system, object, msg, link) {
     M.events.unshift({ id: 'ev-live-' + Date.now(), lane: lane, kind: kind, level: level, system: system, object: object, msg: msg, ts: new Date(), link: link || null });
-  }
-  function resolveApproval(id, verdict) {
-    var ap = byId(M.approvals, 'id', id);
-    if (!ap || ap.status !== '待审') return;
-    ap.status = verdict === 'ok' ? '已批准' : '已驳回';
-    ap.resolvedAt = new Date();
-    addEvent('event', verdict === 'ok' ? 'ApprovalGranted' : 'ApprovalRejected', verdict === 'ok' ? 'info' : 'warn', ap.scope.replace('systems/', ''), 'Approval/' + id, ap.title + ' → ' + ap.status + (verdict === 'ok' ? '（=Apply）' : ''), '#/approvals');
-    if (verdict === 'ok' && ap.id === 'ap-2') { // 批准 ci-impl 提案 = 草稿自动进入文档草稿区（仍需人在编辑器 Apply）
-      var doc = docByName('ci-impl');
-      if (doc && !docHasDraft('ci-impl')) {
-        var st = docState('ci-impl');
-        st.working = doc.draft || st.working;
-        st.entries.push({ source: 'manual', summary: '审批 ap-2 通过，提案转入草稿', ts: new Date() });
-      }
-    }
-    if (verdict === 'ok' && ap.id === 'ap-1') {
-      var prod = instByName('deploy-system', 'prod');
-      if (prod) { prod.phase = 'Remediating'; }
-      addEvent('phase', 'PhaseChanged', 'info', 'deploy-system', 'ServiceInstance/prod', 'Escalated → Remediating（reason: prod-gate-approved，dep-1 续跑 prod 段）', '#/s/deploy-system/i/prod');
-    }
   }
   function healthScore() {
     var insync = M.systems.filter(function (s) { return s.phase === 'InSync'; }).length;
@@ -380,10 +373,10 @@
     M.workflows.forEach(function (w) { add('Workflows', w.name, (w.enabled ? 'enabled' : 'disabled') + ' · ' + w.phase + ' · ' + w.runsTotal + ' runs', 'wf/' + w.name, 'i-flow'); });
     // agents（E5 起文档面真数据；M.agents mock 行摘除——对话入口=chat/<agent>）
     liveChatAgents().forEach(function (a) { add('Agents', a, 'Agent@文档面 · 对话入口', 'chat/' + a, 'i-bot'); });
-    // connectors
-    M.workservices.forEach(function (w) { add('连接', 'ws/' + w.name, w.kind + ' · ' + w.status, 'ws/' + w.name, 'i-plug'); });
-    M.connectorops.forEach(function (c) { add('连接', 'ops/' + c.name, c.status, 'connector/' + c.name, 'i-plug'); });
-    M.providers.forEach(function (p) { add('连接', p.name, p.status, 'provider/' + p.name, 'i-key'); });
+    // connectors（E6 真数据：cored objects 枚举；读面未装=不列 mock——palette 诚实缩容）
+    (LIVE.state.kinds.length ? LIVE.refs('WorkService') : M.workservices).forEach(function (w) { add('连接', w.name, 'WorkService · r' + w.resourceVersion, 'ws/' + w.name, 'i-plug'); });
+    (LIVE.state.kinds.length ? LIVE.refs('ConnectorOps') : M.connectorops).forEach(function (c) { add('连接', c.name, 'ConnectorOps · r' + c.resourceVersion, 'connector/' + c.name, 'i-plug'); });
+    (LIVE.state.kinds.length ? LIVE.refs('Provider') : M.providers).forEach(function (p) { add('连接', p.name, 'Provider · r' + p.resourceVersion, 'provider/' + p.name, 'i-key'); });
     // docs（模糊搜索）
     var ql = (q || '').toLowerCase();
     var docs = M.docs;
@@ -1125,7 +1118,71 @@
       kv('eventId', e.eventId) + kv('type', e.type) + kv('source', e.source) +
       kv('involved', involvedHtml) + kv('dedupKey', e.dedupKey) + kv('level', e.level) + kv('routedTo', e.routedTo) +
       '</div></div>' +
-      '<div class="small faint" style="margin-top:10px">数据源=event_log 归档（/v1/events，最新优先投影）；involved 点击=对象详情（只读 viewer）</div></div>';
+      '<div class="sec-title" style="margin-top:14px">链路（event→run→workflow→doc——标识符全可点）</div>' +
+      '<div id="ev-chain" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">' +
+      (e.involved ? '<span class="chip click acc" data-act="go" data-go="' + esc(involvedRoute(e.involved)) + '">involved 对象 ' + esc(e.involved) + ' →</span>' : '') +
+      '<span id="ev-chain-runs" class="small faint">run 反查中…</span>' +
+      '</div>' +
+      '<div class="small faint">数据源=event_log 归档（/v1/events，最新优先投影）；run 反查=/v1/workflows/runs eventId 命中；workflow 锚=/v1/triggers/resolve 决策投影（wfAnchorOfRoute 同一锚解析）。</div></div>';
+    hydrateEventChain(e);
+  }
+  /* 链路注水（E6）：run 反查（eventId 命中→#/wf/:name/r/:n）+ workflow 锚（resolve route 投影→#/wf/:name） */
+  function hydrateEventChain(e) {
+    var el = $('#ev-chain-runs');
+    if (!el) return;
+    var stamp = S.route + '|' + S.segs.join('/');
+    var runs = (LIVE.state.runs || []).filter(function (r) { return r.eventId === e.eventId; });
+    var parts = runs.map(function (r) {
+      var wf = r.workflow || 'core-workflow';
+      var no = r.run || r.triggerSeq || '';
+      return '<span class="chip click ok" data-act="go" data-go="wf/' + esc(encodeURIComponent(wf)) + '/r/' + esc(no) + '">run #' + esc(no) + ' @' + esc(wf) + '（' + esc(r.status || '') + '·' + esc(r.phase || '') + '）→</span>';
+    });
+    var anchorDone = false;
+    var anchor = function () {
+      if (anchorDone || !e.involved) return;
+      anchorDone = true;
+      LIVE.get('v1/triggers/resolve?type=' + encodeURIComponent(e.type) + '&involved=' + encodeURIComponent(e.involved))
+        .then(function (res) {
+          if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+          var el2 = $('#ev-chain-runs');
+          if (!el2) return;
+          var wf = wfAnchorOfRoute(res.route || '');
+          var cur = el2.innerHTML;
+          if (wf && res.matched) {
+            cur += ' <span class="chip click mute" data-act="go" data-go="wf/' + esc(encodeURIComponent(wf)) + '">workflow 锚 ' + esc(wf) + '（route ' + esc(res.route) + '·row' + esc(res.row) + '）→</span>';
+          } else if (res.route) {
+            cur += ' <span class="chip mute small">route ' + esc(res.route) + '（执行面 executor=' + esc((res.execution && res.execution.route && res.execution.route.executor) || '') + '，非 workflow 锚）</span>';
+          }
+          el2.innerHTML = cur;
+        }).catch(function () { /* 决策面缺席=链路行保持现状（不报错块） */ });
+    };
+    if (runs.length) {
+      var el2 = $('#ev-chain-runs');
+      if (el2) el2.innerHTML = parts.join(' ');
+      anchor();
+    } else {
+      // runs 快照未含→显式拉一次（runs 面恒开；空=诚实「无 run 投影」不假画）
+      LIVE.get('v1/workflows/runs').then(function (body) {
+        if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+        var el2 = $('#ev-chain-runs');
+        if (!el2) return;
+        var hit = (body.runs || []).filter(function (r) { return r.eventId === e.eventId; });
+        if (hit.length) {
+          el2.innerHTML = hit.map(function (r) {
+            var wf = r.workflow || 'core-workflow';
+            var no = r.run || r.triggerSeq || '';
+            return '<span class="chip click ok" data-act="go" data-go="wf/' + esc(encodeURIComponent(wf)) + '/r/' + esc(no) + '">run #' + esc(no) + ' @' + esc(wf) + '（' + esc(r.status || '') + '·' + esc(r.phase || '') + '）→</span>';
+          }).join(' ');
+        } else {
+          el2.innerHTML = '<span class="chip mute small">无 run 投影（该事件执行面非 workflow 或未接线——诚实空态）</span>';
+        }
+        anchor();
+      }, function () {
+        if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+        var el2 = $('#ev-chain-runs');
+        if (el2) el2.innerHTML = '<span class="small faint">run 反查面暂不可达</span>';
+      });
+    }
   }
   function screenSystem(view) {
     LIVE.ensure();
@@ -1973,8 +2030,12 @@
     var key = edKey(kind, scope, name);
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
       { label: scope, go: scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + encodeURIComponent(scope) }, { label: name }]);
-    var tabs = [['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
-    var tab = S.docTab[key] || 'llm';
+    // E6：ConnectorOps kind 专属第五 tab「运行面」（连接层运行态——缺省 tab=运行面；
+    // 其余 kind 四 tab 不变——文档与资源同规则 E4 既有）。
+    var tabs = kind === 'ConnectorOps'
+      ? [['ops', '运行面'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
+      : [['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
+    var tab = S.docTab[key] || (kind === 'ConnectorOps' ? 'ops' : 'llm');
     view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' +
       '<div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
       '<span id="ed-draft-chip"></span></div>' +
@@ -2120,6 +2181,7 @@
     var tab = S.docTab[key] || 'llm';
     var el = $('#collab-body');
     if (!el) return;
+    if (tab === 'ops') { el.innerHTML = opsTabHtml(kind, scope, name); if (name === 'agent-comm') hydrateCommLive(kind, scope, name); return; }
     if (tab === 'llm') { el.innerHTML = llmTabHtml(kind, scope, name); hydrateProposals(kind, scope, name); return; }
     if (tab === 'draft') { el.innerHTML = draftTabHtml(kind, scope, name); return; }
     if (tab === 'hist') { el.innerHTML = '<div id="ed-history" style="padding:8px 2px">' + liveSkeletonRows(2, 0) + '</div>'; hydrateHistory(kind, scope, name); return; } // 骨架带宿主 id——hydrate 注水点
@@ -2896,195 +2958,167 @@
     var u = S.chatUi[S.params.agent] || {};
     if (ta && u.sessionId) sendChatReal(S.params.agent, u.sessionId, ta.value);
   };
-  /* ================= 屏 8：连接 ================= */
+  /* ================= 屏 8：连接（E6 真数据换装，console-adoption.md §1.13） =================
+   * 三组=cored objects 跨 scope 枚举（E2 通路复用，渲染数据无双源）；ConnectorOps 详情=
+   * 编辑器屏第五 tab「运行面」（route 零改动——文档与资源同规则 E4 既有）。
+   * agent-comm 运行面数据源=GET /core-console/comm（插件宿主 comm 落账快照——协议运行时
+   * 自身记账，console 只渲染）；token 值永不出现（落账只记 hasToken）。 */
+  function connCard(o, route, sub) {
+    return '<div class="conncard" data-act="go" data-go="' + route + '">' +
+      '<div class="cc-top"><span class="chip ok small">' + esc(o.kind) + '</span><span class="cc-name mono">' + esc(o.name) + '</span></div>' +
+      '<div class="cc-desc mono faint small">' + esc(o.scope || '—') + ' · r' + esc(o.resourceVersion) + '</div>' +
+      (sub ? '<div class="cc-desc small">' + esc(sub) + '</div>' : '') + '</div>';
+  }
+  function connCards(kind, routePrefix) {
+    var rows = LIVE.refs(kind);
+    if (!rows.length) return '<div class="empty" style="padding:14px"><div class="e-title">归档窗内暂无 ' + kind + ' 对象在册</div></div>';
+    return rows.map(function (o) {
+      var sub = '';
+      if (kind === 'ConnectorOps') {
+        var c = LIVE.docContent('ConnectorOps', o.scope, o.name);
+        var m = /ops:\s*\[(.*?)\]/.exec(c);
+        if (m) sub = 'ops: ' + m[1].replace(/[\s"']/g, '');
+      }
+      return connCard(o, routePrefix + encodeURIComponent(o.name), sub);
+    }).join('');
+  }
   function screenConnectors(view) {
+    LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '连接' }]);
-    function cards(items, routeFn) {
-      return items.map(function (x) {
-        return '<div class="conncard" data-act="go" data-go="' + routeFn(x) + '">' +
-          '<div class="cc-top">' + statusChip(x.status) + '<span class="cc-name">' + esc(x.name) + '</span></div>' +
-          '<div class="cc-desc">' + esc(x.desc || '') + '</div>' +
-          '<div class="mono faint small">' + esc(x.endpoint || (x.workService ? '挂载: ' + x.workService : x.ops ? 'ops: ' + x.ops.join(' / ') : '')) + '</div></div>';
-      }).join('');
-    }
+    var loading = LIVE.state.status !== 'ok';
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>连接</h1><span class="chip kind">WorkService · ConnectorOps · Provider</span></div>' +
-      '<div class="dh-sub">连接系统把外部世界包装成可调用的面；跨 Agent 通信走 agent-comm（dispatch / query / interrupt / inbox）。</div></div></div>' +
-      '<div class="conn-group"><div class="sec-title">WorkServices</div><div class="conncards">' + cards(M.workservices, function (x) { return 'ws/' + x.name; }) + '</div></div>' +
-      '<div class="conn-group"><div class="sec-title">ConnectorOps 挂载</div><div class="conncards">' + cards(M.connectorops, function (x) { return 'connector/' + x.name; }) + '</div></div>' +
-      '<div class="conn-group"><div class="sec-title">Providers</div><div class="conncards">' + cards(M.providers, function (x) { return 'provider/' + x.name; }) + '</div></div>' +
+      '<div class="dh-sub">连接系统把外部世界包装成可调用的面；跨 Agent 通信走 agent-comm（dispatch / query / interrupt / inbox）。数据源=cored objects 枚举。</div></div></div>' +
+      '<div class="conn-group"><div class="sec-title">WorkServices</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('WorkService', 'ws/')) + '</div></div>' +
+      '<div class="conn-group"><div class="sec-title">ConnectorOps 挂载</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('ConnectorOps', 'connector/')) + '</div></div>' +
+      '<div class="conn-group"><div class="sec-title">Providers</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('Provider', 'provider/')) + '</div></div>' +
       '</div>';
   }
-  function screenConnector(view) {
-    var cop = byId(M.connectorops, 'name', S.params.name);
-    if (!cop) { view.innerHTML = emptyBox('ConnectorOps 不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '连接', go: 'connectors' }, { label: cop.name }]);
-    var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(cop.name) + '</h1>' + statusChip(cop.status) + '<span class="chip kind">ConnectorOps</span></div>' +
-      '<div class="dh-sub">' + esc(cop.desc) + (cop.workService ? ' · 挂在 <span class="lk mono" data-act="go" data-go="ws/' + esc(cop.workService) + '">' + esc(cop.workService) + '</span>' : '') + '</div></div>' +
-      '<div class="dh-actions"><button class="btn" data-act="reconcile" data-sys="connector"><svg class="ic"><use href="#cc-i-refresh"/></svg>触发对账</button></div></div>';
-    var opCards = '<div class="conn-group"><div class="sec-title">op 面（' + cop.ops.length + ' 个原语）</div><div class="op-cards">' +
-      cop.ops.map(function (op) {
-        var descMap = { dispatch: '委派任务（token 整包下发，子 ⊆ 父）', query: '询问/回报（一问一答）', interrupt: '打断/Escalate 通道', inbox: '收件面（未读按 session 归组）', build: '触发构建（branch/job）', 'poll-log': '拉取构建日志尾部', 'trigger-job': '触发指定 job', 'watch-queue': '注册队列 watch', 'open-terminal': '建立 tty 会话', exec: '终端执行命令', put: '产物入库（带 digest）', get: '按 digest 回源', 'verify-digest': 'sha256 校验' };
-        return '<div class="op-card"><div class="oc-name">' + esc(cop.name) + '.' + esc(op) + '</div><div class="oc-desc">' + esc(descMap[op] || 'op 原语') + '</div></div>';
-      }).join('') + '</div></div>';
-    var extra = '';
-    if (cop.name === 'agent-comm') extra = agentCommPanels();
-    else if (cop.name === 'gotty-web') extra = gottyPanels();
-    else extra = genericConnPanels(cop);
-    view.innerHTML = '<div class="view-inner">' + head + opCards + extra + '</div>';
+  /* —— envelope v0.1 字段表（协议文档=静态面，cross-agent.md §5.1；非数据不冒充） —— */
+  var ENVELOPE_V1 = [
+    { field: 'v', type: 'string', req: true, desc: '协议版本，恒 "0.1"' },
+    { field: 'id', type: 'uuid', req: true, desc: '信封幂等键（inbox 按 id 去重）' },
+    { field: 'ts', type: 'RFC3339', req: true, desc: '发出时刻' },
+    { field: 'from', type: 'agent ref', req: true, desc: '发起方 agent/<name>@<scope>' },
+    { field: 'to', type: 'agent ref', req: true, desc: '目标 agent/<name>@<scope>（文档面在册且活体可解析才可投）' },
+    { field: 'kind', type: 'enum', req: true, desc: '四原语之一：dispatch | query | interrupt | inbox' },
+    { field: 'payload', type: 'object', req: true, desc: '自由对象（v0.1 不定 schema；inbox 侧容错收）' },
+    { field: 'refs', type: 'string[]', req: false, desc: '可选文档面引用（systems/<s>/path#revN）' },
+    { field: 'token', type: 'string', req: 'dispatch', desc: '权限凭据——dispatch 必带（无 token 一律拒绝）；值永不入 console 落账面' }
+  ];
+  function envelopeTableHtml() {
+    return '<table class="env-table"><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>' +
+      ENVELOPE_V1.map(function (f) {
+        return '<tr><td class="mono" style="color:#7fb0f9">' + esc(f.field) + '</td><td class="mono small">' + esc(f.type) + '</td>' +
+          '<td>' + (f.req === true ? '<span class="chip warn small">必填</span>' : f.req === 'dispatch' ? '<span class="chip warn small">dispatch 必带</span>' : '<span class="chip mute small">可选</span>') + '</td>' +
+          '<td class="small muted">' + esc(f.desc) + '</td></tr>';
+      }).join('') + '</tbody></table>';
   }
-  function agentCommPanels() {
-    // 拓扑小地图
-    var nodes = [
-      { id: 'root', label: 'builtinRoot', x: 60, y: 90, sub: 'root' },
-      { id: 'dev1', label: 'dev-1', x: 300, y: 30, sub: 'dev-pool' },
-      { id: 'repair', label: 'ci-repair-agent', x: 300, y: 95, sub: 'ci' },
-      { id: 'verify', label: 'ci-verifier', x: 300, y: 160, sub: 'ci' },
-      { id: 'dep', label: 'dep-1', x: 300, y: 225, sub: 'prod' },
-      { id: 'wf', label: 'workflow/engine', x: 60, y: 190, sub: 'dispatch 源' }
-    ];
-    var edges = [['root', 'dev1', 'token ⊆'], ['root', 'repair', 'token ⊆'], ['repair', 'verify', '只读'], ['root', 'dep', 'interrupt'], ['wf', 'repair', 'dispatch'], ['wf', 'dep', 'dispatch']];
-    var edgeHtml = edges.map(function (e) {
-      var a = nodes.filter(function (n) { return n.id === e[0]; })[0], b = nodes.filter(function (n) { return n.id === e[1]; })[0];
-      return '<path class="topo-edge" d="M' + (a.x + 110) + ',' + (a.y + 20) + ' C' + ((a.x + b.x) / 2 + 60) + ',' + (a.y + 20) + ',' + ((a.x + b.x) / 2 + 60) + ',' + (b.y + 20) + ',' + (b.x - 6) + ',' + (b.y + 20) + '"/>' +
-        '<text x="' + ((a.x + b.x) / 2 + 40) + '" y="' + ((a.y + b.y) / 2 + 16) + '" style="font-size:9.5px">' + esc(e[2]) + '</text>';
+  /* —— agent-comm 运行面（comm 落账真数据：拓扑/消息日志/op 计数；token 打码） —— */
+  function agentCommCommPanels(data) {
+    var OP_DESC = { dispatch: '委派任务（异步；token ⊆ 发起方权限面，缺 token=拒）', query: '只读问询（同步快照；§2 对齐表 query↔get/list）', interrupt: '打断/插话（cancel 落点）', inbox: '收件面拉取（error reply 落账消费；豁免活体检查）' };
+    var counts = data.counts || {};
+    var opCards = '<div class="op-cards">' + ['dispatch', 'query', 'interrupt', 'inbox'].map(function (op) {
+      var c = counts[op] || { total: 0, ok: 0 };
+      return '<div class="op-card"><div class="oc-name">agent-comm.' + esc(op) + '</div><div class="oc-desc">' + esc(OP_DESC[op] || '') + '</div>' +
+        '<div class="mono faint small" style="margin-top:4px">落账 ' + c.total + ' 次 · 受理 ' + c.ok + '</div></div>';
+    }).join('') + '</div>';
+    var nodeRefs = (data.refs || []).slice();
+    LIVE.refs('Agent').forEach(function (o) {
+      var c = LIVE.docContent('Agent', o.scope, o.name);
+      if (/connector-ops\/agent-comm/.test(c)) {
+        var ref = 'agent/' + o.name + '@' + o.scope;
+        if (nodeRefs.indexOf(ref) < 0) nodeRefs.push(ref);
+      }
+    });
+    var rows = data.journal || [];
+    var W = 440, rowH = 44, topH = 24;
+    var pos = {};
+    nodeRefs.forEach(function (r, i) { pos[r] = topH + i * rowH; });
+    var H = topH + nodeRefs.length * rowH + 12;
+    var edges = rows.slice(0, 8).filter(function (r) { return pos[r.from] !== undefined && pos[r.to] !== undefined; });
+    var edgeHtml = edges.map(function (r) {
+      var y1 = pos[r.from] + 14, y2 = pos[r.to] + 14;
+      var mid = (W / 2 + 40);
+      var col = r.ok ? '#22c55e' : '#f87171';
+      return '<path class="topo-edge" style="stroke:' + col + '" d="M120,' + y1 + ' C' + mid + ',' + y1 + ',' + mid + ',' + y2 + ',320,' + y2 + '"/>';
     }).join('');
-    var topo = '<svg class="topo-svg" width="440" height="275" viewBox="0 0 440 275">' + edgeHtml +
-      nodes.map(function (n) {
-        return '<g class="topo-node" data-act="' + (n.id === 'wf' ? 'go' : 'go') + '" data-go="' + (n.id === 'wf' ? 'workflows' : 'agent/' + esc(n.label)) + '">' +
-          '<rect x="' + n.x + '" y="' + n.y + '" width="116" height="40" rx="7"/><text x="' + (n.x + 10) + '" y="' + (n.y + 17) + '" style="fill:#e6e9ef;font-weight:600">' + esc(n.label) + '</text>' +
-          '<text x="' + (n.x + 10) + '" y="' + (n.y + 32) + '">' + esc(n.sub) + '</text></g>';
-      }).join('') + '</svg>';
-    // 消息日志
-    var logRows = M.commLog.map(function (l) {
-      var st = l.status === '失败' ? '<span class="chip danger small">失败</span>' : l.status === '已确认' ? '<span class="chip ok small">已确认</span>' : '<span class="chip acc small">已送达</span>';
-      return '<tr class="row-click" data-act="go" data-go="session/' + esc(l.session) + '"><td class="mono faint">' + fmtTime(l.ts) + '</td>' +
-        '<td class="mono"><span class="lk" data-act="stop">' + esc(l.from) + '</span> → <span class="lk" data-act="stop">' + esc(l.to) + '</span></td>' +
-        '<td><span class="chip acc small mono">' + esc(l.op) + '</span></td>' +
-        '<td class="small">' + esc(l.payload) + '</td>' +
-        '<td><span class="tag">' + esc(l.token) + '</span></td>' + '<td>' + st + '</td>' +
-        '<td><span class="lk mono small">' + esc(l.session) + '</span></td></tr>';
+    var nodeHtml = nodeRefs.map(function (r) {
+      var y = pos[r];
+      var nm = r.replace(/^agent\//, '');
+      return '<g class="topo-node" data-act="go" data-go="agent/' + esc(r.replace(/^agent\//, '').replace(/@.*$/, '')) + '">' +
+        '<rect x="0" y="' + y + '" width="120" height="28" rx="6"/><text x="8" y="' + (y + 19) + '" style="fill:#e6e9ef">' + esc(nm) + '</text></g>';
     }).join('');
-    var envRows = M.envelope.map(function (f) {
-      return '<tr><td class="mono" style="color:#7fb0f9">' + esc(f.field) + '</td><td class="mono small">' + esc(f.type) + '</td>' +
-        '<td>' + (f.req ? '<span class="chip warn small">必填</span>' : '<span class="chip mute small">可选</span>') + '</td><td class="small muted">' + esc(f.desc) + '</td></tr>';
+    var edgeLegend = '<div class="small faint" style="margin-top:4px">边=comm 落账流水（绿=受理，红=error 回执；v0.1 dispatch 异步——业务回复在目标 SessionLog，不自动回传）。</div>';
+    var topo = nodeRefs.length
+      ? '<svg class="topo-svg" width="' + W + '" height="' + Math.max(H, 80) + '" viewBox="0 0 ' + W + ' ' + Math.max(H, 80) + '">' + edgeHtml + nodeHtml + '</svg>' + edgeLegend
+      : '<div class="empty" style="padding:12px"><div class="e-title">落账窗内暂无节点（comm 落账为空）</div></div>';
+    var logRows = rows.slice(0, 20).map(function (r) {
+      var st = r.ok ? '<span class="chip ok small">受理</span>' : '<span class="chip danger small">error</span>';
+      return '<tr' + (r.sessionId ? ' class="row-click" data-act="go" data-go="session/' + esc(r.sessionId) + '"' : '') + '>' +
+        '<td class="mono faint small">' + esc(String(r.ts || '').replace('T', ' ').slice(0, 19)) + '</td>' +
+        '<td class="mono small">' + esc(r.from) + ' → ' + esc(r.to) + '</td>' +
+        '<td><span class="chip acc small mono">' + esc(r.op) + '</span></td>' +
+        '<td class="mono faint small">' + esc(String(r.envelopeId || '').slice(0, 8)) + '</td>' +
+        '<td>' + (r.hasToken ? '<span class="tag">✔ 已携（值打码）</span>' : '<span class="tag">✗ 缺</span>') + '</td>' +
+        '<td>' + st + '</td></tr>';
     }).join('');
-    return '<div class="grid" style="grid-template-columns:440px 1fr">' +
-      '<div class="card"><div class="card-h"><span class="h-title">拓扑（agent ↔ 子 agent · 连线可点）</span></div><div class="card-b">' + topo +
-      '<div class="small faint" style="margin-top:6px">上级委派 = 权限整包下发（token），子 agent 权限 ⊆ 父；打断走 interrupt（Escalate 通道）。</div></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">消息日志（' + M.commLog.length + '）</span><span class="h-sub">行点击进所属 session</span></div>' +
-      '<div style="max-height:300px;overflow-y:auto"><table class="tbl"><thead><tr><th>时间</th><th>from → to</th><th>op</th><th>payload 摘要</th><th>token scope</th><th>状态</th><th>session</th></tr></thead><tbody>' + logRows + '</tbody></table></div></div></div>' +
-      '<div class="card" style="margin-top:14px"><div class="card-h"><span class="h-title">协议 envelope · v0.1 字段表</span></div>' +
-      '<table class="env-table"><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>' + envRows + '</tbody></table></div>';
+    var logHtml = rows.length
+      ? '<div style="max-height:280px;overflow-y:auto"><table class="tbl"><thead><tr><th>时刻</th><th>from → to</th><th>op</th><th>envelope</th><th>token</th><th>状态</th></tr></thead><tbody>' + logRows + '</tbody></table></div>'
+      : '<div class="empty" style="padding:12px"><div class="e-title">落账窗内暂无 comm 流水（四 op 未被调用）</div></div>';
+    return opCards +
+      '<div class="grid" style="grid-template-columns:460px 1fr;margin-top:12px">' +
+      '<div class="card"><div class="card-h"><span class="h-title">拓扑（from→to · 节点可点进 agent）</span></div><div class="card-b">' + topo + '</div></div>' +
+      '<div class="card"><div class="card-h"><span class="h-title">消息日志（' + rows.length + '，comm 落账 · token 值打码）</span><span class="h-sub">行点击=sessionId 深链</span></div><div class="card-b">' + logHtml + '</div></div></div>';
   }
-  function gottyPanels() {
-    var yaml = '# systems/connector/mounts/gotty-web.yaml\napiVersion: core/v1\nkind: ConnectorOps\nmetadata:\n  name: gotty-web\n  scope: systems/connector\nspec:\n  workService: onedev\n  terminal:\n    defaultRunner: gotty        # 网页终端（默认）\n    runners:\n      - {name: gotty,      image: gotty:2.0}\n      - {name: opencode,   cmd: "opencode"}\n      - {name: claude-code, cmd: "claude"}\n      - {name: dsh,        cmd: "dsh attach"}\n  heartbeat: 30s\n  remediate: {backoff: 30s*2^n, maxAttempts: 3}';
-    var runnerRows = [
-      ['gotty（默认）', '纯网页终端，ttys 直连', 'sess-repair-term-1 在用'],
-      ['opencode cli', '终端内拉起 opencode', 'dev-1 的 opencode 会话同构'],
-      ['claude-code', '终端内拉起 claude', 'sess-core-0 归档会话用过后归档'],
-      ['内嵌 dsh', 'attach 到宿主 dsh 会话', '默认对话 runner 的终端形态']
-    ];
-    return '<div class="grid" style="grid-template-columns:1fr 1fr">' +
-      '<div class="card"><div class="card-h"><span class="h-title">支持的 runner（默认 gotty 终端接入）</span></div><table class="tbl"><thead><tr><th>runner</th><th>说明</th><th>示例</th></tr></thead><tbody>' +
-      runnerRows.map(function (r) { return '<tr><td class="mono">' + esc(r[0]) + '</td><td class="small muted">' + esc(r[1]) + '</td><td class="small faint">' + esc(r[2]) + '</td></tr>'; }).join('') +
-      '</tbody></table><div class="card-b" style="border-top:1px solid var(--border)"><span class="lk small" data-act="open-term" data-agent="ci-repair-agent">体验：打开 ci-repair-agent 的 gotty 终端会话 →</span></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">挂载 yaml 示例（编辑 = Apply）</span></div><div class="card-b"><div class="yaml-block">' + esc(yaml) + '</div>' +
-      '<div style="margin-top:8px"><span class="lk small" data-act="go" data-go="doc/connector-impl">相关 ImplDoc：connector-impl（挂载声明）→</span></div></div></div></div>' +
-      '<div class="card" style="margin-top:14px"><div class="card-h"><span class="h-title">健康（conn-drift-017 修复中）</span></div><div class="card-b"><div class="kv"><span class="k">当前状态</span><span class="v">' + 'Degraded：gotty-web 心跳 3 次超时，Remediating attempt 1/3（backoff 30s）' + '</span>' +
-      '<span class="k">相关 DriftReport</span><span class="v"><span class="lk mono" data-act="go" data-go="doc/conn-drift-017">conn-drift-017 →</span></span></div></div></div>';
+  /* —— ConnectorOps 运行面 tab（kind 专属第五 tab；agent-comm=comm 落账活体） —— */
+  function opsTabHtml(kind, scope, name) {
+    var content = LIVE.docContent('ConnectorOps', scope, name);
+    var wsRef = (/workservice:\s*["']?([A-Za-z0-9-_.]+)/.exec(content) || [])[1] || '';
+    var escRe = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var mounters = LIVE.refs('Agent').filter(function (o) {
+      return new RegExp('connector-ops\\/' + escRe).test(LIVE.docContent('Agent', o.scope, o.name));
+    });
+    var head = '<div class="kv"><span class="k">workservice</span><span class="v mono">' +
+      (wsRef ? '<span class="lk" data-act="go" data-go="ws/' + esc(encodeURIComponent(wsRef)) + '">' + esc(wsRef) + '</span>' : '<span class="faint">—</span>') + '</span>' +
+      '<span class="k">挂载方（Agent spec.connectorOps 反查）</span><span class="v">' +
+      (mounters.length ? mounters.map(function (o) { return '<span class="lk mono" data-act="go" data-go="agent/' + esc(o.name) + '">' + esc(o.name) + '</span>'; }).join(' · ') : '<span class="faint">无挂载</span>') + '</span></div>';
+    if (name !== 'agent-comm') {
+      var evs = (LIVE.state.events || []).filter(function (e) { return (e.involved || '').indexOf('ConnectorOps/' + scope + '/' + name) === 0; }).slice(0, 8);
+      var evHtml = evs.length ? evs.map(function (e) {
+        return '<div class="mini-row" data-act="go" data-go="event/' + esc(e.eventId) + '"><span class="lamp ' + (e.level === 'warn' || e.level === 'error' ? 'warn' : 'acc') + '"></span><div class="mr-main"><div>' + esc(e.type) + '</div><div class="mr-sub mono small">' + esc(String(e.ts || '').replace('T', ' ').slice(0, 19)) + '</div></div></div>';
+      }).join('') : '<div class="empty" style="padding:12px"><div class="e-title">归档窗内暂无该对象事件</div></div>';
+      var opsRow = (function () {
+        var m = /ops:\s*\[(.*?)\]/.exec(content);
+        var ops = m ? m[1].split(',').map(function (x) { return x.replace(/[\s"']/g, ''); }).filter(Boolean) : [];
+        return ops.map(function (op) { return '<div class="op-card"><div class="oc-name">' + esc(name) + '.' + esc(op) + '</div><div class="oc-desc">op 原语（spec.ops 现读）</div></div>'; }).join('') ||
+          '<div class="empty" style="padding:12px"><div class="e-title">spec.ops 未解析（正文现读）</div></div>';
+      })();
+      return head +
+        '<div class="op-cards" style="margin-top:12px">' + opsRow + '</div>' +
+        '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">相关事件（involved 过滤）</span></div><div class="card-b">' + evHtml + '</div></div>' +
+        '<div class="small faint" style="margin-top:8px">非 agent-comm 挂载面：运行流水暂无独立落账面（declared 余量）——编辑器深链=本屏 tab「草稿」。</div>';
+    }
+    return head + '<div id="comm-live" style="margin-top:12px">' + liveSkeletonRows(3, 0) + '</div>';
   }
-  function genericConnPanels(cop) {
-    var evs = M.events.filter(function (e) { return e.object.indexOf(cop.name) >= 0 || (e.msg && e.msg.indexOf(cop.name) >= 0); }).slice(0, 8);
-    var evHtml = evs.length ? evs.map(function (e) {
-      return '<div class="mini-row" data-act="go" data-go="event/' + esc(e.id) + '"><span class="lamp ' + (e.level === 'warn' || e.level === 'error' ? 'warn' : 'acc') + '"></span><div class="mr-main"><div>' + esc(e.msg) + '</div><div class="mr-sub mono">' + esc(e.kind) + '</div></div><span class="faint mono small">' + fmtAgo(e.ts) + '</span></div>';
-    }).join('') : '<div class="empty" style="padding:16px"><div class="e-title">近期无相关事件</div></div>';
-    var users = Object.keys(M.agents).filter(function (a) { return M.agents[a].perms.connectorops.indexOf(cop.name) >= 0; });
-    return '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">挂载方（agent 权限面引用）</span></div><div class="mini-list">' +
-      users.map(function (u) { return '<div class="mini-row" data-act="go" data-go="agent/' + esc(u) + '"><svg class="ic"><use href="#cc-i-bot"/></svg><div class="mr-main"><div class="mono">' + esc(u) + '</div><div class="mr-sub">' + esc(M.agents[u].instance) + '</div></div></div>'; }).join('') +
-      '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">相关事件</span></div><div class="mini-list">' + evHtml + '</div></div></div>';
+  function hydrateCommLive(kind, scope, name) {
+    var el = $('#comm-live');
+    if (!el) return;
+    var stamp = S.route + '|' + S.segs.join('/');
+    __CC.live.comm().then(function (data) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var el2 = $('#comm-live');
+      if (!el2) return;
+      el2.innerHTML = agentCommCommPanels(data) +
+        '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">协议 envelope · v0.1 字段表</span><span class="h-sub">随协议演进（cross-agent.md §5）</span></div>' +
+        envelopeTableHtml() + '</div>';
+    }, function (e) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var el2 = $('#comm-live');
+      if (el2) el2.innerHTML = '<div class="small faint">comm 落账读面暂不可达（' + esc(String((e && e.message) || e)) + '）——宿主未装配该路由（旧插件代）或恢复后重进即现读</div>';
+    });
   }
-  function screenWorkService(view) {
-    var ws = byId(M.workservices, 'name', S.params.name);
-    if (!ws) { view.innerHTML = emptyBox('WorkService 不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '连接', go: 'connectors' }, { label: ws.name }]);
-    var cops = M.connectorops.filter(function (c) { return c.workService === ws.name; });
-    var evs = M.events.filter(function (e) { return e.object.indexOf(ws.name) >= 0; }).slice(0, 8);
-    var facet = [
-      ['端点', ws.endpoint], ['健康', ws.status === 'Ready' ? 'Ready（心跳新鲜）' : 'Degraded（5xx 抖动后恢复中）'],
-      ['scope', ws.scope], ['描述', ws.desc]
-    ];
-    view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(ws.name) + '</h1>' + statusChip(ws.status) + '<span class="chip kind">WorkService</span></div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(ws.endpoint) + '</span></div></div>' +
-      '<div class="dh-actions"><button class="btn" data-act="reconcile" data-sys="connector">触发对账</button></div></div>' +
-      '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">六面体信息</span></div><div class="card-b"><div class="kv">' +
-      facet.map(function (f) { return '<span class="k">' + f[0] + '</span><span class="v">' + esc(f[1]) + '</span>'; }).join('') + '</div></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">被挂载的 ConnectorOps（' + cops.length + '）</span></div><div class="mini-list">' +
-      (cops.length ? cops.map(function (c) { return '<div class="mini-row" data-act="go" data-go="connector/' + esc(c.name) + '"><div class="mr-main"><div class="mono">' + esc(c.name) + '</div><div class="mr-sub">ops: ' + esc(c.ops.join(' / ')) + '</div></div>' + statusChip(c.status) + '</div>'; }).join('') : '<div class="empty" style="padding:16px"><div class="e-title">暂无挂载</div></div>') + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">最近事件</span></div><div class="mini-list">' +
-      (evs.length ? evs.map(function (e) { return '<div class="mini-row" data-act="go" data-go="event/' + esc(e.id) + '"><span class="lamp ' + (e.level === 'warn' ? 'warn' : 'acc') + '"></span><div class="mr-main"><div>' + esc(e.msg) + '</div></div><span class="faint mono small">' + fmtAgo(e.ts) + '</span></div>'; }).join('') : '<div class="empty" style="padding:16px"><div class="e-title">近期无事件</div></div>') + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">趋势</span></div><div class="card-b" style="text-align:center">' + sparkSVG('ws:' + ws.name, ws.status === 'Ready' ? '#22c55e' : '#f59e0b', 260, 60, 0.5) + '<div class="small faint">24h 健康度</div></div></div>' +
-      '</div></div>';
-  }
-  function screenProvider(view) {
-    var p = byId(M.providers, 'name', S.params.name);
-    if (!p) { view.innerHTML = emptyBox('Provider 不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '连接', go: 'connectors' }, { label: p.name }]);
-    var users = Object.keys(M.agents).filter(function (a) { return M.agents[a].perms.providers.indexOf(p.name) >= 0; });
-    var wfs = M.workflows.filter(function (w) { return w.services.llm && w.services.llm.provider === p.name; });
-    view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(p.name) + '</h1>' + statusChip(p.status) + '<span class="chip kind">Provider</span></div>' +
-      '<div class="dh-sub">' + esc(p.desc) + '</div></div></div>' +
-      '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">账号引用（脱敏）</span></div><div class="card-b"><div class="kv">' +
-      '<span class="k">凭据</span><span class="v mono">' + esc(p.name) + '-tok-****-' + M.hex(4, seeded(p.name)) + '（secret 面，不入公开仓）</span>' +
-      '<span class="k">scope</span><span class="v mono">' + esc(p.scope) + '</span>' +
-      '<span class="k">模型档</span><span class="v mono">' + (p.name === 'llm-main' ? 'flash-tier（R-PUB：选型不入公开仓）' : 'robot account') + '</span></div></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">被引用（agent 权限面）</span></div><div class="mini-list">' +
-      (users.length ? users.map(function (u) { return '<div class="mini-row" data-act="go" data-go="agent/' + esc(u) + '"><svg class="ic"><use href="#cc-i-bot"/></svg><div class="mr-main"><div class="mono">' + esc(u) + '</div><div class="mr-sub">' + esc(M.agents[u].instance) + '</div></div></div>'; }).join('') : '<div class="empty" style="padding:14px"><div class="e-title">无</div></div>') + '</div></div>' +
-      '<div class="card" style="grid-column:1/-1"><div class="card-h"><span class="h-title">使用它的 workflows（llm provider 声明）</span></div><div class="mini-list">' +
-      wfs.map(function (w) { return '<div class="mini-row" data-act="go" data-go="wf/' + esc(w.name) + '"><div class="mr-main"><div class="mono">' + esc(w.name) + '</div><div class="mr-sub">model: ' + esc(w.services.llm.model) + '</div></div>' + phaseChip(w.phase) + '</div>'; }).join('') + '</div></div>' +
-      '</div></div>';
-  }
-  function screenRef(view) {
-    var r = M.refs.filter(function (x) { return x.name === decodeURIComponent(S.params.name); })[0];
-    if (!r) { view.innerHTML = emptyBox('Ref 不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '连接', go: 'connectors' }, { label: r.name }]);
-    var backUsers = Object.keys(M.agents).filter(function (a) { return M.agents[a].perms.refs.indexOf(r.name) >= 0; });
-    view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(r.name) + '</h1><span class="chip ok">' + esc(r.status) + '</span><span class="chip kind">Ref</span></div>' +
-      '<div class="dh-sub">跨系统引用：' + esc(r.from) + ' → ' + esc(r.to) + '（解析后跳目标系统的树）</div></div></div>' +
-      '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">解析目标</span></div><div class="mini-list">' +
-      '<div class="mini-row" data-act="go" data-go="s/' + esc(r.to) + '"><svg class="ic"><use href="#cc-i-grid"/></svg><div class="mr-main"><div class="mono">' + esc(r.to) + '</div><div class="mr-sub">目标系统（ServiceDesc）</div></div>' + phaseChip(sysByName(r.to) ? sysByName(r.to).phase : 'Idle') + '</div></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">引用者（反向链）</span></div><div class="mini-list">' +
-      '<div class="mini-row" data-act="go" data-go="overview"><svg class="ic"><use href="#cc-i-plug"/></svg><div class="mr-main"><div class="mono">' + esc(r.from) + '</div><div class="mr-sub">来自系统/挂载</div></div></div>' +
-      backUsers.map(function (u) { return '<div class="mini-row" data-act="go" data-go="agent/' + esc(u) + '"><svg class="ic"><use href="#cc-i-bot"/></svg><div class="mr-main"><div class="mono">' + esc(u) + '</div><div class="mr-sub">agent 权限面引用</div></div></div>'; }).join('') + '</div></div>' +
-      '</div></div>';
-  }
-  function screenRole(view) {
-    var role = byId(M.roles, 'name', S.params.name);
-    if (!role) { view.innerHTML = emptyBox('Role 不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '连接', go: 'connectors' }, { label: role.name }]);
-    var holders = Object.keys(M.agents).filter(function (a) { return M.agents[a].perms.roles.indexOf(role.name) >= 0; });
-    var cops = M.connectorops;
-    var rows = cops.map(function (c) {
-      var v = holders.some(function (h) { return M.agents[h].perms.connectorops.indexOf(c.name) >= 0; }) || role.scope === 'global';
-      return '<tr><td class="mono">' + esc(c.name) + '.' + esc(c.ops[0]) + '</td><td>' + (v ? '<span style="color:#4ade80">✓ 允许</span>' : '<span style="color:var(--text-3)">✗ 拒绝</span>') + '</td><td class="small muted">' + esc(c.desc) + '</td></tr>';
-    }).join('');
-    view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(role.name) + '</h1><span class="chip kind">Role</span></div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(role.scope) + '</span><span>' + esc(role.desc) + '</span></div></div></div>' +
-      '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">权限条目矩阵</span></div><table class="tbl"><thead><tr><th>op</th><th>裁决</th><th>面说明</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">挂载者（agent）</span></div><div class="mini-list">' +
-      (holders.length ? holders.map(function (h) { return '<div class="mini-row" data-act="go" data-go="agent/' + esc(h) + '"><svg class="ic"><use href="#cc-i-bot"/></svg><div class="mr-main"><div class="mono">' + esc(h) + '</div><div class="mr-sub">' + esc(M.agents[h].instance) + '</div></div>' + phaseChip(M.agents[h].phase) + '</div>'; }).join('') : '<div class="empty" style="padding:16px"><div class="e-title">未挂载到任何 agent</div></div>') + '</div></div>' +
-      '</div></div>';
-  }
+
   /* ================= Agent / Session 详情页 ================= */
   function screenSession(view) {
     LIVE.ensure();
@@ -3153,46 +3187,62 @@
     go('chat/' + el.dataset.agent);
   };
 
-  /* ================= 屏 9：事件流（全局） ================= */
+  /* ================= 屏 9：事件流（E6 真数据换装，console-adoption.md §1.13） =================
+   * 数据源=cored /v1/events 归档投影（LIVE 快照 limit=100——千级虚拟滚动=E7 余量如实标注）；
+   * 三泳道=eventLaneOf 类型族映射；聚合面板=归档窗内实数（成功率/token=n/a 不冒充）。 */
+  function eventLaneOf(type) {
+    if (type === 'DocApplied') return 'phase';                      // 状态变迁=对象 rv 前进
+    if (type === 'ExternalChanged' || type === 'MetricThreshold' ||
+        type === 'DriftFixed' || type === 'ReconcileTick') return 'data'; // 数据事件=数据面/巡检驱动源族
+    return 'event';                                                  // 事件流=其余（缺省不丢行）
+  }
+  var LANE_VIEW = { event: { label: '事件流', color: '#7fb0f9' }, phase: { label: '状态变迁', color: '#a78bfa' }, data: { label: '数据事件', color: '#22c55e' } };
   function screenEvents(view) {
+    LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '事件流' }]);
     var f = S.evFilter;
-    var kinds = [];
-    M.events.forEach(function (e) { if (kinds.indexOf(e.kind) < 0) kinds.push(e.kind); });
-    kinds.sort();
-    var topKinds = kinds.slice(0, 10);
-    var driftN = openDrifts().length;
-    var apN = pendingApprovals().length;
-    var dead = 0.8;
-    var okRate = Math.round(M.workflows.reduce(function (a, w) { return a + w.successRate; }, 0) / M.workflows.length);
+    var evs = LIVE.state.events || [];
+    var types = [];
+    evs.forEach(function (e) { if (types.indexOf(e.type) < 0) types.push(e.type); });
+    types.sort();
+    var apN = (LIVE.state.events || []).filter(function (e) { return e.type === 'ApprovalNeeded'; }).length;
+    var dead = evs.length ? Math.round(evs.filter(function (e) { return String(e.routedTo || '').indexOf('dead-letter') >= 0; }).length * 1000 / evs.length) / 10 : 0;
+    var typeCount = {};
+    evs.forEach(function (e) { typeCount[e.type] = (typeCount[e.type] || 0) + 1; });
+    var top5 = Object.keys(typeCount).sort(function (a, b) { return typeCount[b] - typeCount[a]; }).slice(0, 5);
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>事件流</h1><span class="chip kind">三泳道混排 · ' + M.events.length + ' 条</span></div>' +
-      '<div class="dh-sub">Event / 状态变迁 / 数据事件 · 点任意一条跳相关对象（第二层信息流）</div></div></div>' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>事件流</h1><span class="chip kind">三泳道混排 · 归档窗 ' + evs.length + ' 条</span></div>' +
+      '<div class="dh-sub">Event / 状态变迁 / 数据事件 · 点任意一条跳相关对象（event→run→workflow→doc 链路）。数据源=event_log 归档投影（/v1/events limit=100；千级虚拟滚动=E7 余量）。</div></div></div>' +
       '<div class="grid" style="grid-template-columns:1fr 300px">' +
       '<div>' +
       '<div class="filter-bar"><svg class="ic" style="color:var(--text-3)"><use href="#cc-i-filter"/></svg>' +
       '<span class="fchip' + (!Object.keys(f.kinds).some(function (k) { return f.kinds[k]; }) ? ' on' : '') + '" data-act="ev-kind" data-k="">全部类型</span>' +
-      topKinds.map(function (k) { return '<span class="fchip' + (f.kinds[k] ? ' on' : '') + '" data-act="ev-kind" data-k="' + esc(k) + '">' + esc(k) + '</span>'; }).join('') + '</div>' +
+      types.map(function (k) { return '<span class="fchip' + (f.kinds[k] ? ' on' : '') + '" data-act="ev-kind" data-k="' + esc(k) + '">' + esc(k) + '</span>'; }).join('') + '</div>' +
       '<div class="filter-bar">' +
       '<select id="ev-level"><option value="">全部级别</option><option>info</option><option>warn</option><option>error</option><option>fatal</option></select>' +
       '<select id="ev-range">' + M.TIME_RANGES.map(function (r) { return '<option value="' + r.id + '">' + r.label + '</option>'; }).join('') + '</select>' +
-      '<select id="ev-sys"><option value="">全部系统</option>' + M.systems.map(function (s) { return '<option>' + esc(s.name) + '</option>'; }).join('') + '</select>' +
-      '<input type="search" id="ev-q" placeholder="对象/消息搜索…" style="width:200px">' +
+      '<select id="ev-lane"><option value="">全部泳道</option><option value="event">事件流</option><option value="phase">状态变迁</option><option value="data">数据事件</option></select>' +
+      '<input type="search" id="ev-q" placeholder="对象/类型搜索…" style="width:200px">' +
       '<span class="count-note" id="ev-count-note"></span></div>' +
       '<div id="ev-vlist2"></div></div>' +
       '<div style="display:grid;gap:12px;align-self:start">' +
-      '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span></div><div class="card-b" style="display:grid;gap:10px">' +
-      '<div class="kv"><span class="k">driftOpen</span><span class="v mono" style="color:' + (driftN ? 'var(--warn)' : 'var(--ok)') + '">' + driftN + '</span></div>' +
-      '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (apN ? 'var(--warn)' : 'var(--ok)') + '">' + apN + '</span></div>' +
+      '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span><span class="h-sub">归档窗内实数</span></div><div class="card-b" style="display:grid;gap:10px">' +
+      '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (apN ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + apN + '</span></span></div>' +
       '<div class="kv"><span class="k">死信率</span><span class="v mono">' + dead + '%</span></div>' +
-      '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">' + okRate + '%</span></div></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">token 消耗（24h）</span></div><div class="card-b" style="text-align:center">' + sparkSVG('global:tokens', '#a78bfa', 240, 56) + '<div class="small faint mono">日预算 $15 · 当前 $9.4（62%）</div></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">泳道图例</span></div><div class="card-b small faint">Event 流：ExternalChanged / ApprovalNeeded / DocApplied / Escalated…<br>状态变迁：phase/conditions 跳变（含 reason）<br>数据事件：阈值越线 / 产物入库 / 同步完成</div></div>' +
+      '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">n/a</span><span class="small faint">run 终态事件未落归档（declared 余量，不冒充）</span></div>' +
+      '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据面余量</span></div>' +
+      '<div class="kv"><span class="k">类型分布</span><span class="v small">' + (top5.length ? top5.map(function (t) { return '<span class="tag mono">' + esc(t) + '×' + typeCount[t] + '</span>'; }).join(' ') : '<span class="faint">—</span>') + '</span></div>' +
+      '</div></div>' +
+      '<div class="card"><div class="card-h"><span class="h-title">泳道图例</span></div><div class="card-b small faint">' +
+      Object.keys(LANE_VIEW).map(function (k) { return '<div style="margin:3px 0"><span class="tag" style="color:' + LANE_VIEW[k].color + ';border-color:' + LANE_VIEW[k].color + '44">' + LANE_VIEW[k].label + '</span> ' +
+        (k === 'phase' ? 'DocApplied（对象 rv 前进）' : k === 'data' ? 'ExternalChanged / MetricThreshold / DriftFixed / ReconcileTick' : '其余（ApprovalNeeded / Escalate / HeartbeatLost…）') + '</div>'; }).join('') + '</div></div>' +
       '</div></div></div>';
-    $('#ev-level').value = f.level; $('#ev-range').value = f.range; $('#ev-q').value = f.q;
+    $('#ev-level').value = f.level; $('#ev-range').value = f.range; $('#ev-q').value = (f.q || '');
+    if (f.lane) $('#ev-lane').value = f.lane;
     paintGlobalEvents();
     $('#ev-level').addEventListener('change', function () { f.level = this.value; paintGlobalEvents(); });
     $('#ev-range').addEventListener('change', function () { f.range = this.value; paintGlobalEvents(); });
+    $('#ev-lane').addEventListener('change', function () { f.lane = this.value; paintGlobalEvents(); });
     var deb;
     $('#ev-q').addEventListener('input', function () { var v = this.value; clearTimeout(deb); deb = setTimeout(function () { f.q = v; paintGlobalEvents(); }, 160); });
   }
@@ -3200,25 +3250,28 @@
     var f = S.evFilter;
     var range = byId(M.TIME_RANGES, 'id', f.range) || M.TIME_RANGES[2];
     var kinds = Object.keys(f.kinds).filter(function (k) { return f.kinds[k]; });
-    var ql = f.q.toLowerCase();
-    var items = M.events.filter(function (e) {
-      if (kinds.length && kinds.indexOf(e.kind) < 0) return false;
+    var ql = (f.q || '').toLowerCase();
+    var evs = LIVE.state.events || [];
+    var items = evs.filter(function (e) {
+      if (kinds.length && kinds.indexOf(e.type) < 0) return false;
       if (f.level && e.level !== f.level) return false;
-      if ((Date.now() - e.ts.getTime()) > range.min * 60000) return false;
-      if (ql && (e.object + ' ' + e.msg + ' ' + e.kind + ' ' + e.system).toLowerCase().indexOf(ql) < 0) return false;
+      if (f.lane && eventLaneOf(e.type) !== f.lane) return false;
+      var t = Date.parse(e.ts || '');
+      if (!isNaN(t) && (Date.now() - t) > range.min * 60000) return false;
+      if (ql && ((e.involved || '') + ' ' + e.type + ' ' + (e.source || '')).toLowerCase().indexOf(ql) < 0) return false;
       return true;
     });
     var note = $('#ev-count-note');
-    if (note) note.textContent = items.length + ' / ' + M.events.length + ' events';
+    if (note) note.textContent = items.length + ' / ' + evs.length + ' events';
     vlist($('#ev-vlist2'), items, 36, function (e) {
       var dot = e.level === 'fatal' || e.level === 'error' ? 'var(--danger)' : e.level === 'warn' ? 'var(--warn)' : 'var(--accent)';
-      var laneC = e.lane === 'phase' ? '#a78bfa' : e.lane === 'data' ? '#22c55e' : '#7fb0f9';
+      var lane = LANE_VIEW[eventLaneOf(e.type)] || LANE_VIEW.event;
       return '<span class="vc" style="width:8px;height:8px;border-radius:50%;background:' + dot + '"></span>' +
-        '<span class="vc mono faint" style="width:52px">' + fmtTime(e.ts) + '</span>' +
-        '<span class="vc"><span class="tag" style="color:' + laneC + ';border-color:' + laneC + '44">' + esc(e.lane) + '</span></span>' +
-        '<span class="vc mono" style="width:130px;color:' + laneC + '">' + esc(e.kind) + '</span>' +
-        '<span class="vc mono faint" style="width:190px;overflow:hidden;text-overflow:ellipsis">' + esc(e.object) + '</span>' +
-        '<span class="grow">' + esc(e.msg) + '</span>' +
+        '<span class="vc mono faint" style="width:52px">' + esc(String(e.ts || '').slice(11, 19)) + '</span>' +
+        '<span class="vc"><span class="tag" style="color:' + lane.color + ';border-color:' + lane.color + '44">' + lane.label + '</span></span>' +
+        '<span class="vc mono" style="width:130px;color:' + lane.color + '">' + esc(e.type) + '</span>' +
+        '<span class="vc mono faint" style="width:190px;overflow:hidden;text-overflow:ellipsis">' + esc(e.involved || '—') + '</span>' +
+        '<span class="grow faint small mono">' + esc(String(e.dedupKey || '').slice(0, 60)) + '</span>' +
         '<span class="vc chip mute small">' + esc(e.level) + '</span>';
     });
     $('#ev-vlist2').onclick = function (ev) {
@@ -3226,7 +3279,7 @@
       if (!row) return;
       var idx = Math.floor((row.offsetTop + this.scrollTop) / 36);
       var it = items[idx];
-      if (it) go('event/' + it.id);
+      if (it) go('event/' + encodeURIComponent(it.eventId));
     };
   }
   ACTIONS['ev-kind'] = function (el) {
@@ -3235,98 +3288,212 @@
     else S.evFilter.kinds[k] = !S.evFilter.kinds[k];
     render();
   };
+
   /* 事件详情 */
-  function screenEvent(view) {
-    var e = byId(M.events, 'id', S.params.id);
-    if (!e) { view.innerHTML = emptyBox('事件不存在', S.params.id); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '事件流', go: 'events' }, { label: e.id }]);
-    var sysInst = null;
-    if (e.object.indexOf('ServiceInstance/') === 0) sysInst = e.object.split('/')[1];
-    var chain = [
-      { label: '系统 ' + e.system, go: 's/' + e.system },
-      sysInst ? { label: '实例 ' + sysInst, go: 's/' + e.system + '/i/' + sysInst } : null,
-      { label: '该系统事件面', go: 's/' + e.system + '/events' }
-    ].filter(Boolean);
-    if (e.object.indexOf('workflow/') === 0) chain.unshift({ label: 'workflow ' + e.object.split('/')[1].split('#')[0], go: 'wf/' + e.object.split('/')[1].split('#')[0] });
-    if (e.object.indexOf('Goal/') === 0 || e.object.indexOf('ImplDoc/') === 0 || e.object.indexOf('Rule/') === 0) chain.unshift({ label: '文档 ' + e.object.split('/')[1], go: 'doc/' + e.object.split('/')[1] });
-    var raw = {
-      apiVersion: 'core/v1', kind: 'Event',
-      metadata: { name: e.id, scope: e.system, createdAt: e.ts.toISOString() },
-      involvedObject: { kind: e.object.split('/')[0], name: e.object.split('/').slice(1).join('/') },
-      reason: e.kind, level: e.level, lane: e.lane, message: e.msg,
-      reporter: e.kind === 'DocApplied' ? 'apply-gate' : 'ops-db', count: 1, sequence: M.hex(6, seeded(e.id))
-    };
-    view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(e.kind) + '</h1>' +
-      '<span class="chip ' + (e.level === 'fatal' || e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : 'acc') + '">' + esc(e.level) + '</span><span class="chip kind">' + esc(e.lane) + ' 泳道</span></div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(e.id) + '</span><span class="mono">' + fmtDate(e.ts) + ' ' + fmtTimeS(e.ts) + '</span><span class="mono">' + esc(e.object) + '</span></div>' +
-      '<div class="dh-sub" style="margin-top:4px;font-size:13px;color:var(--text)">' + esc(e.msg) + '</div></div>' +
-      '<div class="dh-actions"><button class="btn" data-act="go" data-go="events">← 事件流</button></div></div>' +
-      '<div class="sec-title">相关对象链（全可点）</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
-      chain.map(function (c) { return '<span class="chip click acc" data-act="go" data-go="' + esc(c.go) + '">' + esc(c.label) + '</span>'; }).join('') + '</div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">事件信封（envelope · JSON）</span></div><div class="card-b"><div class="yaml-block">' + esc(JSON.stringify(raw, null, 2)) + '</div></div></div>' +
-      '</div>';
+  /* ================= 屏 10：审批（E6 真数据换装，console-adoption.md §1.13） =================
+   * 待审区=草稿缓存 ∪ ApprovalNeeded 归档行；diff=稿 content vs 文档面现值（渲染时现读）；
+   * 批准=Apply 全流程复用（dry-run 三检查→人确认→fromDraft 落库，E4 通路零旁路）；
+   * 驳回=DELETE 弃稿（零文档面动作）；批量=同 kind 多稿顺序 Apply（独立判别不中断）。
+   * ApprovalNeeded 无稿=只读待审卡（批准面缺席不冒充——深链 involved 对象编辑器）。 */
+  function apDiffHtml(diff, maxLines) { return renderDiff(diff, maxLines || 40); }
+  function approvalItemHtml(it) {
+    if (it.kind === 'draft') {
+      var d = it.draft;
+      var src = isConsoleFM(d.fieldManager) ? 'console 草稿' : 'LLM/agent 提案';
+      return '<div class="ap-card" id="apcard-' + esc(it.key) + '">' +
+        '<div class="ap-head"><span class="ap-title mono">' + esc(d.kind) + '/' + esc(d.name) + '</span>' +
+        '<span class="chip warn small">待审</span><span class="chip mute small">' + esc(src) + '</span></div>' +
+        '<div class="ap-meta"><span>scope：<b class="mono">' + esc(d.scope || '—') + '</b></span>' +
+        '<span>fieldManager：<b class="mono">' + esc(d.fieldManager) + '</b></span>' +
+        '<span class="mono faint">' + esc(String(d.updatedAt || '').replace('T', ' ').slice(0, 19)) + '</span>' +
+        '<span class="lk mono small" data-act="go" data-go="doc/' + esc(d.kind) + '/' + esc(d.scope || '') + '/' + esc(d.name) + '">对象编辑器 →</span></div>' +
+        '<div class="ap-body" id="apdiff-' + esc(it.key) + '">' + liveSkeletonRows(2, 0) + '</div>' +
+        '<div class="ap-acts"><button class="btn ok" data-act="ap-approve" data-key="' + esc(it.key) + '">批准（=Apply）</button>' +
+        '<button class="btn danger" data-act="ap-reject" data-key="' + esc(it.key) + '">驳回（弃稿）</button>' +
+        '<span class="small faint" style="align-self:center">批准=dry-run 三检查→fromDraft 落库（Revision+1 · DocApplied）；驳回=弃稿（零文档面动作）</span></div></div>';
+    }
+    var e = it.event;
+    return '<div class="ap-card resolved" id="apcard-' + esc(it.key) + '">' +
+      '<div class="ap-head"><span class="ap-title mono">' + esc(e.involved) + '</span>' +
+      '<span class="chip warn small">待审（人审档）</span><span class="chip danger small small">无稿</span></div>' +
+      '<div class="ap-meta"><span>来源：<b class="mono">' + esc(e.source) + '</b></span><span>level：<b class="mono">' + esc(e.level) + '</b></span>' +
+      '<span class="mono faint">' + esc(String(e.ts || '').replace('T', ' ').slice(0, 19)) + '</span>' +
+      '<span class="lk mono small" data-act="go" data-go="' + esc(involvedRoute(e.involved)) + '">involved 对象编辑器 →</span></div>' +
+      '<div class="ap-body small faint">批准面缺席（该对象无草稿在稿）——变更未进稿不可批准（不冒充 diff）；落稿后本页即出现 diff 预览与批准动作。</div></div>';
   }
-  /* ================= 屏 10：审批 ================= */
-  function approvalCard(ap) {
-    var pend = ap.status === '待审';
-    return '<div class="ap-card' + (pend ? '' : ' resolved') + '">' +
-      '<div class="ap-head"><span class="ap-title">' + esc(ap.title) + '</span>' +
-      (pend ? '<span class="chip warn">待审</span>' : ap.status === '已批准' ? '<span class="chip ok">已批准</span>' : '<span class="chip danger">已驳回</span>') +
-      '<span class="chip ' + (ap.level === 'fatal' ? 'danger' : ap.level === 'high' ? 'warn' : 'mute') + ' small">' + esc(ap.level) + '</span></div>' +
-      '<div class="ap-meta"><span>来源：<b class="mono">' + esc(ap.source) + '</b></span><span>scope：<b class="mono">' + esc(ap.scope) + '</b></span>' +
-      '<span class="mono faint">' + fmtAgo(ap.ts) + '</span>' +
-      (ap.link ? '<span class="lk" data-act="go" data-go="' + esc(ap.link.replace('#/', '')) + '">相关对象 →</span>' : '') + '</div>' +
-      '<div class="ap-body">' + renderDiff(ap.diff, 30) + '</div>' +
-      (pend ? '<div class="ap-acts"><button class="btn ok" data-act="ap-approve" data-id="' + esc(ap.id) + '">批准（=Apply）</button><button class="btn danger" data-act="ap-reject" data-id="' + esc(ap.id) + '">驳回</button>' +
-      '<span class="small faint" style="align-self:center">批准/驳回均走 Apply：落库 + DocApplied/回执事件</span></div>' : '') + '</div>';
+  function involvedRoute(inv) {
+    var segs = String(inv || '').split('/');
+    if (segs.length < 3) return 'welcome';
+    return 'doc/' + segs.slice(0, -1).map(encodeURIComponent).join('/') + '/' + encodeURIComponent(segs[segs.length - 1]);
   }
+  function apKeyOf(d) { return d.kind + '/' + (d.scope || '') + '/' + d.name; }
   function screenApprovals(view) {
+    LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '审批' }]);
-    var pend = pendingApprovals();
-    var cards = M.approvals.slice().sort(function (a, b) { return (a.status === '待审' ? 0 : 1) - (b.status === '待审' ? 0 : 1) || b.ts - a.ts; }).map(approvalCard).join('');
+    var items = approvalNeededObjects();
+    var draftItems = items.filter(function (x) { return x.kind === 'draft'; });
+    var evItems = items.filter(function (x) { return x.kind === 'event'; });
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>审批</h1><span class="chip ' + (pend.length ? 'warn' : 'ok') + '">' + pend.length + ' 条待审</span></div>' +
-      '<div class="dh-sub">ApprovalNeeded（role 挂载命中）→ console 批准/驳回（=Apply）。LLM 只提案，Apply 必须人点。</div></div>' +
-      '<div class="dh-actions"><button class="btn ok" data-act="ap-batch"' + (pend.length ? '' : ' disabled') + '>批量批准（' + pend.length + '）</button></div></div>' +
-      cards + '</div>';
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>审批</h1><span class="chip ' + (draftItems.length || evItems.length ? 'warn' : 'ok') + '">' +
+      (draftItems.length + evItems.length) + ' 条待审</span></div>' +
+      '<div class="dh-sub">待审区=草稿缓存（代改代审的家）∪ ApprovalNeeded 归档行。批准/驳回均=人点（LLM 只提案）；diff=稿 vs 文档面现值现读。</div></div>' +
+      '<div class="dh-actions"><button class="btn ok" data-act="ap-batch"' + (draftItems.length ? '' : ' disabled') + '>批量批准（' + draftItems.length + ' 稿）</button></div></div>' +
+      draftItems.map(approvalItemHtml).join('') + evItems.map(approvalItemHtml).join('') +
+      (!items.length ? '<div class="empty" style="padding:10vh"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">待审区为空（草稿缓存与 ApprovalNeeded 归档均空）</div><div class="e-act"><button class="btn primary" data-act="go" data-go="welcome">回 Welcome</button></div></div>' : '') +
+      '</div>';
+    draftItems.forEach(function (it) { hydrateApprovalDiff(it.draft); });
+  }
+  /* diff 注水：稿 content（GET /v1/drafts/{kind}/{name}）+ 面现值（GET /v1/objects）现读 */
+  function hydrateApprovalDiff(d) {
+    var key = apKeyOf(d);
+    var stamp = S.route + '|' + S.segs.join('/');
+    Promise.all([
+      LIVE.get('v1/drafts/' + encodeURIComponent(d.kind) + '/' + encodeURIComponent(d.name) + (d.scope ? '?scope=' + encodeURIComponent(d.scope) : '')),
+      LIVE.fetchObject(d.kind, d.scope, d.name).catch(function () { return null; }),
+    ]).then(function (rs) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var el = $('#apdiff-' + key);
+      if (!el) return;
+      var dr = rs[0], face = rs[1];
+      var base = face ? String(face.content || '') : '（对象不在册——apply 将 404）';
+      var working = String((dr && dr.content) || '');
+      el.innerHTML = (dr ? '' : '<div class="small faint">稿正文读面缺席（超时）——重进即现读</div>') + apDiffHtml(diffLines(base, working)) +
+        '<div class="small faint" style="margin-top:4px">基准=r' + (dr ? dr.baseResourceVersion : '?') + ' · 稿 ' + working.length + 'B vs 面 ' + base.length + 'B（现读，不缓存）</div>';
+    }, function (e) {
+      var el = $('#apdiff-' + key);
+      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">diff 读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
+    });
+  }
+  /* 批准=Apply 全流程复用（dry-run 三检查→人确认→fromDraft 落库）；fieldManager=console:approve */
+  function approvalApply(it, onDone) {
+    var d = it.draft;
+    Promise.all([
+      LIVE.get('v1/drafts/' + encodeURIComponent(d.kind) + '/' + encodeURIComponent(d.name) + (d.scope ? '?scope=' + encodeURIComponent(d.scope) : '')),
+      LIVE.fetchObject(d.kind, d.scope, d.name).catch(function () { return null; }),
+    ]).then(function (rs) {
+      var dr = rs[0], face = rs[1];
+      if (!dr) { toast('稿正文读面缺席', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
+      var base = face ? String(face.content || '') : '';
+      var working = String(dr.content || '');
+      var fullDiff = diffLines(base, working);
+      var stats = diffStats(fullDiff);
+      var baseRV = Number(dr.baseResourceVersion);
+      openModal(
+        '<div class="modal-h"><span class="m-title">批准（= Apply）· ' + esc(d.kind) + '/' + esc(d.name) + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
+        '<div class="modal-b">' +
+        '<div class="kv" style="margin-bottom:12px"><span class="k">变更</span><span class="v"><span class="chip ok small">+' + stats.add + '</span> <span class="chip danger small">-' + stats.del + '</span> · 来源 ' + esc(d.fieldManager) + '</span></div>' +
+        '<div class="checklist" id="ap-checks">' +
+        '<div class="check-item" data-c="scheme"><span class="ci-ic">…</span>Scheme 校验（kind 注册∧spec 结构）</div>' +
+        '<div class="check-item" data-c="perm"><span class="ci-ic">…</span>权限准入（主体=宿主注入 console-operator）</div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + baseRV + ' ↔ 面上现值）</div></div>' +
+        renderDiff(fullDiff, 26) +
+        '<div class="small faint" id="ap-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/apply {fromDraft:true, dryRun:true}——零副作用）…</div>' +
+        '</div>' +
+        '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="ap-apply-go" disabled>确认批准（Apply）</button></div>',
+        { cls: 'wide' });
+      LIVE.apply({ kind: d.kind, scope: d.scope, name: d.name, fromDraft: true, dryRun: true,
+        fieldManager: 'console:approve', reasonRef: 'console:approve-dry' }).then(function (res) {
+        var mark = function (c, ok, note) {
+          var row = $('.check-item[data-c="' + c + '"]');
+          if (!row) return;
+          row.classList.add(ok ? 'pass' : 'fail');
+          var ic = row.querySelector('.ci-ic');
+          if (ic) { ic.textContent = ok ? '✓' : '✗'; ic.style.color = ok ? 'var(--ok)' : 'var(--danger)'; }
+          if (note) { var n = document.createElement('span'); n.className = 'ci-note'; n.textContent = note; row.appendChild(n); }
+        };
+        if (res.ok && res.data && res.data.action === 'dry-run') {
+          var cur = Number(res.data.rv);
+          var lockOk = cur === baseRV;
+          mark('scheme', true, 'kind 在册∧spec 结构过（cored admit ①）');
+          mark('perm', true, '主体准入过（cored admit ②）');
+          mark('lock', lockOk, lockOk ? 'r' + baseRV + ' == 面上现值（可落）' : '稿基于 r' + baseRV + '，面上已 r' + cur + '——落库将 409（稿保留）');
+          var go = $('#ap-apply-go');
+          if (go && lockOk) {
+            go.disabled = false;
+            go.addEventListener('click', function () {
+              go.disabled = true;
+              LIVE.apply({ kind: d.kind, scope: d.scope, name: d.name, fromDraft: true,
+                fieldManager: 'console:approve', reasonRef: 'console:approve' }).then(function (r2) {
+                if (onDone) onDone(r2);
+              });
+            });
+          }
+        } else {
+          var st = res.status;
+          mark('scheme', st !== 404 && st !== 400, st === 404 || st === 400 ? String(res.error || ('HTTP ' + st)) : '—');
+          mark('perm', st !== 403, st === 403 ? String(res.error || '权限准入拒绝') : '—');
+          mark('lock', false, '预检未过（' + (st == null ? '传输层' : 'HTTP ' + st) + '）');
+        }
+      });
+    });
   }
   ACTIONS['ap-approve'] = function (el) {
-    var ap = byId(M.approvals, 'id', el.dataset.id);
-    if (!ap) return;
-    confirmModal('批准（= Apply）',
-      '<div class="kv"><span class="k">对象</span><span class="v">' + esc(ap.title) + '</span>' +
-      '<span class="k">来源</span><span class="v mono">' + esc(ap.source) + '</span>' +
-      '<span class="k">效果</span><span class="v">草稿/提案落库 · Revision+1 · 发 DocApplied；prod 门禁将放行（若为发布类）</span></div>',
-      '确认批准（Apply）', function () {
-        resolveApproval(ap.id, 'ok');
-        toast('已批准（Apply 落库）', ap.id + ' · ' + ap.title.slice(0, 30) + '…', 'ok');
-        render();
-      });
+    var key = el.dataset.key;
+    var it = approvalNeededObjects().filter(function (x) { return x.kind === 'draft' && apKeyOf(x.draft) === key; })[0];
+    if (!it) return;
+    approvalApply(it, function (r2) {
+      if (r2.ok) {
+        closeModal();
+        toast('已批准（Apply 落库 r' + r2.data.rv + '）', key + ' · DocApplied 已归档 · 草稿已清', 'ok');
+        LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (x) { return apKeyOf(x) !== key; });
+        LIVE.load().then(function () { render(); });
+      } else if (r2.status === 409) {
+        closeModal();
+        toast('乐观锁冲突（409）——稿保留', String(r2.error || '') + '——重读后重整草稿再落', 'danger');
+        LIVE.load().then(function () { render(); });
+      } else {
+        toast('批准失败（' + (r2.status == null ? '传输层' : 'HTTP ' + r2.status) + '）', String(r2.error || ''), 'danger');
+      }
+    });
   };
   ACTIONS['ap-reject'] = function (el) {
-    var ap = byId(M.approvals, 'id', el.dataset.id);
-    if (!ap) return;
-    confirmModal('驳回',
-      '<div>驳回 <b>' + esc(ap.title) + '</b>？来源 <b class="mono">' + esc(ap.source) + '</b> 将收到回执并按 onFailed/backoff 处理。</div>',
+    var key = el.dataset.key;
+    var it = approvalNeededObjects().filter(function (x) { return x.kind === 'draft' && apKeyOf(x.draft) === key; })[0];
+    if (!it) return;
+    confirmModal('驳回（弃稿）',
+      '<div>弃稿 <b class="mono">' + esc(key) + '</b>？——零文档面动作（不发明反向写路径）；ApprovalNeeded 归档行保留（审计素材）。</div>',
       '确认驳回', function () {
-        resolveApproval(ap.id, 'reject');
-        toast('已驳回', ap.id + ' 回执已发（ApprovalRejected）', 'warn');
-        render();
+        __CC.live.draftDelete(it.draft.kind, it.draft.name, it.draft.scope).then(function (r) {
+          if (r.ok) {
+            toast('已驳回（弃稿）', key + ' · 草稿清空（' + (r.status === 404 ? '本就无稿' : 'DELETE 200') + '）', 'warn');
+            LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (x) { return apKeyOf(x) !== key; });
+            LIVE.load().then(function () { render(); });
+          } else {
+            toast('弃稿失败（' + (r.status == null ? '传输层' : 'HTTP ' + r.status) + '）', String(r.error || ''), 'danger');
+          }
+        });
       }, true);
   };
   ACTIONS['ap-batch'] = function () {
-    var pend = pendingApprovals();
-    if (!pend.length) return;
-    confirmModal('批量批准（' + pend.length + ' 条 = ' + pend.length + ' 次 Apply）',
-      '<div>' + pend.map(function (a) { return '<div class="small" style="padding:3px 0">· ' + esc(a.title) + '</div>'; }).join('') +
-      '<div class="hr"></div><div class="small faint">逐条落库，各发一条 DocApplied。</div></div>',
-      '全部批准（Apply ×' + pend.length + '）', function () {
-        pend.forEach(function (a) { resolveApproval(a.id, 'ok'); });
-        toast('已批量批准 ' + pend.length + ' 条', '全部 Apply 落库，DocApplied 已发出', 'ok');
-        render();
+    var items = approvalNeededObjects().filter(function (x) { return x.kind === 'draft'; });
+    if (!items.length) return;
+    var kinds = {};
+    items.forEach(function (x) { kinds[x.draft.kind] = 1; });
+    var kindList = Object.keys(kinds);
+    confirmModal('批量批准（' + items.length + ' 稿 · kind=' + kindList.join(',') + '）',
+      '<div>' + items.map(function (x) { return '<div class="small mono" style="padding:3px 0">· ' + esc(apKeyOf(x.draft)) + '</div>'; }).join('') +
+      '<div class="hr"></div><div class="small faint">同 kind 草稿组=批量档（高危单条必审判据未声明，机制如实标注）；顺序逐条 Apply，独立判别结果——单条失败不中断后续（各稿独立乐观锁）。</div></div>',
+      '全部批准（Apply ×' + items.length + '）', function () {
+        var results = [];
+        var idx = 0;
+        var next = function () {
+          if (idx >= items.length) {
+            var okN = results.filter(function (r) { return r.ok; }).length;
+            closeModal();
+            toast('批量完成：' + okN + '/' + items.length + ' 落库', results.map(function (r) { return r.key + '=' + (r.ok ? 'r' + r.rv : (r.status == null ? '传输层' : 'HTTP ' + r.status)); }).join('；'), okN === items.length ? 'ok' : 'warn');
+            LIVE.load().then(function () { render(); });
+            return;
+          }
+          var it = items[idx++];
+          approvalApply(it, function (r2) {
+            results.push({ key: apKeyOf(it.draft), ok: !!(r2 && r2.ok), rv: r2 && r2.ok ? r2.data.rv : null, status: r2 ? r2.status : null });
+            next();
+          });
+        };
+        next();
       });
   };
+
   /* ================= 帮助面板（dsh settings-card） ================= */
   function openHelp() {
     var rows = SHORTCUTS.slice(0, 6).map(function (s) {
@@ -3459,7 +3626,7 @@
       if (!ROOT) return;
       // 'doc'（编辑器）不在列：编辑器自注水（屏加载即现读），live 轻刷新不重渲染（编辑态/textarea 焦点保真）；
       // Apply 成功后的重渲染走 apply 回调显式 LIVE.load().then(render)。
-      if (['welcome', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event'].indexOf(S.route) >= 0) render();
+      if (['welcome', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'connectors'].indexOf(S.route) >= 0) render();
     };
     boot();
   }

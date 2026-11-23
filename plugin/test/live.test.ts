@@ -18,10 +18,12 @@ test('live 层在 bundle：/core-console/api 代理前缀 + __CC.live 挂载', (
   assert.ok(SRC.includes("jget('v1/events?limit=100')"), '事件归档读面在册（Welcome 最近重要事件持久源）')
 })
 
-test('live 层写纪律（E3 起）：唯一写方法=apply() → POST /core-console/apply（宿主转发 cored 唯一写入口，主体宿主注入）；零其他写方法', () => {
+test('live 层写纪律（E3 起）：写方法=apply() POST /core-console/apply（宿主转发 cored 唯一写入口，主体宿主注入）+ drafts 弃稿 DELETE（E6 驳回=弃稿）；零其他写方法', () => {
   assert.ok(liveSrc.includes("'/core-console/apply'"), 'apply 通路在册（写路径唯一浏览器入口）')
   assert.ok(/method:\s*'POST'/.test(liveSrc), 'apply 使用 POST（主体由宿主注入，浏览器不携带）')
-  for (const m of ['DELETE', 'PUT', 'PATCH']) {
+  assert.ok(!/method:\s*['"]DELETE['"][^}]*\/core-console\/apply/.test(liveSrc) && liveSrc.includes('/core-console/drafts'),
+    'DELETE 只用于草稿弃稿路由（E6 审批驳回=弃稿，零文档面动作——不发明反向写路径）')
+  for (const m of ['PUT', 'PATCH']) {
     assert.ok(!new RegExp('\\bmethod\\s*[:=]\\s*[\"\']' + m).test(liveSrc), `live 层不得出现 ${m} 写方法`)
   }
 })
@@ -96,4 +98,39 @@ test('E3 屏换装：运行管理三屏真数据 + override 语义启停 + 运�
   assert.ok(SRC.includes('诚实空态'), '诚实空态纪律在册（action log/SessionLog 余量不假画）')
   assert.ok(!SRC.includes("ACTIONS['wf-rerun']"), '假重跑按钮摘除（真实执行面接线前不画）')
   assert.ok(!SRC.includes("ACTIONS['wf-cancel']"), '假取消按钮摘除')
+})
+
+// ---------- E6 静态面（console-adoption.md §1.13 L42 静态判据） ----------
+test('E6 事件流屏真数据：lane 映射纯函数 + 聚合面板 n/a 不冒充 + 零 mock 事件名', () => {
+  assert.ok(SRC.includes('function eventLaneOf'), '三泳道映射纯函数在册')
+  assert.ok(SRC.includes('function screenEvents'), '事件流屏在册')
+  assert.ok(SRC.includes('归档窗内实数'), '聚合面板实数标注在册')
+  assert.ok(SRC.includes('run 终态事件未落归档'), '成功率 declared 余量 n/a 标注在册')
+  assert.ok(!/lnsr-chk|dep-block|deploy-system 发布等待批准/.test(SRC), '零 mock 审批事件名（诚实空态）')
+})
+
+test('E6 审批屏：待审区=草稿∪ApprovalNeeded ∧ 批准=dry-run+fromDraft ∧ 驳回=DELETE 弃稿', () => {
+  assert.ok(SRC.includes('function approvalNeededObjects'), '待审区数据源在册（live 层）')
+  assert.ok(SRC.includes("'console:approve'"), '批准 fieldManager=console:approve（留痕可查）')
+  assert.ok(SRC.includes("data-act=\"ap-reject\""), '驳回动作在册')
+  assert.ok(liveSrc.includes('draftDelete'), 'draftDelete 写通路在册（DELETE /core-console/drafts）')
+  assert.ok(liveSrc.includes("'/core-console/comm'"), 'comm 读面在册')
+})
+
+test('E6 连接页与运行面：三组=objects 枚举 ∧ ConnectorOps 第五 tab 运行面 ∧ agent-comm comm 落账活体', () => {
+  assert.ok(SRC.includes("connCards('WorkService', 'ws/')"), 'WorkService 组=objects 枚举')
+  assert.ok(SRC.includes("connCards('ConnectorOps', 'connector/')"), 'ConnectorOps 组=objects 枚举')
+  assert.ok(SRC.includes("connCards('Provider', 'provider/')"), 'Provider 组=objects 枚举')
+  assert.ok(SRC.includes("'ops', '运行面'"), '运行面 tab 在册（ConnectorOps 专属）')
+  assert.ok(SRC.includes('function hydrateCommLive'), 'comm 落账注水在册')
+  assert.ok(SRC.includes('ENVELOPE_V1'), 'envelope v0.1 字段表在册')
+  assert.ok(SRC.includes('已携（值打码）'), 'token 打码标注在册')
+})
+
+test('E6 详情页矩阵：event 详情 run 反查 + workflow 锚链 + ws/provider/ref/role 路由零改动', () => {
+  assert.ok(SRC.includes('function hydrateEventChain'), '事件链路注水在册')
+  assert.ok(SRC.includes('event→run→workflow→doc'), '链路语义标注在册')
+  const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
+  assert.ok(/route\('ws\/:name'/.test(appSrc) && /route\('provider\/:name'/.test(appSrc) &&
+    /route\('ref\/:name'/.test(appSrc) && /route\('role\/:name'/.test(appSrc), '矩阵行落点路由在册')
 })
