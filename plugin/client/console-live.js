@@ -22,6 +22,7 @@
     events: [],     // /v1/events 归档行（最新优先；event_log=Welcome 最近重要事件持久源）
     instanceStatus: {}, // ServiceInstance key -> {phase, observedGeneration}（status 回写在正文，逐个现读）
     triggers: null, // /v1/triggers（received/dropped/records——触发留痕，进程内投影）
+    wfAgg: null,    // /v1/workflows 聚合面（v0.37 console 读面第二段——E3 运行管理数据面）
     deliveries: null,
     wakes: null,
     metrics: [],
@@ -37,6 +38,24 @@
       });
   }
   function refList(k) { return (state.objects[k] || []); }
+
+  /** console Apply（E3 写通路：POST /core-console/apply——宿主转发 cored POST /v1/apply
+   *  唯一写入口，主体由宿主注入浏览器不携带；判别联合返回，不抛错）。 */
+  function apply(payload) {
+    return fetch('/core-console/apply', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload || {})
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (body) {
+        if (!r.ok) return { ok: false, status: r.status, error: String(body && body.error || ('HTTP ' + r.status)) };
+        return { ok: true, data: body };
+      });
+    }, function (e) {
+      return { ok: false, status: null, error: String((e && e.message) || e) };
+    });
+  }
 
   /** 全量装载：scheme kinds → 逐 kind 对象枚举 + 四投影面 + 归档事件。任一子面失败=整轮退化（不半装载——
    *  投影一致性优先于可得性；连接态灯已把失联作常态设计，恢复后下轮整装替换）。 */
@@ -75,6 +94,7 @@
       .then(function () {
         return Promise.all([
           jget('v1/workflows/runs').then(function (r) { state.runs = r.runs || []; state.runMeta = r; }),
+          jget('v1/workflows').then(function (r) { state.wfAgg = r; }),
           jget('v1/triggers').then(function (r) { state.triggers = r; }),
           jget('v1/events?limit=100').then(function (r) { state.events = r.events || []; }),
           jget('v1/drafts').then(function (r) { state.drafts = r.drafts || []; }),
@@ -116,6 +136,7 @@
     load: load,
     ensure: ensure,
     fetchObject: fetchObject,
+    apply: apply,
     get: jget,
     refs: refList,
     onChange: null

@@ -1572,341 +1572,425 @@
       '<div class="card"><div class="card-h"><span class="h-title">高敏操作</span></div><table class="tbl"><thead><tr><th>操作</th><th>门禁</th><th>路径</th></tr></thead><tbody>' + sensRows + '</tbody></table></div>' +
       '</div></div>';
   }
-  /* ================= 屏 5：Workflows ================= */
-  function screenWorkflows(view) {
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows' }]);
-    var rows = M.workflows.map(function (w) {
-      var bar = w.successRate >= 95 ? '' : w.successRate >= 85 ? ' mid' : ' low';
-      var docsChips = w.involvedDocs.slice(0, 3).map(function (d) {
-        return '<span class="chip click mute small" data-act="go" data-go="doc/' + esc(d) + '">' + esc(d) + '</span>';
-      }).join(' ');
-      return '<tr class="row-click" data-act="go" data-go="wf/' + esc(w.name) + '">' +
-        '<td class="mono" style="font-weight:650">' + esc(w.name) + (w.builtin ? ' <span class="chip mute tiny" style="font-size:9px">builtin</span>' : '') + '</td>' +
-        '<td><span class="path-mono">' + esc(w.scope) + '</span></td>' +
-        '<td><span class="switch' + (w.enabled ? ' on' : '') + '" data-act="wf-toggle" data-wf="' + esc(w.name) + '" title="启用/停用 = Apply"></span></td>' +
-        '<td>' + phaseChip(w.phase) + '</td>' +
-        '<td class="mono num">' + w.runsTotal + ' <span class="faint">/ ' + w.runs24h + 'h</span></td>' +
-        '<td><span class="bar-mini' + bar + '"><i style="width:' + w.successRate + '%"></i></span><span class="mono small">' + w.successRate + '%</span></td>' +
-        '<td class="mono faint">' + fmtAgo(w.lastRun) + '</td>' +
-        '<td style="max-width:260px">' + docsChips + '</td></tr>';
-    }).join('');
-    view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>Workflows</h1><span class="chip kind">' + M.workflows.length + ' 条规则</span></div>' +
-      '<div class="dh-sub">Workflow = 触发规则 → 事件整理 → 相位态机 → 文档回归。启停 / 编辑 / 克隆 / 导入 全部 = Apply。</div></div>' +
-      '<div class="dh-actions"><button class="btn" data-act="wf-import"><svg class="ic"><use href="#cc-i-import"/></svg>导入</button></div></div>' +
-      '<div class="card"><table class="tbl"><thead><tr><th>名称</th><th>scope</th><th>启用 (=Apply)</th><th>当前相位</th><th>运行次数 总/24h</th><th>成功率</th><th>最近运行</th><th>涉及文档</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  /* ================= 屏 5：Workflow 运行管理（E3：cored 读面真数据，console-ui.md 屏幕 5） =================
+   * 数据来源（无双源红线）：列表/详情=GET /v1/workflows 聚合投影（三源同投，cored-bridge.md §2
+   * v0.37）；轮次=/v1/workflows/runs（involved=涉及对象链第一跳）；事件 tab=触发留痕过滤；
+   * 配置 tab=对象 YAML 现读。启停=POST /core-console/apply（宿主转发 cored 唯一写入口
+   * POST /v1/apply，主体宿主注入，console-adoption.md §1.9）——override 语义（红线 b）：
+   * builtin 本体不动，落系统层同名 override（origin: override-of-builtin）。
+   * 诚实口径：成功率不投影（run 终态事件未落归档=declared 余量，n/a 不冒充）；无 run=空态
+   * 不假画；action log/SessionLog=诚实空态余量；重跑/取消=余量不画按钮。 */
+  function liveWfRow(name) {
+    var a = LIVE.state.wfAgg;
+    if (!a || !a.workflows) return null;
+    for (var i = 0; i < a.workflows.length; i++) if (a.workflows[i].name === name) return a.workflows[i];
+    return null;
   }
-  ACTIONS['wf-toggle'] = function (el, e) {
-    e.stopPropagation();
-    var wf = wfByName(el.dataset.wf);
-    var to = wf.enabled ? '停用' : '启用';
-    confirmModal(to + ' workflow（= Apply）',
-      '<div class="kv" style="gap:8px"><span class="k">对象</span><span class="v mono">' + esc(wf.name) + '</span>' +
-      '<span class="k">变更</span><span class="v mono">spec.enabled: ' + wf.enabled + ' → ' + (!wf.enabled) + '</span>' +
-      '<span class="k">语义</span><span class="v">' + (wf.enabled ? '该规则不再触发、不再消耗；已完成轮次与回归记录保留。' : '规则重新生效，触发源重新接线。') + '</span>' +
-      '<span class="k">效果</span><span class="v">Revision+1 · 发 DocApplied 事件（编辑与发布分离，此操作即发布）</span></div>',
-      '确认 ' + to + '（Apply）', function () {
-        applyWorkflowToggle(wf.name);
-        toast('已落库（Apply）', wf.name + ' spec.enabled → ' + wf.enabled + ' · DocApplied 已发出', 'ok');
-        render();
+  function liveRunsOf(name) {
+    var out = [];
+    (LIVE.state.runs || []).forEach(function (r) { if (r.workflow === name) out.push(r); });
+    out.reverse(); // 新→旧
+    return out;
+  }
+  function liveRunByNo(name, no) {
+    var runs = liveRunsOf(name);
+    for (var i = 0; i < runs.length; i++) if (runs[i].run === no) return runs[i];
+    return null;
+  }
+  function wfAnchorOfRoute(route) {
+    if (!route) return '';
+    if (route.indexOf('workflows/') === 0) return route.slice('workflows/'.length);
+    if (/-workflow$/.test(route)) return 'core-workflow';
+    return '';
+  }
+  function runStatusChip(st, phase) {
+    if (st === 'running') return phaseChip(phase || 'running');
+    if (st === 'suspended') return '<span class="chip warn"><span class="lamp warn pulse-warn"></span>' + esc(phase || 'suspended') + ' · 挂起</span>';
+    if (st === 'failed') return '<span class="chip danger">failed</span>';
+    return '<span class="chip mute">' + esc(st || 'triggered') + '</span>';
+  }
+  function wfObjectChip(name, o) {
+    return '<span class="chip click mute small" data-act="go" data-go="doc/Workflow/' +
+      encodeURIComponent(o.scope) + '/' + encodeURIComponent(name) + '" title="对象详情（本体/override 同构）">' +
+      esc(o.scope) + ' r' + o.resourceVersion + '</span>';
+  }
+  function involvedDocChip(involved) {
+    var segs = String(involved || '').split('/');
+    if (segs.length >= 3) {
+      return '<span class="chip click mute small" data-act="go" data-go="doc/' +
+        encodeURIComponent(segs[0]) + '/' + encodeURIComponent(segs[1]) + '/' + encodeURIComponent(segs.slice(2).join('/')) +
+        '">' + esc(involved) + '</span>';
+    }
+    if (segs.length === 2) {
+      return '<span class="chip click mute small" data-act="go" data-go="doc/' +
+        encodeURIComponent(segs[0]) + '/' + encodeURIComponent(segs[1]) + '">' + esc(involved) + '</span>';
+    }
+    return involved ? '<span class="chip mute small mono">' + esc(involved) + '</span>' : '';
+  }
+  function wfToggleTarget(row) {
+    var eff = null, body = null;
+    (row.objects || []).forEach(function (o) {
+      if (row.effective && o.scope === row.effective.scope) eff = o;
+      if (o.scope === 'global') body = o;
+    });
+    return { target: eff || body, isOverride: !!eff };
+  }
+  function firstSystemScope() {
+    var names = LIVE.refs('ServiceDesc').map(function (o) { return o.name; }).sort();
+    return names[0] || '';
+  }
+  function setYamlEnabled(content, to) {
+    if (/^[ \t]*enabled:[ \t]*(true|false)[ \t]*$/m.test(content)) {
+      return content.replace(/^([ \t]*)enabled:[ \t]*(true|false)[ \t]*$/m, function (_m0, ind) { return ind + 'enabled: ' + to; });
+    }
+    return content.replace(/^spec:[ \t]*$/m, 'spec:\n  enabled: ' + to);
+  }
+  function ensureOriginLabel(content) {
+    if (/core\/origin:/.test(content)) return content;
+    if (/^[ \t]+labels:[ \t]*$/m.test(content)) {
+      return content.replace(/^([ \t]+)labels:[ \t]*$/m, '$1labels:\n' + '$1' + '  core/origin: override-of-builtin');
+    }
+    if (/^metadata:[ \t]*$/m.test(content)) {
+      return content.replace(/^metadata:[ \t]*$/m, 'metadata:\n  labels:\n    core/origin: override-of-builtin');
+    }
+    return content;
+  }
+  function cloneAsOverride(content, sys, to) {
+    var c = setYamlEnabled(content, to);
+    c = c.replace(/^([ \t]*)scope:[ \t]*\S+([ \t]*(?:#.*)?)$/m, '$1scope: ' + sys + '$2');
+    return ensureOriginLabel(c);
+  }
+  function applyWorkflowToggleLive(name, target, isOverride, to) {
+    LIVE.fetchObject('Workflow', target.scope, name).then(function (obj) {
+      var content = String(obj.content || '');
+      var scope = target.scope;
+      if (isOverride) {
+        content = ensureOriginLabel(setYamlEnabled(content, to));
+      } else {
+        var sys = firstSystemScope();
+        if (!sys) { toast('override 目标面缺席', '文档库无系统 scope（ServiceDesc 缺席）——不发明 override 位置', 'warn'); return; }
+        scope = sys;
+        content = cloneAsOverride(content, sys, to);
+      }
+      LIVE.apply({
+        kind: 'Workflow', scope: scope, name: name, resourceVersion: obj.resourceVersion,
+        content: content, fieldManager: 'console:workflow-toggle', reasonRef: 'console:wf-toggle:' + name
+      }).then(function (res) {
+        if (!res.ok) { toast('Apply 失败（HTTP ' + (res.status == null ? '传输层' : res.status) + '）', res.error, 'danger'); return; }
+        var ev = res.data && res.data.event ? ' · DocApplied ' + res.data.event.id : '';
+        toast('已落库（Apply）', name + ' @' + scope + ' spec.enabled → ' + to + ev, 'ok');
+        LIVE.load().then(function () { render(); });
       });
-  };
-  ACTIONS['wf-import'] = function () {
-    toast('ImportRequested 已发', 'install-service 将做模板发现（asks 在审批页呈现）');
-    addEvent('event', 'InstallRequested', 'info', 'connector', 'install-service', 'workflow 导入请求：模板发现中（asks: 2）', '#/connectors');
-  };
+    }, function () {
+      toast('本体读取失败', '对象读面不可达——稍后重试（连接态灯见右下）', 'warn');
+    });
+  }
+
+  function screenWorkflows(view) {
+    LIVE.ensure();
+    var st = LIVE.state;
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows' }]);
+    var inner;
+    if (!st.wfAgg) {
+      inner = '<div class="card"><div class="card-b">' + liveSkeletonRows(5) + '</div></div>' +
+        (st.status === 'degraded' ? liveDegradedNote() : '');
+    } else {
+      var rowsHtml = (st.wfAgg.workflows || []).map(function (w) {
+        var tt = wfToggleTarget(w);
+        var curEnabled = tt.target ? (tt.target.enabled === false ? false : true) : null;
+        var switchCell;
+        if (tt.target) {
+          switchCell = '<span class="switch' + (curEnabled ? ' on' : '') + '" data-act="wf-toggle" data-wf="' + esc(w.name) +
+            '" title="启用/停用 = Apply（override 语义：builtin 本体不动）"></span>';
+        } else {
+          switchCell = '<span class="faint small" title="builtin 本体无文档对象——override 生成=E4 编辑器轮余量（诚实余量，不假开关）">—</span>';
+        }
+        var docsChips = (w.objects || []).map(function (o) { return wfObjectChip(w.name, o); }).join(' ') ||
+          '<span class="faint small" title="声明随运行时 builtin 注册表（无文档本体）">builtin 注册表</span>';
+        var scopeCell = w.effective ? '<span class="path-mono">' + esc(w.effective.scope) + '</span>' :
+          (w.objects.length ? '<span class="path-mono">' + esc(w.objects[0].scope) + '</span>' : '<span class="faint">global</span>');
+        return '<tr class="row-click" data-act="go" data-go="wf/' + esc(w.name) + '">' +
+          '<td class="mono" style="font-weight:650">' + esc(w.name) + ' <span class="chip mute tiny" style="font-size:9px">' + esc(w.specSource || 'builtin') + '</span></td>' +
+          '<td>' + scopeCell + '</td>' +
+          '<td>' + switchCell + '</td>' +
+          '<td>' + (w.latest ? runStatusChip(w.latest.status, w.latest.phase) : '<span class="faint small">无现势 run</span>') + '</td>' +
+          '<td class="mono num">' + w.runsTotal + ' <span class="faint">/ ' + w.runs24h + 'h</span></td>' +
+          '<td><span class="faint small" title="成功率不投影：run 终态事件未落归档（declared 余量）——n/a 不冒充">n/a</span></td>' +
+          '<td class="mono faint">' + (w.latest ? fmtAgo(new Date(w.latest.startedAt)) : '—') + '</td>' +
+          '<td style="max-width:280px">' + docsChips + '</td></tr>';
+      }).join('');
+      inner = '<div class="card"><table class="tbl"><thead><tr><th>名称</th><th>生效 scope</th><th>启用 (=Apply)</th><th>当前相位</th>' +
+        '<th>运行次数 总/24h</th><th>成功率</th><th>最近运行</th><th>涉及文档</th></tr></thead><tbody>' + (rowsHtml || '') + '</tbody></table></div>' +
+        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）</div>';
+    }
+    view.innerHTML = '<div class="view-inner">' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>Workflows</h1>' +
+      (st.wfAgg ? '<span class="chip kind">' + (st.wfAgg.count || 0) + ' 条规则</span>' : '') + '</div>' +
+      '<div class="dh-sub">Workflow = 触发规则 → 事件整理 → 相位态机 → 文档回归。启停/编辑 全部 = Apply（override 落系统层同名对象）。</div></div></div>' +
+      inner + '</div>';
+  }
+
   var WF_TABS = [
     { id: 'runs', label: '运行' }, { id: 'flow', label: '流程图' }, { id: 'events', label: '事件' },
     { id: 'transitions', label: '流转' }, { id: 'dataflow', label: '数据流' }, { id: 'config', label: '配置' }
   ];
   function screenWorkflow(view) {
-    var wf = wfByName(S.params.name);
-    if (!wf) { view.innerHTML = emptyBox('workflow 不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    var tab = S.wfTab[wf.name] || 'runs';
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows', go: 'workflows' }, { label: wf.name, go: 'wf/' + wf.name },
-      tab === 'runs' ? null : { label: WF_TABS.filter(function (t) { return t.id === tab; })[0].label }].filter(Boolean));
-    var avgDur = Math.round(wf.runs.reduce(function (a, r) { return a + (r.durMin || 8); }, 0) / Math.max(1, wf.runs.length));
-    var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(wf.name) + '</h1>' + phaseChip(wf.phase) +
-      '<span class="chip kind">Workflow</span>' + (wf.builtin ? '<span class="chip mute">builtin · ' + esc(wf.origin) + '</span>' : '<span class="chip mute">system</span>') +
-      (wf.enabled ? '' : '<span class="chip warn">已停用</span>') + '</div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(wf.scope) + '</span><span>' + esc(wf.triggers) + '</span></div></div>' +
+    LIVE.ensure();
+    var st = LIVE.state;
+    var name = S.params.name;
+    var row = liveWfRow(name);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows', go: 'workflows' }, { label: name }]);
+    if (!row) {
+      view.innerHTML = '<div class="view-inner">' + (st.wfAgg
+        ? emptyBox('workflow 不在聚合面（行集=注册表∪对象∪run 锚三源并集）', name)
+        : '<div class="card"><div class="card-b">' + liveSkeletonRows(3) + '</div></div>' + liveDegradedNote()) + '</div>';
+      return;
+    }
+    var tab = S.wfTab[name] || 'runs';
+    var curEnabled = wfToggleTarget(row).target ? (wfToggleTarget(row).target.enabled === false ? false : true) : null;
+    var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(row.name) + '</h1>' +
+      '<span class="chip kind">Workflow</span><span class="chip mute">' + esc(row.specSource || 'builtin') + '</span>' +
+      (row.effective ? '<span class="chip mute">override · ' + esc(row.effective.scope) + '</span>' : '') +
+      (curEnabled === false ? '<span class="chip warn">已停用（override）</span>' : '') + '</div>' +
+      '<div class="dh-sub"><span>' + (row.objects.length ? '对象 ' + row.objects.length + ' 份（本体/override 同构可点）' : '声明随 builtin 注册表（无文档本体）') +
+      ' · ' + (row.phases || []).length + ' 相位</span></div></div>' +
       '<div class="dh-actions">' +
-      '<button class="btn ' + (wf.enabled ? 'danger' : 'ok') + '" data-act="wf-toggle" data-wf="' + esc(wf.name) + '">' + (wf.enabled ? '停用' : '启用') + '</button>' +
-      '<button class="btn" data-act="wf-edit-spec" data-wf="' + esc(wf.name) + '" title="全部 = Apply">编辑 spec</button>' +
-      '<button class="btn" data-act="wf-clone" data-wf="' + esc(wf.name) + '" title="克隆 = Apply 落一份新 spec"><svg class="ic"><use href="#cc-i-clone"/></svg>克隆</button>' +
-      '<button class="btn" data-act="wf-import" title="导入 = Apply"><svg class="ic"><use href="#cc-i-import"/></svg>导入</button>' +
+      (curEnabled !== null
+        ? '<button class="btn ' + (curEnabled ? 'danger' : 'ok') + '" data-act="wf-toggle" data-wf="' + esc(row.name) + '">' + (curEnabled ? '停用' : '启用') + '</button>'
+        : '<span class="faint small" title="builtin 本体无文档对象——override 生成=E4 余量">启停余量</span>') +
+      '<button class="btn" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '" title="编辑=文档编辑器（E4 起 Apply 全链）">编辑 spec</button>' +
       '</div></div>';
     var kpi = '<div class="statbar" style="grid-template-columns:repeat(4,1fr)">' +
-      '<div class="stat"><div class="st-num">' + wf.runsTotal + '</div><div class="st-label">总运行</div></div>' +
-      '<div class="stat"><div class="st-num">' + wf.successRate + '%</div><div class="st-label">成功率</div></div>' +
-      '<div class="stat"><div class="st-num">~' + avgDur + 'm</div><div class="st-label">平均时长</div></div>' +
-      '<div class="stat"><div class="st-num">' + (wf.activeApproval && byId(M.approvals, 'id', wf.activeApproval).status === '待审' ? 1 : 0) + '</div><div class="st-label">活跃审批</div></div></div>';
+      '<div class="stat"><div class="st-num">' + row.runsTotal + '</div><div class="st-label">总运行（归档口径）</div></div>' +
+      '<div class="stat"><div class="st-num">' + row.runs24h + '</div><div class="st-label">24h 运行</div></div>' +
+      '<div class="stat"><div class="st-num" style="font-size:15px">' + (row.latest ? esc(row.latest.phase) : '—') + '</div><div class="st-label">当前相位' + (row.latest ? '' : '（无现势 run）') + '</div></div>' +
+      '<div class="stat"><div class="st-num">' + row.objects.length + '</div><div class="st-label">对象（本体/override）</div></div></div>';
     var tabs = '<div class="tabs">' + WF_TABS.map(function (t) {
       return '<div class="tab' + (t.id === tab ? ' active' : '') + '" data-act="wf-tab" data-t="' + t.id + '">' + t.label + '</div>';
     }).join('') + '</div>';
     var body = '';
-    if (tab === 'runs') body = wfTabRuns(wf);
-    else if (tab === 'flow') body = wfTabFlow(wf);
-    else if (tab === 'events') body = wfTabEvents(wf);
-    else if (tab === 'transitions') body = wfTabTransitions(wf);
-    else if (tab === 'dataflow') body = wfTabDataflow(wf);
-    else if (tab === 'config') body = wfTabConfig(wf);
+    if (tab === 'runs') body = wfLiveTabRuns(row);
+    else if (tab === 'flow') body = wfLiveTabFlow(row);
+    else if (tab === 'events') body = wfLiveTabEvents(row);
+    else if (tab === 'transitions') body = wfLiveTabTransitions(row);
+    else if (tab === 'dataflow') body = wfLiveTabDataflow(row);
+    else body = wfLiveTabConfig(row);
     view.innerHTML = '<div class="view-inner">' + head + kpi + tabs + body + '</div>';
-    if (tab === 'transitions') paintTransitions(wf);
-    if (tab === 'runs') wireFollow(wf);
+    if (tab === 'transitions') paintWfTransitions(row);
+    if (tab === 'config') hydrateWfConfig(row);
   }
   ACTIONS['wf-tab'] = function (el) { S.wfTab[S.params.name] = el.dataset.t; render(); };
+  ACTIONS['wf-toggle'] = function (el, e) {
+    e.stopPropagation();
+    var name = el.dataset.wf;
+    var row = liveWfRow(name);
+    if (!row) { toast('读面未就绪', 'workflow 聚合面未装载——稍后重试', 'warn'); return; }
+    var tt = wfToggleTarget(row);
+    if (!tt.target) { toast('无法启停（诚实余量）', 'builtin 本体无文档对象——override 生成=E4 编辑器轮余量', 'warn'); return; }
+    var cur = tt.target.enabled === false ? false : true;
+    var to = !cur;
+    var scopeAfter = tt.isOverride ? tt.target.scope : firstSystemScope();
+    confirmModal(to ? '启用 workflow（= Apply）' : '停用 workflow（= Apply）',
+      '<div class="kv" style="gap:8px"><span class="k">对象</span><span class="v mono">Workflow/' + esc(scopeAfter) + '/' + esc(name) + '</span>' +
+      '<span class="k">语义</span><span class="v">' + (tt.isOverride ? '更新既有 override（系统层同名覆盖——builtin 本体不动）' : '生成 override（克隆本体文档 + origin 标注 + 翻转 enabled；builtin 本体不动）') + '</span>' +
+      '<span class="k">变更</span><span class="v mono">spec.enabled: ' + cur + ' → ' + to + '</span>' +
+      '<span class="k">闭环</span><span class="v">Apply 落库 Revision+1 · DocApplied 归档 · 页面重读显示新态（触发路径对 enabled 的实时 honoring=引擎余量，如实标注）</span></div>',
+      '确认（Apply）', function () {
+        applyWorkflowToggleLive(name, tt.target, tt.isOverride, to);
+      });
+  };
   ACTIONS['wf-edit-spec'] = function (el) {
-    var wf = wfByName(el.dataset.wf);
-    go('doc/' + (wf.specDoc || wf.name + '-spec'));
+    var row = liveWfRow(el.dataset.wf);
+    var tt = row ? wfToggleTarget(row) : null;
+    if (tt && tt.target) { go('doc/Workflow/' + encodeURIComponent(tt.target.scope) + '/' + encodeURIComponent(el.dataset.wf)); return; }
+    toast('无文档本体（诚实空态）', '该 workflow 的声明随 builtin 注册表——spec 编辑=E4 编辑器轮余量', 'warn');
   };
-  ACTIONS['wf-clone'] = function (el) {
-    var wf = wfByName(el.dataset.wf);
-    var cloneName = wf.name + '-clone';
-    if (!wfByName(cloneName)) {
-      var c = JSON.parse(JSON.stringify(wf));
-      c.name = cloneName; c.builtin = false; c.runsTotal = 0; c.runs24h = 0; c.runs = []; c.phase = 'Idle'; c.origin = 'cloned-from:' + wf.name;
-      M.workflows.push(c);
-    }
-    toast('已克隆（=Apply 落库）', cloneName + ' · spec 已写入本系统 workflows/');
-    addEvent('event', 'DocApplied', 'info', wf.scope.replace('systems/', '') || 'global', 'Workflow/' + cloneName, '克隆自 ' + wf.name + '（Apply 落库）', '#/wf/' + cloneName);
-    go('wf/' + cloneName);
-  };
-  /* --- 运行 tab：dsh Jobs 面板（任务列表 + 详情面板 + follow） --- */
-  function wfTabRuns(wf) {
-    var selNo = S.wfRunSel[wf.name] != null ? S.wfRunSel[wf.name] : (wf.runs[0] ? wf.runs[0].no : null);
-    var sel = wf.runs.filter(function (r) { return r.no === selNo; })[0] || wf.runs[0];
-    var list = wf.runs.map(function (r) {
-      var stChip = r.status === 'running' ? phaseChip(r.phase) : r.status === 'waiting' ? '<span class="chip warn"><span class="lamp warn pulse-warn"></span>待审批</span>' : r.status === 'failed' ? '<span class="chip danger">failed</span>' : '<span class="chip ok">ok</span>';
-      return '<div class="job-item' + (r.no === sel.no ? ' sel' : '') + '" data-act="wf-run-sel" data-no="' + r.no + '">' +
-        '<div class="ji-top"><span class="ji-no">#' + r.no + '</span>' + stChip +
-        '<span class="faint mono small" style="margin-left:auto">' + fmtAgo(r.start) + '</span></div>' +
-        '<div class="ji-sub"><span>' + esc(r.trigger) + '</span><span>·</span><span>' + (r.durMin ? r.durMin + 'm' : '进行中') + '</span><span>·</span><span>' + r.docsCount + ' docs</span></div></div>';
+
+  /* --- 运行 tab：dsh Jobs 双栏（run 列表 + 抽屉内联；follow=余量，轮次静态投影） --- */
+  function wfLiveTabRuns(row) {
+    var runs = liveRunsOf(row.name);
+    var selNo = S.wfRunSel[row.name] != null ? S.wfRunSel[row.name] : (runs[0] ? runs[0].run : null);
+    var sel = runs.filter(function (r) { return r.run === selNo; })[0] || runs[0] || null;
+    var list = runs.slice(0, 60).map(function (r) {
+      return '<div class="job-item' + (sel && r.run === sel.run ? ' sel' : '') + '" data-act="wf-run-sel" data-no="' + r.run + '">' +
+        '<div class="ji-top"><span class="ji-no">#' + r.run + '</span>' + runStatusChip(r.status, r.phase) +
+        '<span class="faint mono small" style="margin-left:auto">' + fmtAgo(new Date(r.startedAt)) + '</span></div>' +
+        '<div class="ji-sub"><span>' + esc(r.type) + '</span><span>·</span><span>' + esc(r.specSource || '—') + '</span></div></div>';
     }).join('');
-    var detail = sel ? jobDetailHtml(wf, sel) : '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">无运行轮次</div><div class="e-act"><button class="btn primary" data-act="wf-rerun" data-wf="' + esc(wf.name) + '">手动触发一轮</button></div></div>';
-    return '<div class="jobs-layout"><div class="jobs-list"><div class="card-h"><span class="h-title">运行轮次</span><span class="h-sub">' + wf.runs.length + ' 轮（页面内 follow）</span></div><div class="jl-scroll">' + list + '</div></div>' +
+    if (!list) list = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">环内暂无该锚的 run（触发留痕=观测面，环容量 256）</div></div>';
+    var detail = sel ? wfRunDrawerHtml(row, sel, true) :
+      '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">无运行轮次</div><div class="e-act"><span class="faint small">手动触发=Apply 触发设置（引擎真实执行面接线余量）</span></div></div>';
+    return '<div class="jobs-layout"><div class="jobs-list"><div class="card-h"><span class="h-title">运行轮次</span><span class="h-sub">' +
+      runs.length + ' 轮（环内投影，新→旧）</span></div><div class="jl-scroll">' + list + '</div></div>' +
       '<div class="job-detail" id="job-detail">' + detail + '</div></div>';
   }
   ACTIONS['wf-run-sel'] = function (el) { S.wfRunSel[S.params.name] = parseInt(el.dataset.no, 10); render(); };
-  function jobDetailHtml(wf, r) {
-    var runKey = wf.name + ':' + r.no;
-    var docs = wf.involvedDocs;
-    var tl = r.timeline.map(function (t, i) {
-      var cls = t.state === 'current' ? 'current' : (t.note && t.note.indexOf('backoff') >= 0 ? 'fail' : 'done');
-      return '<div class="ptl-item ' + cls + '"><div class="ptl-rail"><div class="ptl-node"></div>' + (i < r.timeline.length - 1 ? '<div class="ptl-line"></div>' : '') + '</div>' +
-        '<div class="ptl-main"><div class="ptl-head"><span class="ptl-phase">' + esc(t.phase) + '</span><span class="ptl-ts">' + fmtTime(t.ts) + ' · ' + (t.state === 'current' ? '进行中' : t.dur + 'm') + '</span></div>' +
-        '<div class="ptl-note">' + esc(t.note) + '</div></div></div>';
+
+  /* --- 运行抽屉（相位时间线/留痕 kv/涉及文档；action log 与 SessionLog=诚实空态余量） --- */
+  function wfRunDrawerHtml(row, r, inline) {
+    var phases = r.phases || [];
+    var curIdx = phases.indexOf(r.phase);
+    var tl = phases.map(function (p, i) {
+      var cls = i < curIdx ? 'done' : (i === curIdx ? 'current' : '');
+      return '<div class="ptl-item ' + cls + '"><div class="ptl-rail"><div class="ptl-node"></div>' + (i < phases.length - 1 ? '<div class="ptl-line"></div>' : '') + '</div>' +
+        '<div class="ptl-main"><div class="ptl-head"><span class="ptl-phase">' + esc(p) + '</span><span class="ptl-ts">' +
+        (i === curIdx ? '当前落点' : (i < curIdx ? '已过（留痕面无进出时刻——相位进出时刻=执行面余量）' : '未至')) + '</span></div></div></div>';
     }).join('');
-    var shownActions = r.actions.slice(0, S.logShown && S.logShown[runKey] ? S.logShown[runKey] : 3);
-    var moreBtn = r.actions.length > shownActions.length ? '<button class="log-more" data-act="log-more" data-key="' + esc(runKey) + '" data-total="' + r.actions.length + '">加载更早 action（' + (r.actions.length - shownActions.length) + ' 条 · 模拟 follow/page）</button>' : '';
-    var logHtml = shownActions.slice().reverse().map(function (a) {
-      return '<div class="log-line"><span class="lg-ts">' + fmtTime(a.ts) + '</span><span class="lg-op">' + esc(a.op) + '</span><span class="grow">' + esc(a.detail) + '</span></div>';
-    }).join('');
-    var followOn = S.follow[runKey] !== false;
-    var isLive = r.status === 'running' || r.status === 'waiting';
-    var docsChips = docs.map(function (d) { return '<span class="chip click mute small" data-act="go" data-go="doc/' + esc(d) + '">' + esc(d) + '</span>'; }).join(' ');
-    return '<div class="jd-head"><span class="jd-title mono">#' + r.no + ' · ' + esc(wf.name) + '</span>' + phaseChip(r.phase) +
-      (isLive ? '<span class="follow-tag' + (followOn ? '' : ' off') + '" data-act="follow-toggle" data-key="' + esc(runKey) + '"><span class="lamp ' + (followOn ? 'ok pulse-ok' : 'off') + '" style="width:7px;height:7px"></span>' + (followOn ? '跟随中' : '已暂停跟随（点击恢复）') + '</span>' : '') +
-      '<span style="margin-left:auto"></span>' +
-      '<span class="lk small" data-act="go" data-go="wf/' + esc(wf.name) + '/r/' + r.no + '">在独立页打开 →</span></div>' +
+    if (!tl) tl = '<div class="small faint">相位未投影（' + esc(r.specSource) + ' 源未声明 spec.phases——零投影口径，status=' + esc(r.status) + '）</div>';
+    var kv = function (k, v) { return '<span>' + esc(k) + ' <b>' + v + '</b></span>'; };
+    var brakes = r.brakes || {};
+    var docsChips = involvedDocChip(r.involved);
+    var objChips = (row.objects || []).map(function (o) { return wfObjectChip(row.name, o); }).join(' ');
+    var back = '<span class="lk small" data-act="go" data-go="wf/' + esc(row.name) + '/r/' + r.run + '">在独立页打开 →</span>';
+    return '<div class="jd-head"><span class="jd-title mono">#' + r.run + ' · ' + esc(row.name) + '</span>' + runStatusChip(r.status, r.phase) +
+      '<span style="margin-left:auto"></span>' + (inline ? back : '<span class="lk small" data-act="go" data-go="wf/' + esc(row.name) + '">← 返回运行管理</span>') + '</div>' +
       '<div class="jd-kvrow">' +
-      '<span>kind <b>workflow-round</b></span><span>label <b>#' + r.no + ' ' + esc(wf.name) + '</b></span>' +
-      '<span>status <b>' + esc(r.status) + '</b></span><span>trigger <b class="mono">' + esc(r.trigger) + '</b></span>' +
-      '<span>startedAt <b class="mono">' + fmtTimeS(r.start) + '</b></span>' +
-      '<span>detail <b>' + esc(r.result) + '</b></span></div>' +
+      kv('specSource', esc(r.specSource || '—')) + kv('status', esc(r.status)) +
+      kv('triggerSeq', esc(r.triggerSeq)) + '<span>eventId <b class="mono">' + esc(r.eventId || '—') + '</b></span>' +
+      '<span>route <b class="mono">' + esc(r.route || '—') + '</b></span>' +
+      '<span>owner <b class="mono">' + esc(r.owner || '—') + '</b></span>' +
+      '<span>startedAt <b class="mono">' + esc((r.startedAt || '').replace('T', ' ').slice(0, 19)) + '</b></span>' +
+      '<span>brakes <b class="mono">' + esc(brakes.cooldown || '—') + ' / ' + esc(brakes.maxMutationsTick != null ? brakes.maxMutationsTick : '—') + '</b></span></div>' +
       '<div class="jd-body">' +
-      '<div><div class="sec-title">相位时间线（FSM）</div><div class="phase-tl">' + tl + '</div></div>' +
-      '<div><div class="sec-title">action log（ConnectorOps 调用 · op 等宽）</div><div class="logbox" id="log-' + esc(runKey.replace(/[^a-z0-9]/gi, '')) + '">' + logHtml + moreBtn + '</div></div>' +
-      '<div><div class="sec-title">涉及文档（' + docs.length + ' · 点击进编辑器）</div><div style="display:flex;gap:6px;flex-wrap:wrap">' + docsChips + '</div></div>' +
-      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
-      '<span class="lk small" data-act="go" data-go="session/' + esc(r.session) + '">SessionLog：' + esc(r.session) + ' →</span>' +
-      '<span style="flex:1"></span>' +
-      '<button class="btn sm" data-act="wf-rerun" data-wf="' + esc(wf.name) + '">重跑</button>' +
-      '<button class="btn sm danger" data-act="wf-cancel" data-wf="' + esc(wf.name) + '" data-no="' + r.no + '">取消</button></div>' +
+      '<div><div class="sec-title">相位时间线（FSM：声明序列 + 当前落点）</div><div class="phase-tl">' + tl + '</div></div>' +
+      '<div><div class="sec-title">action log（ConnectorOps 调用）</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：action log 随真实执行面接线落位（引擎主体余量，cored-bridge.md §2.3）——本抽屉当前承载触发面投影（留痕 kv 即该 run 的审计锚点）</div></div></div>' +
+      '<div><div class="sec-title">涉及文档（点击进对象 viewer）</div><div style="display:flex;gap:6px;flex-wrap:wrap">' + (docsChips || '<span class="faint small">留痕 involved 缺席</span>') + (objChips ? '<span class="faint small" style="align-self:center">声明对象：</span>' + objChips : '') + '</div></div>' +
+      '<div><div class="sec-title">SessionLog 全文</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：SessionLog 随 agent 会话接线落位（E5 会话屏轮）——细粒度断点续跑靠 SessionLog（workflows 规则 13 挂账）</div></div></div>' +
       '</div>';
   }
-  ACTIONS['log-more'] = function (el) {
-    var key = el.dataset.key, total = parseInt(el.dataset.total, 10);
-    S.logShown = S.logShown || {};
-    S.logShown[key] = Math.min(total, (S.logShown[key] || 3) + 4);
-    render();
-  };
-  ACTIONS['follow-toggle'] = function (el) {
-    var key = el.dataset.key;
-    S.follow[key] = S.follow[key] === false ? true : false;
-    render();
-  };
-  function wireFollow(wf) {
-    var r = wf.runs[0];
-    if (!r) return;
-    var runKey = wf.name + ':' + r.no;
-    var isLive = r.status === 'running' || r.status === 'waiting';
-    if (!isLive || S.follow[runKey] === false) return;
-    var extra = ['agent-comm.inbox', 'onedev-ci.poll-log', 'oss-artifacts.verify-digest', 'gitfs.pull'];
-    var n = 0;
-    var t = addInterval(function () {
-      n++;
-      var box = $('#job-detail .logbox');
-      if (!box) return;
-      var op = extra[n % extra.length];
-      var line = document.createElement('div');
-      line.className = 'log-line';
-      line.innerHTML = '<span class="lg-ts">' + fmtTimeS(new Date()) + '</span><span class="lg-op">' + op + '</span><span class="grow">follow 追加 #' + n + '（live tail，间隔 2.5s 模拟）</span>';
-      box.insertBefore(line, box.firstChild);
-    }, 2500);
-    stopFollowTimers();
-    S.followTimers = [t];
+
+  /* --- 流程图 tab：生效相位序列线性渲染，当前落点高亮（相位态机=声明序列） --- */
+  function wfLiveTabFlow(row) {
+    var phases = row.phases || [];
+    var cur = row.latest ? row.latest.phase : '';
+    var steps = phases.map(function (p, i) {
+      var cls = p === cur ? 'cur' : (p === 'Failed' ? 'abn' : '');
+      return '<div class="fstep ' + cls + '"><div class="fs-dot"></div><div class="fs-name mono">' + esc(p) + '</div></div>';
+    }).join('<div class="fs-arrow">→</div>');
+    if (!phases.length) steps = '<div class="small faint">相位未投影（声明 spec.phases 余量）</div>';
+    return '<div class="card"><div class="card-h"><span class="h-title">相位态机（声明序列）</span>' +
+      '<span class="h-sub">' + (row.latest ? '现势 run #' + row.latest.run + ' · ' + esc(row.latest.status) : '无现势 run——落点不假画（诚实空态）') + '</span></div>' +
+      '<div class="card-b"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0">' + steps + '</div></div></div>' +
+      '<div class="small faint" style="margin-top:8px">声明表=transitions（物化相邻行+审批边——runs 载荷 transitions 键可查）；当前相位=' + esc(cur || '无') + '</div>';
   }
-  ACTIONS['wf-rerun'] = function (el) {
-    var wf = wfByName(el.dataset.wf);
-    var no = wf.runs[0].no + 1;
-    addEvent('event', 'ManualTick', 'info', wf.scope.replace('systems/', '') || 'global', 'workflow/' + wf.name, '手动触发一轮（manual: root）→ 轮次 #' + no + ' 入队', '#/wf/' + wf.name);
-    toast('已入队', wf.name + ' #' + no + ' · =Apply 语义（触发设置生效）', 'ok');
-  };
-  ACTIONS['wf-cancel'] = function (el) {
-    var wf = wfByName(el.dataset.wf);
-    confirmModal('取消运行轮次（= Apply）',
-      '<div>将取消 <b class="mono">' + esc(wf.name) + ' #' + esc(el.dataset.no) + '</b>：相位冻结、现场保留，SessionLog 可续。该操作走 Apply 落库并发出事件。</div>',
-      '确认取消（Apply）', function () {
-        addEvent('phase', 'PhaseChanged', 'warn', wf.scope.replace('systems/', '') || 'global', 'workflow/' + wf.name + '#' + el.dataset.no, '手动取消（Paused，reason: manual:console）', '#/wf/' + wf.name);
-        toast('已取消（Apply 落库）', wf.name + ' #' + el.dataset.no + ' → Paused', 'warn');
-        render();
-      });
-  };
-  /* --- 流程图 tab --- */
-  function wfTabFlow(wf) {
-    var phases = M.FSM;
-    var W = 1180, H = 300;
-    var cols = 4;
-    var pos = {};
-    phases.forEach(function (p, i) {
-      pos[p] = { x: 60 + (i % cols) * 270, y: 60 + Math.floor(i / cols) * 120 };
+
+  /* --- 事件 tab：该 workflow 触发与消费的事件流=触发留痕过滤（route→该锚） --- */
+  function wfLiveTabEvents(row) {
+    var recs = ((LIVE.state.triggers || {}).records || []).filter(function (rec) {
+      return rec.execution && rec.execution.route && rec.execution.route.executor === 'workflow' &&
+        wfAnchorOfRoute(rec.route) === row.name;
+    }).reverse();
+    var html = recs.slice(0, 60).map(function (rec) {
+      var dot = rec.level === 'error' || rec.level === 'fatal' ? 'danger' : rec.level === 'warn' ? 'warn' : 'acc';
+      return '<div class="mini-row" data-act="go" data-go="event/' + encodeURIComponent(rec.eventId) + '">' +
+        '<span class="lamp ' + dot + '"></span>' +
+        '<div class="mr-main"><div>' + esc(rec.type) + '</div><div class="mr-sub mono">' + esc(rec.involved || '—') + ' · route ' + esc(rec.route) + '</div></div>' +
+        '<span class="faint mono small">' + fmtAgo(new Date(rec.receivedAt || rec.at)) + '</span></div>';
+    }).join('');
+    if (!html) html = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">留痕环内暂无路由到该锚的事件（dead-letter/其他执行面不入此列）</div></div>';
+    return '<div class="card"><div class="card-h"><span class="h-title">触发与消费的事件流（留痕=过去的决策投影）</span><span class="h-sub">' + recs.length + ' 条</span></div>' +
+      '<div class="mini-list" style="max-height:520px;overflow-y:auto">' + html + '</div></div>';
+  }
+
+  /* --- 流转 tab：run 行投影（相位+状态+时刻；相位进出时刻=执行面余量，如实标注） --- */
+  function wfLiveTabTransitions(row) {
+    var runs = liveRunsOf(row.name);
+    var container = '<div id="tr-vlist"></div>';
+    var note = '<div class="filter-bar"><span class="small muted">运行轮次（新→旧）：</span><span class="count-note">' + runs.length + ' 行（相位进出时刻随执行面接线落位——当前承载=受理/迁移落点投影）</span></div>';
+    return note + container;
+  }
+  function paintWfTransitions(row) {
+    var el = $('#tr-vlist');
+    if (!el) return;
+    var runs = liveRunsOf(row.name);
+    vlist(el, runs, 34, function (r) {
+      return '<span class="vc mono faint" style="width:70px">#' + r.run + '</span>' + runStatusChip(r.status, r.phase) +
+        '<span class="vc mono faint" style="width:150px">' + esc(r.type) + '</span>' +
+        '<span class="grow mono faint small">' + esc(r.involved || '—') + '</span>' +
+        '<span class="vc mono faint" style="width:130px">' + esc((r.startedAt || '').replace('T', ' ').slice(0, 19)) + '</span>';
     });
-    var abn = { Failed: { x: 60 + 3 * 270, y: 60 + 120 }, Paused: { x: 60 + 2 * 270, y: 60 + 120 } };
-    var cur = wf.phase;
-    function node(p, p2, sub) {
-      var c = pos[p] || abn[p];
-      var isCur = p === cur;
-      var isAbn = p === 'Failed' || p === 'Paused';
-      return '<g class="fnode' + (isCur ? ' cur' : '') + (isAbn ? ' abn' : '') + '" data-act="flow-node" data-ph="' + esc(p) + '">' +
-        '<rect x="' + c.x + '" y="' + c.y + '" width="200" height="54" rx="8"/>' +
-        '<text x="' + (c.x + 14) + '" y="' + (c.y + 23) + '">' + esc(p) + '</text>' +
-        '<text class="fsub" x="' + (c.x + 14) + '" y="' + (c.y + 41) + '">' + esc(sub) + '</text></g>';
-    }
-    var subs = { Idle: '待触发', Analyzing: '读文档 对比现实', Planning: '选 TaskScheme', AwaitingApproval: '高危人批', Executing: 'ConnectorOps 执行', Verifying: '探针复测', Reporting: 'Status 回归归档', Failed: 'backoff 30s*2^n', Paused: '断点保留 等人批 Resume' };
-    var edges = [];
-    for (var i = 0; i < phases.length - 1; i++) {
-      var a = pos[phases[i]], b = pos[phases[i + 1]];
-      var ax = a.x + 200, ay = a.y + 27, bx = b.x, by = b.y + 27;
-      if (Math.abs(a.y - b.y) < 5) {
-        edges.push('<path class="fedge' + (wf.phase === phases[i + 1] ? ' hot' : '') + '" d="M' + ax + ',' + ay + ' L' + (bx - 8) + ',' + by + '"/>');
-      } else {
-        edges.push('<path class="fedge" d="M' + (a.x + 100) + ',' + (a.y + 54) + ' L' + (a.x + 100) + ',' + (a.y + 90) + ' L' + (b.x + 100) + ',' + (b.y - 36) + ' L' + (b.x + 100) + ',' + (b.y - 6) + '"/>');
-      }
-    }
-    edges.push('<path class="fedge abn" d="M' + (pos.Executing.x + 200) + ',' + (pos.Executing.y + 40) + ' C' + (pos.Executing.x + 240) + ',' + (pos.Executing.y + 120) + ',' + (abn.Failed.x - 40) + ',' + (abn.Failed.y + 60) + ',' + (abn.Failed.x) + ',' + (abn.Failed.y + 27) + '"/>');
-    edges.push('<path class="fedge abn" d="M' + (pos.Executing.x + 210) + ',' + (pos.Executing.y + 27) + ' L' + (abn.Paused.x - 8) + ',' + (abn.Paused.y + 27) + '"/>');
-    var arrowDef = '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2b3646"/></marker></defs>';
-    return '<div class="flowwrap"><svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' + arrowDef + edges +
-      phases.map(function (p) { return node(p, null, subs[p]); }).join('') +
-      Object.keys(abn).map(function (p) { return node(p, null, subs[p]); }).join('') +
-      '<text x="60" y="270" style="fill:#8b93a7;font-size:11px">当前相位：<tspan fill="#7fb0f9" style="font-weight:700">' + esc(cur) + '</tspan> · 蓝色描边=当前 · 红色虚线=异常路径 · 点击节点过滤「流转」</text></svg></div>' +
-      '<div id="flow-note" class="small faint" style="margin-top:8px">onEscalate: ' + esc(wf.onEscalate) + ' · onFailed: escalate to root + notify bind-role</div>';
-  }
-  ACTIONS['flow-node'] = function (el) {
-    S.trFilter.phase = el.dataset.ph;
-    S.wfTab[S.params.name] = 'transitions';
-    render();
-  };
-  /* --- 事件 tab --- */
-  function wfTabEvents(wf) {
-    var evs = M.events.filter(function (e) { return e.object.indexOf(wf.name) >= 0 || (e.msg && e.msg.indexOf(wf.name) >= 0); }).slice(0, 40);
-    var html = evs.length ? evs.map(function (e) {
-      var dot = e.level === 'fatal' || e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : 'acc';
-      return '<div class="mini-row" data-act="go" data-go="event/' + esc(e.id) + '"><span class="lamp ' + dot + '"></span>' +
-        '<div class="mr-main"><div>' + esc(e.msg) + '</div><div class="mr-sub mono">' + esc(e.kind) + ' · ' + esc(e.object) + '</div></div>' +
-        '<span class="faint mono small">' + fmtAgo(e.ts) + '</span></div>';
-    }).join('') : '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">该 workflow 暂无事件</div></div>';
-    return '<div class="card"><div class="card-h"><span class="h-title">该 workflow 触发与消费的事件流</span></div><div class="mini-list" style="max-height:520px;overflow-y:auto">' + html + '</div></div>';
-  }
-  /* --- 流转 tab（≥800 行虚拟滚动） --- */
-  function wfTabTransitions(wf) {
-    var rows = M.transitions.filter(function (t) { return t.wf === wf.name && (!S.trFilter.phase || t.phase === S.trFilter.phase); });
-    var phaseOpts = [''].concat(M.FSM, M.FSM_ABNORMAL);
-    var head = '<div class="filter-bar"><span class="small muted">相位过滤：</span>' +
-      '<select id="tr-phase">' + phaseOpts.map(function (p) { return '<option value="' + p + '"' + (S.trFilter.phase === p ? ' selected' : '') + '>' + (p || '全部相位') + '</option>'; }).join('') + '</select>' +
-      '<span class="count-note" id="tr-count">' + rows.length + ' 行（全量 ' + M.transitions.length + ' · 虚拟滚动）</span></div>';
-    return head + '<div id="tr-vlist"></div>';
-  }
-  function paintTransitions(wf) {
-    var rows = M.transitions.filter(function (t) { return t.wf === wf.name && (!S.trFilter.phase || t.phase === S.trFilter.phase); });
-    var note = $('#tr-count');
-    if (note) note.textContent = rows.length + ' 行（全量 ' + M.transitions.length + ' · 虚拟滚动）';
-    vlist($('#tr-vlist'), rows, 34, function (t) {
-      var dirChip = t.dir === 'in' ? '<span class="chip acc small">→ in</span>' : '<span class="chip mute small">← out</span>';
-      var phChip = t.phase === 'Failed' || t.phase === 'Paused' ? '<span class="chip danger small">' + t.phase + '</span>' : '<span class="chip kind">' + esc(t.phase) + '</span>';
-      return '<span class="vc mono faint" style="width:110px">' + esc(t.wf) + ' #' + t.run + '</span>' +
-        '<span class="vc">' + dirChip + '</span>' + phChip +
-        '<span class="grow">' + esc(t.note) + '</span>' +
-        '<span class="vc mono faint" style="width:120px">' + esc(t.reason) + '</span>' +
-        '<span class="vc mono faint" style="width:60px">' + fmtTime(t.ts) + '</span>';
-    });
-    $('#tr-vlist').onclick = function (ev) {
-      var row = ev.target.closest('.vrow');
-      if (!row) return;
-      var idx = Math.floor((row.offsetTop + this.scrollTop) / 34);
-      var it = rows[idx];
-      if (it) { S.wfRunSel[wf.name] = it.run; S.wfTab[wf.name] = 'runs'; render(); }
+    el.onclick = function (ev) {
+      var rowEl = ev.target.closest('.vrow');
+      if (!rowEl) return;
+      var idx = Math.floor((rowEl.offsetTop + this.scrollTop) / 34);
+      var it = runs[idx];
+      if (it) { S.wfRunSel[row.name] = it.run; S.wfTab[row.name] = 'runs'; render(); }
     };
   }
-  /* --- 数据流 tab --- */
-  function wfTabDataflow(wf) {
-    var df = wf.dataflow;
-    function nodeCol(title, items, kind) {
-      return '<div><div class="sec-title">' + esc(title) + '</div><div style="display:grid;gap:8px">' +
-        items.map(function (x) {
-          var label = x.events ? 'events: ' + x.events.join(', ') : x.docs ? 'docs: ' + x.docs : x.status ? 'status: ' + x.status : '';
-          var extra = x.notify ? ' notify: ' + x.notify.join(',') : x.artifacts ? ' artifacts: ' + x.artifacts : x.reports ? ' reports: ' + x.reports.join(',') : '';
-          var go_ = x.artifacts ? 'ws/oss' : x.docs && x.docs.indexOf('systems/') >= 0 ? 's/' + x.docs.split('/')[1] : x.events ? 'events' : 'overview';
-          return '<div class="op-card" style="cursor:pointer" data-act="go" data-go="' + esc(go_) + '"><div class="oc-name mono">' + esc(label) + '</div><div class="oc-desc">' + esc(extra) + '</div></div>';
-        }).join('') + '</div></div>';
+
+  /* --- 数据流 tab：聚合面 dataflowInputs/Outputs 拼图（节点全可点） --- */
+  function wfLiveTabDataflow(row) {
+    var tt = wfToggleTarget(row);
+    var eff = tt.target;
+    if (!eff) {
+      return '<div class="card"><div class="card-b">' + emptyBox('数据流声明缺席（诚实空态）', row.name + ' 无文档本体——spec.dataflow 随文档面，builtin 注册表无此声明') + '</div></div>';
     }
+    var ins = (eff.dataflowInputs || []).map(function (x) {
+      var label = x.events && x.events.length ? 'events: ' + x.events.join(', ') : (x.docs ? 'docs: ' + x.docs : '');
+      var go_ = x.docs && x.docs.indexOf('systems/') >= 0 ? 's/' + x.docs.split('/')[1] : (x.events ? 'events' : 'overview');
+      return '<div class="op-card" style="cursor:pointer" data-act="go" data-go="' + esc(go_) + '"><div class="oc-name mono">' + esc(label) + '</div></div>';
+    }).join('');
+    var outs = (eff.dataflowOutputs || []).map(function (x) {
+      var label = x.status ? 'status: ' + x.status : (x.docs ? 'docs: ' + x.docs : (x.artifacts ? 'artifacts: ' + x.artifacts : ''));
+      var extra = [x.notify && x.notify.length ? 'notify: ' + x.notify.join(',') : '',
+        x.artifacts ? 'artifacts: ' + x.artifacts : '', x.reports && x.reports.length ? 'reports: ' + x.reports.join(',') : ''].filter(Boolean).join(' · ');
+      var go_ = x.artifacts ? 'connectors' : (x.docs && x.docs.indexOf('systems/') >= 0 ? 's/' + x.docs.split('/')[1] : 'overview');
+      return '<div class="op-card" style="cursor:pointer" data-act="go" data-go="' + esc(go_) + '"><div class="oc-name mono">' + esc(label) + '</div><div class="oc-desc">' + esc(extra) + '</div></div>';
+    }).join('');
     return '<div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:14px">' +
-      nodeCol('① 输入（触发源）', df.inputs) +
-      '<div><div class="sec-title">② 处理（相位态机）</div><div class="op-card"><div class="oc-name">phases</div><div class="oc-desc">' + esc(df.process) + '</div>' +
-      '<div class="hr"></div><div class="oc-desc">brakes: ' + esc(wf.brakes) + '</div><div class="oc-desc" style="margin-top:6px">regression: ' + esc(wf.regression) + '</div>' +
+      '<div><div class="sec-title">① 输入（触发源）</div><div style="display:grid;gap:8px">' + (ins || '<span class="faint small">未声明</span>') + '</div></div>' +
+      '<div><div class="sec-title">② 处理（相位态机）</div><div class="op-card"><div class="oc-name mono">phases ×' + (row.phases || []).length + '</div>' +
+      '<div class="oc-desc">mode: ' + esc(eff.mode || '—') + '</div><div class="oc-desc">involved: ' + esc((eff.involved || []).join(', ') || '随 scope') + '</div>' +
       '<div style="margin-top:10px"><span class="lk small" data-act="wf-tab-go" data-t="flow">查看流程图 →</span></div></div></div>' +
-      nodeCol('③ 输出（回归/产物）', df.outputs) + '</div>' +
-      '<div class="small faint" style="margin-top:10px">节点全部可点：artifacts → oss WorkService；docs → 系统详情；events → 事件流。</div>';
+      '<div><div class="sec-title">③ 输出（回归/产物）</div><div style="display:grid;gap:8px">' + (outs || '<span class="faint small">未声明</span>') + '</div></div></div>' +
+      '<div class="small faint" style="margin-top:10px">节点全部可点：docs → 系统详情；events → 事件流；声明源=' + esc(eff.scope) + ' r' + eff.resourceVersion + '</div>';
   }
   ACTIONS['wf-tab-go'] = function (el) { S.wfTab[S.params.name] = el.dataset.t; render(); };
-  /* --- 配置 tab --- */
-  function wfSpecYaml(wf) {
-    var doc = docByName(wf.specDoc || wf.name + '-spec');
-    if (doc) return doc.content;
-    return 'apiVersion: core/v1\nkind: Workflow\nmetadata:\n  name: ' + wf.name + '\n  scope: ' + wf.scope + '\nspec:\n  enabled: ' + wf.enabled + '\n  services:\n    involved: [' + wf.services.involved.join(', ') + ']\n    mode: ' + wf.services.mode + '\n    llm: {provider: ' + wf.services.llm.provider + ', model: ' + wf.services.llm.model + '}\n  triggers: ' + wf.triggers + '\n  brakes: ' + wf.brakes + '\n  regression: ' + wf.regression + '\n  onEscalate: ' + wf.onEscalate;
+
+  /* --- 配置 tab：生效对象 YAML 现读（编辑深链=E4）；builtin 无本体=注册表说明 --- */
+  function wfLiveTabConfig(row) {
+    var tt = wfToggleTarget(row);
+    if (!tt.target) {
+      return '<div class="card"><div class="card-h"><span class="h-title">spec（builtin 注册表——无文档本体）</span></div>' +
+        '<div class="card-b"><div class="small faint" style="padding:4px 0">声明随运行时 builtin 注册表（相位词汇映射表同源，concepts/workflow.md §1）；override 编辑=E4 编辑器轮余量。</div>' +
+        '<div class="yaml-block">' + esc('phases: [' + (row.phases || []).join(', ') + ']\nspecSource: ' + row.specSource) + '</div></div></div>';
+    }
+    var obj = tt.target;
+    return '<div class="card"><div class="card-h"><span class="h-title">spec yaml（' + esc(obj.scope) + ' r' + obj.resourceVersion + ' · origin ' + esc(obj.origin) + '）</span>' +
+      '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '">编辑（→ 对象 viewer，E4 起 Apply 全链）</span></span></div>' +
+      '<div class="card-b" id="wf-config-yaml"><div class="skel-row"><div class="skel" style="width:220px"></div></div></div></div>';
   }
-  function wfTabConfig(wf) {
-    var specDoc = docByName(wf.specDoc || wf.name + '-spec');
-    return '<div class="card"><div class="card-h"><span class="h-title">spec yaml（只读视图）</span>' +
-      '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(wf.name) + '">编辑' + (specDoc ? '（→ ' + esc(specDoc.name) + ' 编辑器，Apply 落库）' : '') + '</span></span></div>' +
-      '<div class="card-b"><div class="yaml-block">' + esc(wfSpecYaml(wf)) + '</div></div></div>';
+  function hydrateWfConfig(row) {
+    var obj = wfToggleTarget(row).target;
+    if (!obj) return;
+    hydrate('wf-config-yaml', 'v1/objects/Workflow/' + encodeURIComponent(row.name) + '?scope=' + encodeURIComponent(obj.scope),
+      function (el, b) {
+        el.innerHTML = '<div class="yaml-block">' + esc(String(b.content || '')) + '</div>';
+      });
   }
-  /* --- 运行独立页 #/wf/:name/r/:n --- */
+
+  /* --- 运行独立页 #/wf/:name/r/:n（屏幕 5 运行抽屉的独立路由形态，console-ui.md 详情页矩阵） --- */
   function screenWfRun(view) {
-    var wf = wfByName(S.params.name);
-    if (!wf) { view.innerHTML = emptyBox('workflow 不存在', S.params.name); return; }
-    var r = wf.runs.filter(function (x) { return x.no === parseInt(S.params.n, 10); })[0];
-    if (!r) { view.innerHTML = emptyBox('运行轮次不存在', wf.name + ' #' + S.params.n); return; }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows', go: 'workflows' }, { label: wf.name, go: 'wf/' + wf.name }, { label: '运行 #' + r.no }]);
+    LIVE.ensure();
+    var st = LIVE.state;
+    var name = S.params.name;
+    var no = parseInt(S.params.n, 10);
+    var row = liveWfRow(name);
+    var r = liveRunByNo(name, no);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows', go: 'workflows' }, { label: name, go: 'wf/' + name }, { label: '运行 #' + no }]);
+    if (!row || !r) {
+      view.innerHTML = '<div class="view-inner">' + (st.wfAgg
+        ? emptyBox('运行轮次不在环内（环容量 256——旧轮次随溢出挤出，留痕=观测面非账本）', name + ' #' + no)
+        : '<div class="card"><div class="card-b">' + liveSkeletonRows(3) + '</div></div>' + liveDegradedNote()) + '</div>';
+      return;
+    }
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(wf.name) + ' <span style="color:var(--text-2)">#' + r.no + '</span></h1>' + phaseChip(r.phase) + '</div>' +
-      '<div class="dh-sub">' + esc(r.trigger) + ' · 开始 ' + fmtTime(r.start) + ' · ' + esc(r.result) + '</div></div>' +
-      '<div class="dh-actions"><button class="btn" data-act="go" data-go="wf/' + esc(wf.name) + '">← 返回运行管理</button>' +
-      '<button class="btn" data-act="wf-rerun" data-wf="' + esc(wf.name) + '">重跑</button></div></div>' +
-      '<div class="card" id="job-detail">' + jobDetailHtml(wf, r) + '</div></div>';
-    wireFollow(wf);
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(name) + ' <span style="color:var(--text-2)">#' + r.run + '</span></h1>' + runStatusChip(r.status, r.phase) + '</div>' +
+      '<div class="dh-sub">' + esc(r.type) + ' · startedAt ' + esc((r.startedAt || '').replace('T', ' ').slice(0, 19)) + '</div></div>' +
+      '<div class="dh-actions"><button class="btn" data-act="go" data-go="wf/' + esc(name) + '">← 返回运行管理</button></div></div>' +
+      '<div class="card" id="job-detail">' + wfRunDrawerHtml(row, r, false) + '</div></div>';
   }
+
   /* ================= 屏 6：文档编辑器 ================= */
   S.docLLM = {};   // docName -> {msgs:[{role,text,cards,done}], tab:'llm'}
   S.docTab = {};   // docName -> collab tab
@@ -3096,7 +3180,7 @@
   route('s/:name/docs', screenSysDocs);
   route('s/:name/permissions', screenSysPermissions);
   route('workflows', screenWorkflows);
-  route('wf/:name', function (v) { screenObject(v, 'Workflow'); }); // E3 起升运行管理（列表+详情+运行抽屉）
+  route('wf/:name', screenWorkflow); // E3：运行管理详情（六 tab；列表列=L38-05 活体判据）
   route('wf/:name/r/:n', screenWfRun);
   route('doc/:name', function (v) { screenObject(v, null); });      // 名字解析（歧义=空态引导回系统树）
   route('doc/:kind/:scope/:name', function (v) { screenObject(v); }); // 对象键直链（kind/scope/name）

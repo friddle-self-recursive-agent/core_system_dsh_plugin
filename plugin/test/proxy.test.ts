@@ -1,11 +1,14 @@
 // proxy.test.ts —— E2 数据通路宿主侧验收：/core-console/api 只读代理
 // （console-adoption.md §1.8 数据通路；R-PUB：无部署锚点，全注入）。
+// E3 增：/core-console/apply 写路由（栅栏同款 fail-closed、方法分立 405、subject 宿主注入
+// 剥除客户端声明、上游透传、503/502 口径）。
 // 判据：鉴权栅栏 fail-closed（栅栏缺席=拒全部）、只放行 GET /v1/*、cored 未就绪 503、
 // 状态码/载荷透传（双读一致面）、注册依赖软出现（headless 零影响）。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  CONSOLE_API_PREFIX, createConsoleApiHandler, mountConsoleProxy,
+  CONSOLE_API_PREFIX, CONSOLE_APPLY_PATH, DEFAULT_APPLY_SUBJECT,
+  createApplyHandler, createConsoleApiHandler, mountConsoleRoutes,
   type FetchLike, type HttpReqLike, type HttpResLike,
 } from '../src/index.ts'
 
@@ -80,29 +83,96 @@ test('cored 未就绪=503；上游不可达=502（读面关断口径，不冒充
   assert.equal(r2.statusCode, 502)
 })
 
-test('mountConsoleProxy：webServer+connection 在场=prefix 注册；缺席=不注册（headless 软出现）', () => {
-  let registered: { kind: string; path: string } | null = null
-  mountConsoleProxy({
+test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply exact 成对注册；缺席=不注册（headless 软出现）', () => {
+  const registered: { kind: string; path: string }[] = []
+  let disposed = 0
+  mountConsoleRoutes({
     inject(_deps, apply) {
       const sub: Record<string, unknown> = {
-        webServer: { register: (route: { kind: string; path: string }) => { registered = route; return () => {} } },
+        webServer: { register: (route: { kind: string; path: string }) => { registered.push(route); return () => { disposed++ } } },
         connection: { requestRejection: () => undefined },
       }
       const d = apply(sub)
       assert.equal(typeof d, 'function', '注册 disposer 应随插件退场返回')
     },
   }, { url: 'http://127.0.0.1:9/' })
-  assert.ok(registered)
-  assert.equal(registered!.kind, 'prefix')
-  assert.equal(registered!.path, CONSOLE_API_PREFIX)
+  assert.deepEqual(registered.map((r) => [r.kind, r.path]), [
+    ['prefix', CONSOLE_API_PREFIX],
+    ['exact', CONSOLE_APPLY_PATH],
+  ], '读代理（prefix）与 Apply 写路由（exact）成对注册（E3）')
+  assert.equal(disposed, 0)
 
   // 依赖缺席（headless）：回调体不注册、不抛错
   let called = false
-  mountConsoleProxy({
+  mountConsoleRoutes({
     inject(_deps, apply) {
       called = true
       apply({}) // Reflect.get 均缺席
     },
   }, { url: '' })
   assert.ok(called, 'inject 回调仍被驱动（软出现=依赖缺席时无害空转）')
+})
+
+// ─────── E3：/core-console/apply 写路由（console-adoption.md §1.9）───────
+
+function postRes(): HttpResLike {
+  return { statusCode: 0, setHeader() {}, end() {} }
+}
+
+test('createApplyHandler：栅栏 fail-closed ∧ 非 POST=405 ∧ 未就绪=503 ∧ 体不可解析=400', async () => {
+  const allow = () => undefined as 401 | 403 | undefined
+  const h = createApplyHandler({ bridge: { url: 'http://127.0.0.1:9/' }, reject: allow, subject: DEFAULT_APPLY_SUBJECT })
+  // 栅栏拒绝（403）
+  const hDenied = createApplyHandler({
+    bridge: { url: 'http://127.0.0.1:9/' }, reject: () => 403, subject: DEFAULT_APPLY_SUBJECT,
+  })
+  let r = postRes()
+  await hDenied({ method: 'POST', headers: {} }, r)
+  assert.equal(r.statusCode, 403)
+  // 栅栏缺席=fail-closed（拒绝全部）
+  const hNoGate = createApplyHandler({ bridge: { url: 'http://127.0.0.1:9/' }, subject: DEFAULT_APPLY_SUBJECT })
+  r = postRes()
+  await hNoGate({ method: 'POST', headers: {} }, r)
+  assert.equal(r.statusCode, 401, '无栅栏=拒绝全部（fail-closed 同读代理口径）')
+  // 非 POST=405（写路由方法分立）
+  r = postRes()
+  await h({ method: 'GET', headers: {} }, r)
+  assert.equal(r.statusCode, 405)
+  // 未就绪=503
+  const hDown = createApplyHandler({ bridge: { url: '' }, reject: allow, subject: DEFAULT_APPLY_SUBJECT })
+  r = postRes()
+  await hDown({ method: 'POST', headers: {}, body: '{}' }, r)
+  assert.equal(r.statusCode, 503)
+  // 体不可解析=400
+  const hBad = createApplyHandler({
+    bridge: { url: 'http://127.0.0.1:9/' }, reject: allow,
+    fetchImpl: (async () => { throw new Error('不应转发') }) as FetchLike,
+    subject: DEFAULT_APPLY_SUBJECT,
+  })
+  r = postRes()
+  await hBad({ method: 'POST', headers: {}, body: '{oops' }, r)
+  assert.equal(r.statusCode, 400)
+})
+
+test('createApplyHandler：subject 宿主注入（剥客户端声明）∧ 上游透传 rv/action', async () => {
+  let captured: { url: string; init?: { body?: string } } | null = null
+  const ok: FetchLike = (async (url: string, init?: { body?: string }) => {
+    captured = { url, init }
+    return { ok: true, status: 200, json: async () => ({}), text: async () => JSON.stringify({ rv: 2, action: 'update' }) }
+  }) as FetchLike
+  const h = createApplyHandler({
+    bridge: { url: 'http://127.0.0.1:9/' }, reject: () => undefined as 401 | 403 | undefined, fetchImpl: ok,
+    subject: { user: 'console-probe', roles: ['role/global/admin'] },
+  })
+  let r = postRes()
+  await h({
+    method: 'POST', headers: {},
+    body: JSON.stringify({ kind: 'Workflow', scope: 's1', name: 'dev-delivery', resourceVersion: 1, fieldManager: 'console:apply', content: 'spec: {enabled: false}\n', subject: { user: 'spoof' } }),
+  }, r)
+  assert.equal(r.statusCode, 200)
+  assert.ok(captured!.url.endsWith('/v1/apply'))
+  const sent = JSON.parse(captured!.init!.body!)
+  assert.equal(sent.subject.user, 'console-probe', '主体=宿主注入')
+  assert.equal(sent.subject.user !== 'spoof', true, '客户端 subject 声明被剥除')
+  assert.equal(sent.kind, 'Workflow')
 })

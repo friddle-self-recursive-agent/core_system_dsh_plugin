@@ -22,6 +22,9 @@ export interface Config {
   coredUrl?: string
   /** 等待就绪行的超时（毫秒，缺省 10000）。 */
   readyTimeoutMs?: number
+  /** console Apply 写路由的请求级主体（E3 起；缺省=内置 admin 全权字面量——
+   *  cored-bridge.md §3 config.applySubject；主体注入属宿主行为，浏览器不携带主体）。 */
+  applySubject?: ApplySubject
 }
 
 /** 对象引用（/v1/objects list 投影，瘦身载荷无正文；契约 cored-bridge.md §2）。 */
@@ -66,14 +69,19 @@ export interface CoreSystemBridge extends CoreSystemQueryHandle {
   kinds: string[] | null
 }
 
-/** fetch 的最小结构面（便于测试注入假实现；与全局 fetch 同形）。 */
-export type FetchLike = (input: string) => Promise<{ ok: boolean; status: number; json(): Promise<unknown>; text(): Promise<string> }>
+/** fetch 的最小结构面（便于测试注入假实现；与全局 fetch 同形——第二参=POST/写通路的 init）。 */
+export type FetchLike = (input: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown>; text(): Promise<string> }>
 
-/** 极小 IncomingMessage 结构面（测试可注入；真实侧来自 node:http）。 */
+/** 极小 IncomingMessage 结构面（测试可注入；真实侧来自 node:http——POST 体经流式读取）。 */
 export interface HttpReqLike {
   method?: string
   url?: string
   headers: Record<string, unknown>
+  /** 测试注入面：string=现成请求体（流缺席时不走 stream 读取）。 */
+  body?: string
+  /** node:http 流面（真实侧 IncomingMessage；测试假体可缺席）。 */
+  on?(event: string, cb: (chunk?: Buffer | string) => void): unknown
+  off?(event: string, cb: (chunk?: Buffer | string) => void): unknown
 }
 /** 极小 ServerResponse 结构面（测试可注入）。 */
 export interface HttpResLike {
@@ -93,6 +101,23 @@ export interface ConnectionLike {
 
 /** console 只读代理路由前缀（宿主 web 路由；浏览器同源 fetch，cookies 随行）。 */
 export const CONSOLE_API_PREFIX = '/core-console/api'
+
+/** console Apply 写路由（E3 起，exact 路径；与只读代理前缀分立）。宿主转发 cored
+ *  POST /v1/apply（写路径唯一入口，三步闸门零旁路——cored-bridge.md §2.1）；主体由宿主
+ *  注入（config.applySubject），浏览器不携带主体；鉴权边界=connection 鉴权栅栏（与读代理
+ *  同 fail-closed 口径）。 */
+export const CONSOLE_APPLY_PATH = '/core-console/apply'
+
+/** Apply 主体缺省（permission.DefaultAdmin 全权字面量；部署可经 config.applySubject 覆写
+ *  为受限 role——cored-bridge.md §3 config.applySubject）。 */
+export const DEFAULT_APPLY_SUBJECT = { user: 'console-operator', roles: ['role/global/admin'] }
+
+/** 请求级主体（cored POST /v1/apply subject 字段投影；cored-bridge.md §2.1）。 */
+export interface ApplySubject {
+  user: string
+  roles?: string[]
+  groups?: string[]
+}
 
 /** 代理允许的上游路径前缀：只放行 cored 只读 GET 面（cored-bridge.md §2）——
  *  写路径唯一入口 POST /v1/apply 与 secrets/草稿写操作永不经本代理（缺省只读装配），
@@ -160,23 +185,133 @@ export function createConsoleApiHandler(opts: {
   }
 }
 
+/** POST 体上限（与 cored apply 入口同量级；超出=400，不无界缓冲）。 */
+const APPLY_BODY_CAP = 4 << 20
+
+/** 读 POST 请求体：流面在=逐块收集（真实 IncomingMessage）；string 面在=直取（测试假体）；
+ *  两者皆缺=空体（cored 侧 400 兜底）。超限提前收口。 */
+async function readRequestBody(req: HttpReqLike): Promise<string> {
+  if (typeof req.body === 'string') return req.body
+  if (typeof req.on !== 'function') return ''
+  return new Promise<string>((resolve) => {
+    let out = ''
+    let done = false
+    const finish = (v: string) => {
+      if (done) return
+      done = true
+      try { req.off?.('data', onData); req.off?.('end', onEnd) } catch { /* 假体可无 off */ }
+      resolve(v)
+    }
+    const onData = (chunk?: Buffer | string) => {
+      if (done) return
+      out += typeof chunk === 'string' ? chunk : (chunk ?? Buffer.alloc(0)).toString('utf8')
+      if (out.length > APPLY_BODY_CAP) finish('')
+    }
+    const onEnd = () => finish(out)
+    req.on('data', onData)
+    req.on('end', onEnd)
+  })
+}
+
+/**
+ * console Apply handler（E3 写通路，测试注入 fetch/bridge/reject 全独立）：
+ *   浏览器 POST /core-console/apply → connection 鉴权栅栏 → cored POST <bridge.url>/v1/apply
+ * 主体由宿主注入（opts.subject 覆写请求体任何 subject 声明——浏览器不携带主体，red line：
+ * 主体注入属宿主行为）；非 POST=405（写路由方法分立）；栅栏缺席=fail-closed 拒全部；
+ * cored 未就绪=503；上游不可达=502（与读代理同口径）；请求体不可解析=400。
+ */
+export function createApplyHandler(opts: {
+  bridge: { url: string }
+  reject?: (req: { headers: unknown }) => 401 | 403 | undefined
+  fetchImpl?: FetchLike
+  subject: ApplySubject
+}) {
+  const fetchImpl = opts.fetchImpl ?? fetch
+  return async function applyHandler(req: HttpReqLike, res: HttpResLike): Promise<void> {
+    // 写面 fail-closed（比读代理更严）：栅栏回调缺席=拒全部——写路由只在显式装配了鉴权
+    // 栅栏的宿主上放行（读代理的 fail-closed 在装配层，写面在 handler 内再锁一道）。
+    if (!opts.reject) {
+      res.statusCode = 401
+      res.end()
+      return
+    }
+    const rejection = opts.reject({ headers: req.headers })
+    if (rejection !== undefined) {
+      res.statusCode = rejection
+      res.end()
+      return
+    }
+    if ((req.method ?? 'GET') !== 'POST') {
+      res.statusCode = 405
+      res.setHeader('allow', 'POST')
+      res.end()
+      return
+    }
+    if (!opts.bridge.url) {
+      sendJson(res, 503, { error: 'cored 未就绪（桥接未完成）' })
+      return
+    }
+    // 请求体：JSON 对象必需；subject 一律由宿主注入（剥除客户端声明——写主体是宿主断言）。
+    let parsed: Record<string, unknown>
+    try {
+      const bodyText = await readRequestBody(req)
+      parsed = JSON.parse(bodyText || '{}')
+    } catch {
+      sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+      return
+    }
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+      return
+    }
+    delete parsed.subject
+    const upstream = { ...parsed, subject: opts.subject }
+    let out: Awaited<ReturnType<FetchLike>>
+    try {
+      out = await fetchImpl(opts.bridge.url.replace(/\/+$/, '') + '/v1/apply', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(upstream),
+      })
+    } catch (e) {
+      sendJson(res, 502, { error: `cored 不可达: ${String((e as Error)?.message ?? e)}` })
+      return
+    }
+    const text = await out.text()
+    res.statusCode = out.status
+    res.setHeader('content-type', 'application/json; charset=utf-8')
+    res.setHeader('cache-control', 'no-store')
+    res.end(text)
+  }
+}
+
 /** 宿主侧装配（软出现：web profile 才有 webServer/connection；headless 宿主零影响）。
  *  用 ctx.inject 等待依赖可用——依赖缺席的 profile 上回调永不启动，插件本体不受影响。 */
-export function mountConsoleProxy(ctx: {
+export function mountConsoleRoutes(ctx: {
   inject?(deps: string[], apply: (sub: any) => void | (() => void)): unknown
-}, bridge: { url: string }): void {
+}, bridge: { url: string }, applySubject: ApplySubject = DEFAULT_APPLY_SUBJECT): void {
   if (typeof ctx.inject !== 'function') return // 防御面：无 inject 能力的宿主（测试假体/极简壳）零影响
   ctx.inject(['webServer', 'connection'], (sub: any) => {
     const webServer = Reflect.get(sub, 'webServer') as WebServerLike | undefined
     const connection = Reflect.get(sub, 'connection') as ConnectionLike | undefined
     if (!webServer || !connection) return // 防御面：inject 已保证，缺席即不注册（不降级）
-    const handler = createConsoleApiHandler({
-      bridge,
-      reject: (req) => connection.requestRejection(req),
-    })
-    return webServer.register({ kind: 'prefix', path: CONSOLE_API_PREFIX, handler })
+    const reject = (req: { headers: unknown }) => connection.requestRejection(req)
+    const unregisters = [
+      webServer.register({
+        kind: 'prefix', path: CONSOLE_API_PREFIX,
+        handler: createConsoleApiHandler({ bridge, reject }),
+      }),
+      webServer.register({
+        kind: 'exact', path: CONSOLE_APPLY_PATH,
+        handler: createApplyHandler({ bridge, reject, subject: applySubject }),
+      }),
+    ]
+    return () => unregisters.forEach((u) => u())
   })
 }
+
+/** 旧装配入口别名（E2 只读代理；现由 mountConsoleRoutes 承接——契约名保留兼容）。 */
+export const mountConsoleProxy = mountConsoleRoutes
 
 /** 解析 cored 就绪行（契约：cored-bridge.md §1）：`CORED_READY addr=… scheme_version=… kinds=<n> [apply=on|off]`。
  * 解析宽松：尾随令牌（如 apply=）不参与匹配——旧桥/新桥互不破坏。 */
@@ -270,7 +405,7 @@ export default async function apply(ctx: any, config: Config = {}) {
     const bridge = makeBridge()
     bridge.url = config.coredUrl
     ctx.provide('coreSystem', bridge)
-    mountConsoleProxy(ctx, bridge)
+    mountConsoleRoutes(ctx, bridge, config.applySubject)
     await probeScheme(bridge.url, bridge)
     ctx.logger.info('core-system: 已接入运行中的 cored %s（kinds=%s）', bridge.url, bridge.kinds?.length ?? '?')
     return
@@ -295,9 +430,10 @@ export default async function apply(ctx: any, config: Config = {}) {
   // 服务先声明后填值（cordis：未 provide 的属性不可 set）；fiber 卸载即自动注销。
   const bridge = makeBridge()
   ctx.provide('coreSystem', bridge)
-  // console v2 数据通路（E2）：webServer+connection 可用的宿主上注册只读代理路由
-  // （/core-console/api → cored 读面；headless 宿主无 webServer，回调永不启动）。
-  mountConsoleProxy(ctx, bridge)
+  // console v2 数据通路（E2 读代理+E3 写路由）：webServer+connection 可用的宿主上注册
+  // （/core-console/api → cored 读面；/core-console/apply → cored 唯一写入口，主体宿主注入；
+  // headless 宿主无 webServer，回调永不启动）。
+  mountConsoleRoutes(ctx, bridge, config.applySubject)
 
   // 退场回收：无论插件因何种原因卸载，子进程一并带走。
   ctx.effect(() => {

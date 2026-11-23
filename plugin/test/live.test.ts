@@ -18,11 +18,11 @@ test('live 层在 bundle：/core-console/api 代理前缀 + __CC.live 挂载', (
   assert.ok(SRC.includes("jget('v1/events?limit=100')"), '事件归档读面在册（Welcome 最近重要事件持久源）')
 })
 
-test('live 层只读纪律：零写方法（写路径唯一入口=POST /v1/apply，不经浏览器代理）', () => {
-  const http = ['fetch(', 'POST', 'DELETE', 'PUT']
-  assert.ok(liveSrc.includes('fetch('), 'live 层用 fetch')
-  for (const m of ['POST', 'DELETE', 'PUT', 'PATCH']) {
-    assert.ok(!new RegExp('\\bmethod\\s*[:=]\\s*[\\"\']' + m).test(liveSrc), `live 层不得出现 ${m} 写方法`)
+test('live 层写纪律（E3 起）：唯一写方法=apply() → POST /core-console/apply（宿主转发 cored 唯一写入口，主体宿主注入）；零其他写方法', () => {
+  assert.ok(liveSrc.includes("'/core-console/apply'"), 'apply 通路在册（写路径唯一浏览器入口）')
+  assert.ok(/method:\s*'POST'/.test(liveSrc), 'apply 使用 POST（主体由宿主注入，浏览器不携带）')
+  for (const m of ['DELETE', 'PUT', 'PATCH']) {
+    assert.ok(!new RegExp('\\bmethod\\s*[:=]\\s*[\"\']' + m).test(liveSrc), `live 层不得出现 ${m} 写方法`)
   }
 })
 
@@ -55,4 +55,26 @@ test('原型屏仍在册（未换装的屏保持 proto mock 待各自 E 轮）',
   for (const fn of ['screenOverview', 'screenWorkflows', 'screenDocsGlobal', 'screenChat', 'screenApprovals']) {
     assert.ok(new RegExp('function ' + fn + '\\(').test(SRC), `${fn} 在册`)
   }
+})
+
+// ─────── E3：Workflow 运行管理真数据换装（console-adoption.md §1.9）───────
+
+test('E3 live 层：聚合面装载 + apply 通路返回判别联合', () => {
+  assert.ok(liveSrc.includes("jget('v1/workflows')"), '聚合面 GET /v1/workflows 装载在册（v0.37 console 读面第二段）')
+  assert.ok(liveSrc.includes('wfAgg'), '聚合面 state 槽在册')
+  assert.ok(liveSrc.includes('return { ok: false, status: r.status, error:'), 'apply 失败判别（status/error）在册')
+})
+
+test('E3 屏换装：运行管理三屏真数据 + override 语义启停 + 运行抽屉', () => {
+  assert.ok(SRC.includes('function liveWfRow'), '聚合行查找在册（列表/详情数据源）')
+  assert.ok(SRC.includes('function liveRunsOf'), 'run 轮次过滤在册（runs 面投影）')
+  assert.ok(SRC.includes('function wfRunDrawerHtml'), '运行抽屉在册（相位时间线/留痕 kv/涉及文档）')
+  assert.ok(SRC.includes('data-act="wf-toggle"'), '启停开关在册（=Apply）')
+  assert.ok(SRC.includes('override-of-builtin'), 'override origin 标注在册（红线 b：builtin 本体不动）')
+  assert.ok(SRC.includes('function applyWorkflowToggleLive'), '真实 Apply 通路在册（POST /core-console/apply）')
+  assert.ok(SRC.includes("route('wf/:name', screenWorkflow)"), '详情路由换装（E2 对象 viewer → E3 运行管理）')
+  assert.ok(SRC.includes("route('wf/:name/r/:n', screenWfRun)"), '运行独立路由在册（详情页矩阵）')
+  assert.ok(SRC.includes('诚实空态'), '诚实空态纪律在册（action log/SessionLog 余量不假画）')
+  assert.ok(!SRC.includes("ACTIONS['wf-rerun']"), '假重跑按钮摘除（真实执行面接线前不画）')
+  assert.ok(!SRC.includes("ACTIONS['wf-cancel']"), '假取消按钮摘除')
 })
