@@ -42,13 +42,32 @@ test('系统树真数据换装：scope 对象枚举 + 文档/资源同构行 + �
   assert.ok(!/模拟异步 300ms/.test(SRC), '假懒加载计时器必须摘除（数据已全量在册）')
 })
 
-test('对象详情 viewer + 事件详情路由注册（标识符全可点的落点面）', () => {
+test('对象详情编辑器（E4 起 viewer 升编辑器）+ 事件详情路由注册（标识符全可点的落点面）', () => {
   assert.ok(SRC.includes("route('doc/:kind/:scope/:name'"), '对象键直链路由在册')
   assert.ok(SRC.includes("route('doc/:name'"), '名字解析路由在册')
-  assert.ok(SRC.includes('function screenObject'), '对象 viewer 在册')
+  assert.ok(SRC.includes('function screenEditor'), '编辑器屏在册（E4：viewer 升编辑器——文档与资源同规则）')
+  assert.ok(!/function screenObject\b/.test(SRC), '只读 viewer 已被编辑器替换（同路由同屏）')
   assert.ok(SRC.includes('function screenEventLive'), '事件详情（真数据）在册')
   assert.ok(SRC.includes("route('event/:id', screenEventLive)"), '事件详情路由接线')
   assert.ok(SRC.includes('function refChips'), '正文引用标识符可点（system:// agent:// …）')
+})
+
+// ─────── E4：文档编辑器真数据换装（console-adoption.md §1.10）───────
+
+test('E4 live/编辑器：草稿通道 + dry-run 三检查 + Apply 闭环（LLM 止步提案）', () => {
+  assert.ok(SRC.includes("POST /core-console/drafts".slice(5)), '草稿落稿通路在册（POST /core-console/drafts）')
+  assert.ok(SRC.includes('function landDraft'), 'debounced 落稿在册（编辑=写草稿不触文档面）')
+  assert.ok(SRC.includes('function llmTabHtml'), 'LLM 提案 tab 在册（提案队列=非 console 前缀稿）')
+  assert.ok(SRC.includes('isConsoleFM'), 'console 前缀判别在册（提案/自有稿分流）')
+  assert.ok(SRC.includes('data-act="prop-adopt"'), '提案 [加入草稿] 在册（采纳=工作副本更新）')
+  assert.ok(SRC.includes('data-act="prop-drop"'), '提案 [丢弃] 在册（DELETE 弃稿）')
+  assert.ok(SRC.includes('data-act="doc-apply"'), '吸底 Apply dock 在册（唯一写入口人点为准）')
+  assert.ok(SRC.includes('fromDraft: true, dryRun: true'), 'dry-run 预检在册（零副作用三检查）')
+  assert.ok(SRC.includes('data-c="lock"') && SRC.includes('面上已 r'), '乐观锁检查=回执 rv 与稿 baseRV 比对在册')
+  assert.ok(SRC.includes('hydrateHistory'), '历史 tab=apply_log 投影在册（v0.38 /v1/history）')
+  assert.ok(SRC.includes('空草稿——无操作'), '空草稿 Apply=无操作提示（不落库不发事件）')
+  assert.ok(!SRC.includes("ACTIONS['llm-send']"), 'mock LLM 对话输入摘除（真实生成面=Agent 会话，E5 接线）')
+  assert.ok(!SRC.includes("ACTIONS['draft-accept']"), 'mock 提案卡动作摘除（真通道=prop-adopt）')
 })
 
 test('原型屏仍在册（未换装的屏保持 proto mock 待各自 E 轮）', () => {

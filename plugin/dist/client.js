@@ -2,7 +2,7 @@
 window.__ModuleLoader__.load({ id: 'dsh-plugin-core-system', factory: function (require) {
 var module = { exports: {} }; var exports = module.exports;
 var React = require('react'); // 平台种子模块（dsh client 各 bundle 同款引用，无需 inject 边）
-var CC_CSS = "/* console-proto app.css 作用域化（构建手术 v3，loop-36）：全部规则选择器收进 .cc-app 容器（不污染 dsh 宿主）；:root/body→.cc-app；keyframes 与 animation 引用加 cc- 前缀；.cc-app.app 高度=100%（宿主面板内非视口）；原文注释已剥离（手术脚本管辖） */\n.cc-app{\n  --bg: #0b0e14;\n  --panel: #11151c;\n  --panel-2: #161b24;\n  --panel-3: #1a2029;\n  --border: #1e2530;\n  --border-2: #273041;\n  --text: #e6e9ef;\n  --text-2: #8b93a7;\n  --text-3: #5b6378;\n  --accent: #3b82f6;\n  --accent-dim: #1d3a68;\n  --ok: #22c55e;\n  --warn: #f59e0b;\n  --danger: #ef4444;\n  --esc: #fb7185;\n  --llm: #a78bfa;\n  --mono: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, monospace;\n  --sans: system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n  --rad: 8px;\n  --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);\n  --side-w: 240px;\n  --top-h: 46px;\n}.cc-app, .cc-app *{ box-sizing: border-box; margin: 0; padding: 0; }.cc-app, .cc-app{ height: 100%; }.cc-app{\n  background: var(--bg); color: var(--text);\n  font: 13px/1.55 var(--sans);\n  -webkit-font-smoothing: antialiased;\n  overflow: hidden;\n}.cc-app .mono{ font-family: var(--mono); }.cc-app .ic{ width: 15px; height: 15px; flex: none; vertical-align: -2px; }.cc-app a, .cc-app .lk{ color: var(--accent); text-decoration: none; cursor: pointer; }.cc-app .lk:hover, .cc-app a:hover{ text-decoration: underline; }.cc-app ::selection{ background: rgba(59,130,246,.32); }.cc-app ::-webkit-scrollbar{ width: 10px; height: 10px; }.cc-app ::-webkit-scrollbar-thumb{ background: #232b3a; border-radius: 6px; border: 2px solid var(--bg); }.cc-app ::-webkit-scrollbar-thumb:hover{ background: #2e3a4e; }.cc-app ::-webkit-scrollbar-corner, .cc-app ::-webkit-scrollbar-track{ background: transparent; }.cc-app .app{ display: flex; height: 100vh; }.cc-app .sidebar{\n  width: var(--side-w); flex: none; background: var(--panel);\n  border-right: 1px solid var(--border);\n  display: flex; flex-direction: column;\n  transition: margin-left .18s ease;\n  z-index: 30;\n}.cc-app .app.side-collapsed .sidebar{ margin-left: calc(var(--side-w) * -1); }.cc-app .side-rail{\n  display: none; position: fixed; left: 0; top: 8px; z-index: 40;\n  width: 26px; height: 26px; border-radius: 6px; background: var(--panel-2);\n  border: 1px solid var(--border-2); color: var(--accent);\n  font-size: 13px; text-align: center; line-height: 24px; cursor: pointer;\n}.cc-app .app.side-collapsed .side-rail{ display: block; }.cc-app .main{ flex: 1; min-width: 0; display: flex; flex-direction: column; }.cc-app .view{ flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 18px 22px 60px; position: relative; }.cc-app .view.nopad{ padding: 0; }.cc-app .view-inner{ max-width: 1460px; margin: 0 auto; }.cc-app .side-logo{ display: flex; align-items: center; gap: 9px; padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }.cc-app .logo-mark{ width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #1d3a68, #3b82f6); color: #dbe7ff; font-size: 13px; text-align: center; line-height: 28px; flex: none; }.cc-app .logo-name{ font-weight: 650; letter-spacing: .2px; font-size: 13.5px; }.cc-app .logo-sub{ font-size: 10.5px; color: var(--text-3); font-family: var(--mono); }.cc-app .side-collapse{ margin-left: auto; }.cc-app .side-nav{ flex: 1; overflow-y: auto; padding: 10px 8px; }.cc-app .nav-item{\n  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px;\n  color: var(--text-2); cursor: pointer; margin-bottom: 2px; user-select: none;\n  font-size: 13px; border: 1px solid transparent;\n}.cc-app .nav-item:hover{ background: var(--panel-2); color: var(--text); }.cc-app .nav-item.active{ background: var(--accent-dim); color: #dbe7ff; border-color: rgba(59,130,246,.35); }.cc-app .nav-item .ic{ opacity: .9; }.cc-app .nav-item .nav-badge{\n  margin-left: auto; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger);\n  color: #fff; font-size: 10.5px; font-weight: 600; text-align: center; line-height: 18px; padding: 0 5px;\n}.cc-app .nav-sec{ font-size: 10.5px; color: var(--text-3); letter-spacing: .8px; padding: 12px 10px 4px; text-transform: uppercase; }.cc-app .side-foot{ border-top: 1px solid var(--border); padding: 10px 14px 12px; display: grid; gap: 6px; }.cc-app .side-user{ display: flex; align-items: center; gap: 8px; color: var(--text); }.cc-app .avatar{ width: 22px; height: 22px; border-radius: 50%; background: var(--accent-dim); color: #9ec2ff; font-size: 11px; text-align: center; line-height: 22px; flex: none; }.cc-app .side-conn{ display: flex; align-items: center; gap: 7px; color: var(--text-3); font-size: 11px; }.cc-app .lamp{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }.cc-app .lamp.ok{ background: var(--ok); }.cc-app .lamp.warn{ background: var(--warn); }.cc-app .lamp.danger{ background: var(--danger); }.cc-app .lamp.esc{ background: var(--esc); }.cc-app .lamp.acc{ background: var(--accent); }.cc-app .lamp.off{ background: var(--text-3); }.cc-app .pulse-dot{ animation: cc-pulse 1.8s ease-out infinite; }@keyframes cc-pulse{\n  0% { box-shadow: 0 0 0 0 rgba(59,130,246,.45); }\n  70% { box-shadow: 0 0 0 7px rgba(59,130,246,0); }\n  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }\n}.cc-app .lamp.pulse-ok{ animation: cc-pulse-ok 1.8s ease-out infinite; }@keyframes cc-pulse-ok{ 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }.cc-app .lamp.pulse-warn{ animation: cc-pulse-warn 1.6s ease-out infinite; }@keyframes cc-pulse-warn{ 0% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); } 70% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } }.cc-app .lamp.pulse-danger{ animation: cc-pulse-danger 1.5s ease-out infinite; }@keyframes cc-pulse-danger{ 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.5); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }.cc-app .chip{\n  display: inline-flex; align-items: center; gap: 6px; padding: 1px 9px; border-radius: 20px;\n  font-size: 11.5px; font-weight: 550; border: 1px solid var(--border-2); color: var(--text-2);\n  background: var(--panel-2); white-space: nowrap; line-height: 20px;\n}.cc-app .chip.lg{ font-size: 12.5px; padding: 3px 12px; line-height: 22px; }.cc-app .chip.ok{ color: #4ade80; border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.09); }.cc-app .chip.warn{ color: #fbbf24; border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.09); }.cc-app .chip.danger{ color: #f87171; border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.09); }.cc-app .chip.esc{ color: var(--esc); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.09); }.cc-app .chip.acc{ color: #7fb0f9; border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.09); }.cc-app .chip.llm{ color: #c4b5fd; border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.09); }.cc-app .chip.mute{ color: var(--text-3); }.cc-app .chip.kind{ font-family: var(--mono); font-size: 10.5px; color: #9db2d0; background: #182130; border-color: var(--border-2); }.cc-app .chip.click{ cursor: pointer; }.cc-app .chip.click:hover{ border-color: var(--accent); color: var(--text); }.cc-app .tag{\n  display: inline-block; font-size: 10.5px; font-family: var(--mono); padding: 0 7px; line-height: 18px;\n  border-radius: 5px; background: #17202e; color: #8fa3c2; border: 1px solid var(--border);\n}.cc-app .badge-dot{ position: absolute; top: -2px; right: -3px; min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; padding: 0 4px; }.cc-app .badge-dot.hidden{ display: none; }.cc-app .draft-dot{ color: var(--warn); font-size: 15px; line-height: 1; margin-left: 4px; }.cc-app .kbd{\n  display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--text-2);\n  background: var(--panel-3); border: 1px solid var(--border-2); border-bottom-width: 2px;\n  border-radius: 5px; padding: 0 5px; line-height: 16px; margin: 0 1px;\n}.cc-app .btn{\n  display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 7px;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text);\n  font-size: 12.5px; font-weight: 550; cursor: pointer; user-select: none; white-space: nowrap;\n}.cc-app .btn:hover{ background: var(--panel-3); border-color: #33405a; }.cc-app .btn:active{ transform: translateY(1px); }.cc-app .btn.primary{ background: var(--accent); border-color: var(--accent); color: #fff; }.cc-app .btn.primary:hover{ background: #2f74e8; }.cc-app .btn.ok{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color: #4ade80; }.cc-app .btn.ok:hover{ background: rgba(34,197,94,.2); }.cc-app .btn.danger{ background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.45); color: #f87171; }.cc-app .btn.danger:hover{ background: rgba(239,68,68,.18); }.cc-app .btn.llm{ background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.45); color: #c4b5fd; }.cc-app .btn.llm:hover{ background: rgba(167,139,250,.2); }.cc-app .btn.sm{ padding: 2px 9px; font-size: 11.5px; border-radius: 6px; }.cc-app .btn.xs{ padding: 1px 7px; font-size: 11px; border-radius: 5px; }.cc-app .btn.lg{ padding: 8px 18px; font-size: 13.5px; }.cc-app .btn.block{ width: 100%; justify-content: center; }.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }.cc-app .btn:disabled:active{ transform: none; }.cc-app .icon-btn{\n  position: relative; width: 28px; height: 28px; border-radius: 7px; display: inline-flex;\n  align-items: center; justify-content: center; background: transparent; border: none;\n  color: var(--text-2); cursor: pointer;\n}.cc-app .icon-btn:hover{ background: var(--panel-3); color: var(--text); }.cc-app .icon-btn.on{ color: var(--accent); background: var(--accent-dim); }.cc-app .btn-group{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }.cc-app .topbar{\n  height: var(--top-h); flex: none; display: flex; align-items: center; gap: 16px;\n  border-bottom: 1px solid var(--border); background: rgba(17,21,28,.75); backdrop-filter: blur(6px);\n  padding: 0 18px; position: sticky; top: 0; z-index: 20;\n}.cc-app .crumbs{ display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 12.5px; }.cc-app .crumb{ color: var(--text-2); cursor: pointer; padding: 3px 6px; border-radius: 5px; }.cc-app .crumb:hover{ background: var(--panel-2); color: var(--text); }.cc-app .crumb.here{ color: var(--text); font-weight: 600; cursor: default; }.cc-app .crumb.here:hover{ background: transparent; }.cc-app .crumb-sep{ color: var(--text-3); }.cc-app .top-search{\n  margin-left: auto; display: flex; align-items: center; gap: 8px; width: 330px; height: 29px;\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 8px; padding: 0 9px;\n  color: var(--text-3); cursor: pointer; font-size: 12px;\n}.cc-app .top-search:hover{ border-color: #33405a; color: var(--text-2); }.cc-app .ts-placeholder{ flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }.cc-app .top-right{ display: flex; align-items: center; gap: 10px; }.cc-app .ev-count{ font-size: 11px; color: var(--text-2); background: var(--panel-2); border: 1px solid var(--border-2); padding: 2px 9px; border-radius: 14px; }.cc-app .ev-count b{ color: var(--text); }.cc-app .panel{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); box-shadow: var(--shadow); }.cc-app .card-h{ display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--border); }.cc-app .card-h .h-title{ font-weight: 620; font-size: 13px; }.cc-app .card-h .h-sub{ color: var(--text-3); font-size: 11.5px; }.cc-app .card-h .h-right{ margin-left: auto; display: flex; gap: 8px; align-items: center; }.cc-app .card-b{ padding: 14px; }.cc-app .grid{ display: grid; gap: 14px; }.cc-app .cols-2{ grid-template-columns: 1fr 1fr; }.cc-app .cols-3{ grid-template-columns: repeat(3, 1fr); }.cc-app .muted{ color: var(--text-2); }.cc-app .faint{ color: var(--text-3); }.cc-app .small{ font-size: 11.5px; }.cc-app .sec-title{ font-size: 12px; font-weight: 650; color: var(--text-2); letter-spacing: .4px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }.cc-app .hr{ border: 0; border-top: 1px solid var(--border); margin: 10px 0; }.cc-app .tbl{ width: 100%; border-collapse: collapse; font-size: 12.5px; }.cc-app .tbl th{\n  text-align: left; font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .3px;\n  padding: 6px 12px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 2;\n  white-space: nowrap;\n}.cc-app .tbl td{ padding: 0 12px; height: 36px; border-bottom: 1px solid rgba(30,37,48,.6); vertical-align: middle; }.cc-app .tbl tr.row-click{ cursor: pointer; }.cc-app .tbl tbody tr.row-click:hover{ background: rgba(59,130,246,.06); }.cc-app .tbl tbody tr:hover{ background: rgba(255,255,255,.018); }.cc-app .tbl .num{ font-variant-numeric: tabular-nums; }.cc-app .tbl-mini{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .tbl-mini td{ padding: 5px 8px; border-bottom: 1px solid rgba(30,37,48,.55); }.cc-app .tabs{ display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }.cc-app .tab{\n  padding: 7px 14px; font-size: 12.5px; font-weight: 560; color: var(--text-2); cursor: pointer;\n  border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; user-select: none; white-space: nowrap;\n}.cc-app .tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .tab .t-badge{ font-size: 10px; background: var(--panel-3); border-radius: 8px; padding: 0 5px; margin-left: 4px; color: var(--text-2); }.cc-app .tab.active .t-badge{ background: var(--accent-dim); color: #9ec2ff; }.cc-app .empty{ text-align: center; padding: 42px 20px; color: var(--text-3); }.cc-app .empty .ic{ width: 34px; height: 34px; opacity: .4; margin-bottom: 10px; }.cc-app .empty .e-title{ color: var(--text-2); font-weight: 600; margin-bottom: 4px; }.cc-app .empty .e-act{ margin-top: 14px; }.cc-app .skel{ position: relative; overflow: hidden; background: var(--panel-2); border-radius: 5px; height: 14px; }.cc-app .skel::after{\n  content: \"\"; position: absolute; inset: 0; transform: translateX(-100%);\n  background: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent);\n  animation: cc-shimmer 1.2s infinite;\n}@keyframes cc-shimmer{ to { transform: translateX(100%); } }.cc-app .skel-row{ display: flex; align-items: center; gap: 10px; padding: 9px 12px; }.cc-app .diff{ font-family: var(--mono); font-size: 11.5px; line-height: 1.65; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; overflow-x: auto; }.cc-app .diff-line{ padding: 0 10px; white-space: pre; }.cc-app .diff-line.add{ background: rgba(34,197,94,.09); color: #86efac; }.cc-app .diff-line.del{ background: rgba(239,68,68,.09); color: #fca5a5; }.cc-app .diff-line.ctx{ color: var(--text-2); }.cc-app .diff-line .d-sign{ display: inline-block; width: 12px; color: var(--text-3); }.cc-app .toast-stack{ position: fixed; right: 18px; bottom: 60px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }.cc-app .toast{\n  min-width: 240px; max-width: 380px; background: var(--panel-2); border: 1px solid var(--border-2);\n  border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; box-shadow: var(--shadow);\n  animation: cc-toast-in .22s ease; font-size: 12.5px;\n}.cc-app .toast.ok{ border-left-color: var(--ok); }.cc-app .toast.warn{ border-left-color: var(--warn); }.cc-app .toast.err{ border-left-color: var(--danger); }.cc-app .toast .t-msg{ color: var(--text); }.cc-app .toast .t-sub{ color: var(--text-3); font-size: 11px; margin-top: 2px; }@keyframes cc-toast-in{ from { opacity: 0; transform: translateY(8px); } }.cc-app .overlay{ position: fixed; inset: 0; background: rgba(4,6,10,.62); backdrop-filter: blur(2px); z-index: 100; display: flex; align-items: flex-start; justify-content: center; }.cc-app .overlay[hidden]{ display: none; }.cc-app .modal{\n  margin-top: 12vh; width: min(720px, 92vw); max-height: 76vh; display: flex; flex-direction: column;\n  background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow);\n  animation: cc-modal-in .16s ease;\n}.cc-app .modal.wide{ width: min(900px, 94vw); }.cc-app .modal.narrow{ width: min(480px, 92vw); }@keyframes cc-modal-in{ from { opacity: 0; transform: translateY(-6px) scale(.985); } }.cc-app .modal-h{ display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 10px; }.cc-app .modal-h .m-title{ font-weight: 650; font-size: 14px; }.cc-app .modal-h .icon-btn{ margin-left: auto; }.cc-app .modal-b{ padding: 16px; overflow-y: auto; }.cc-app .modal-f{ padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }.cc-app .palette{ margin-top: 11vh; width: min(640px, 92vw); background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; animation: cc-modal-in .16s ease; }.cc-app .pal-input-row{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text-3); }.cc-app .pal-input-row input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; font-family: var(--sans); }.cc-app .pal-list{ max-height: 46vh; overflow-y: auto; padding: 6px; }.cc-app .pal-item{ display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 7px; cursor: pointer; color: var(--text-2); }.cc-app .pal-item .pi-label{ color: var(--text); }.cc-app .pal-item .pi-sub{ color: var(--text-3); font-size: 11px; margin-left: auto; font-family: var(--mono); }.cc-app .pal-item.sel{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .pal-item.sel .pi-label{ color: #fff; }.cc-app .pal-item.sel .pi-sub{ color: #9ec2ff; }.cc-app .pal-sec{ font-size: 10.5px; color: var(--text-3); padding: 8px 12px 2px; letter-spacing: .6px; }.cc-app .pal-foot{ display: flex; gap: 14px; padding: 9px 16px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 11px; }.cc-app .drawer-wrap{ position: fixed; inset: 0; z-index: 90; }.cc-app .drawer-mask{ position: absolute; inset: 0; background: rgba(4,6,10,.5); }.cc-app .drawer{\n  position: absolute; top: 0; right: 0; bottom: 0; width: min(680px, 86vw);\n  background: var(--panel); border-left: 1px solid var(--border-2); box-shadow: var(--shadow);\n  display: flex; flex-direction: column; animation: cc-drawer-in .2s ease;\n}@keyframes cc-drawer-in{ from { transform: translateX(30px); opacity: .6; } }.cc-app .drawer-h{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); }.cc-app .drawer-h .d-title{ font-weight: 650; }.cc-app .drawer-b{ flex: 1; overflow-y: auto; padding: 16px; }.cc-app .help-fab{\n  position: fixed; right: 16px; bottom: 16px; width: 32px; height: 32px; border-radius: 50%;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text-2);\n  font-size: 14px; font-weight: 700; cursor: pointer; z-index: 80; box-shadow: var(--shadow);\n}.cc-app .help-fab:hover{ color: var(--accent); border-color: var(--accent); }.cc-app .settings-cards{ display: grid; gap: 14px; max-width: 760px; }.cc-app .set-card{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }.cc-app .set-card-h{ padding: 12px 16px 4px; font-weight: 650; font-size: 13px; }.cc-app .set-card-sub{ padding: 0 16px 8px; color: var(--text-3); font-size: 11.5px; }.cc-app .set-row{ display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid rgba(30,37,48,.6); font-size: 12.5px; }.cc-app .set-row .sr-label{ color: var(--text-2); width: 150px; flex: none; }.cc-app .set-row .sr-val{ color: var(--text); flex: 1; min-width: 0; }.cc-app .set-row .sr-ctl{ margin-left: auto; flex: none; }.cc-app .switch{ position: relative; width: 34px; height: 19px; border-radius: 10px; background: var(--panel-3); border: 1px solid var(--border-2); cursor: pointer; flex: none; transition: background .15s; }.cc-app .switch::after{ content: \"\"; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-3); transition: all .15s; }.cc-app .switch.on{ background: var(--accent); border-color: var(--accent); }.cc-app .switch.on::after{ left: 16px; background: #fff; }.cc-app .kv{ display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 12px; }.cc-app .kv .k{ color: var(--text-3); white-space: nowrap; }.cc-app .kv .v{ color: var(--text); min-width: 0; }.cc-app .progress{ height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; }.cc-app .progress > i{ display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }.cc-app .bar-mini{ display: inline-block; width: 56px; height: 5px; border-radius: 3px; background: var(--panel-3); overflow: hidden; vertical-align: middle; margin-right: 6px; }.cc-app .bar-mini > i{ display: block; height: 100%; background: var(--ok); }.cc-app .bar-mini.mid > i{ background: var(--warn); }.cc-app .bar-mini.low > i{ background: var(--danger); }.cc-app .spin{ animation: cc-rot 1s linear infinite; display: inline-block; }@keyframes cc-rot{ to { transform: rotate(360deg); } }.cc-app .typing-caret::after{ content: \"▍\"; color: var(--llm); animation: cc-blink .9s steps(1) infinite; }@keyframes cc-blink{ 50% { opacity: 0; } }.cc-app .welcome{ max-width: 1180px; margin: 0 auto; padding-top: 4vh; }.cc-app .w-hello{ display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; }.cc-app .w-hello h1{ font-size: 26px; font-weight: 700; letter-spacing: .3px; }.cc-app .w-hello .w-date{ color: var(--text-3); font-size: 13px; }.cc-app .w-health-row{ display: flex; gap: 18px; align-items: stretch; margin-bottom: 30px; flex-wrap: wrap; }.cc-app .w-health{\n  flex: none; display: flex; align-items: center; gap: 18px; background: var(--panel);\n  border: 1px solid var(--border); border-radius: 14px; padding: 20px 26px; box-shadow: var(--shadow);\n  position: relative;\n}.cc-app .w-health-num{ font-size: 54px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }.cc-app .w-health-num .unit{ font-size: 20px; color: var(--text-3); font-weight: 500; }.cc-app .w-health.good{ color: #4ade80; }.cc-app .w-health.mid{ color: var(--warn); }.cc-app .w-health.bad{ color: var(--danger); }.cc-app .w-health-meta{ font-size: 12px; color: var(--text-2); line-height: 1.7; }.cc-app .w-health-meta b{ color: var(--text); }.cc-app .w-insync{ flex: 1; min-width: 260px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }.cc-app .w-insync-num{ font-size: 30px; font-weight: 700; }.cc-app .w-insync-bar{ display: flex; gap: 5px; }.cc-app .w-insync-cell{ flex: 1; height: 10px; border-radius: 4px; background: var(--panel-3); position: relative; }.cc-app .w-insync-cell.lit-ok{ background: var(--ok); }.cc-app .w-insync-cell.lit-warn{ background: var(--warn); }.cc-app .w-insync-cell.lit-acc{ background: var(--accent); }.cc-app .w-insync-cell.lit-esc{ background: var(--esc); }.cc-app .w-insync-cell .cell-tip{ position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-3); white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; }.cc-app .w-insync-cell:hover .cell-tip{ opacity: 1; }.cc-app .w-quick{ display: flex; gap: 10px; align-items: center; margin-left: auto; }.cc-app .w-stagebar{ margin-bottom: 30px; }.cc-app .w-stages{ display: flex; align-items: center; gap: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; overflow-x: auto; }.cc-app .w-stage{ flex: 1; min-width: 108px; position: relative; cursor: pointer; text-align: center; padding-top: 4px; }.cc-app .w-stage:hover .ws-name{ color: var(--accent); }.cc-app .w-stage::before{ content: \"\"; position: absolute; top: 16px; left: -50%; width: 100%; height: 2px; background: var(--border-2); }.cc-app .w-stage:first-child::before{ display: none; }.cc-app .w-stage.done::before{ background: var(--ok); }.cc-app .w-stage.current::before{ background: var(--accent); }.cc-app .w-stage-dot{\n  width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 8px; position: relative; z-index: 1;\n  background: var(--panel-3); border: 2px solid var(--border-2); color: var(--text-3);\n  font-size: 11px; font-weight: 700; line-height: 20px; text-align: center;\n}.cc-app .w-stage.done .w-stage-dot{ background: rgba(34,197,94,.15); border-color: var(--ok); color: #4ade80; }.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent); color: #7fb0f9; animation: cc-pulse 1.8s ease-out infinite; }.cc-app .w-stage.wait .w-stage-dot{ border-color: var(--warn); color: #fbbf24; }.cc-app .ws-name{ font-weight: 640; font-size: 12.5px; }.cc-app .ws-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; }.cc-app .ws-note{ font-size: 10.5px; color: var(--text-2); margin-top: 4px; max-width: 140px; margin-left: auto; margin-right: auto; }.cc-app .w-services{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }.cc-app .w-svc{\n  display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border);\n  border-radius: 10px; padding: 13px 16px; cursor: pointer; transition: border-color .12s;\n}.cc-app .w-svc:hover{ border-color: var(--border-2); background: var(--panel-2); }.cc-app .w-svc .ws-main{ min-width: 0; }.cc-app .w-svc .ws-title{ font-weight: 620; font-family: var(--mono); font-size: 12.5px; }.cc-app .w-svc .ws-desc{ color: var(--text-3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.cc-app .w-svc .ws-chip{ margin-left: auto; }.cc-app .w-ev-filter{ display: flex; gap: 8px; margin-bottom: 10px; }.cc-app .fchip{ padding: 3px 12px; border-radius: 16px; font-size: 12px; font-weight: 560; border: 1px solid var(--border-2); color: var(--text-2); cursor: pointer; background: var(--panel-2); }.cc-app .fchip:hover{ color: var(--text); }.cc-app .fchip.on{ border-color: var(--accent); color: #7fb0f9; background: rgba(59,130,246,.1); }.cc-app .fchip.on.crit{ border-color: var(--danger); color: #f87171; background: rgba(239,68,68,.09); }.cc-app .w-ev-item{ display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid rgba(30,37,48,.6); }.cc-app .w-ev-item:hover{ background: rgba(255,255,255,.02); }.cc-app .w-ev-dot{ width: 8px; height: 8px; border-radius: 50%; flex: none; }.cc-app .w-ev-title{ color: var(--text); }.cc-app .w-ev-obj{ margin-left: auto; }.cc-app .w-ev-time{ color: var(--text-3); font-size: 11px; width: 44px; text-align: right; }.cc-app .statbar{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }.cc-app .stat{\n  background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);\n  padding: 12px 16px; display: flex; flex-direction: column; gap: 2px;\n}.cc-app .stat .st-num{ font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }.cc-app .stat .st-num .dim{ color: var(--text-3); font-size: 14px; font-weight: 500; }.cc-app .stat .st-label{ font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }.cc-app .stat.alert .st-num{ color: var(--esc); }.cc-app .syscards{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }.cc-app .syscard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; cursor: pointer; transition: border-color .12s, transform .12s; }.cc-app .syscard:hover{ border-color: var(--border-2); transform: translateY(-1px); }.cc-app .syscard .sc-top{ display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }.cc-app .syscard .sc-name{ font-family: var(--mono); font-weight: 650; font-size: 13px; }.cc-app .syscard .sc-meta{ display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 11.5px; color: var(--text-2); margin-bottom: 10px; }.cc-app .syscard .sc-meta .k{ color: var(--text-3); }.cc-app .syscard .sc-foot{ display: flex; align-items: center; gap: 8px; border-top: 1px solid rgba(30,37,48,.6); padding-top: 9px; }.cc-app .mini-list{ display: flex; flex-direction: column; }.cc-app .mini-row{ display: flex; align-items: center; gap: 9px; padding: 8px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; font-size: 12.5px; }.cc-app .mini-row:hover{ background: rgba(59,130,246,.06); }.cc-app .mini-row:last-child{ border-bottom: none; }.cc-app .mini-row .mr-main{ min-width: 0; flex: 1; }.cc-app .mini-row .mr-sub{ color: var(--text-3); font-size: 11px; }.cc-app .tree-toolbar{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }.cc-app .tree-box{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .tree-node{ user-select: none; }.cc-app .tree-row{\n  display: flex; align-items: center; gap: 7px; padding: 0 10px; height: 34px; cursor: pointer;\n  border-bottom: 1px solid rgba(30,37,48,.45); font-size: 12.5px; position: relative;\n}.cc-app .tree-row:hover{ background: rgba(59,130,246,.05); }.cc-app .tree-row .t-caret{ width: 14px; color: var(--text-3); flex: none; transition: transform .12s; font-size: 10px; text-align: center; }.cc-app .tree-row .t-caret.open{ transform: rotate(90deg); }.cc-app .tree-row .t-name{ font-family: var(--mono); font-weight: 560; color: var(--text); }.cc-app .tree-row:hover .t-name{ color: var(--accent); }.cc-app .tree-row .t-kind{ margin-left: 2px; }.cc-app .tree-row .t-meta{ margin-left: auto; display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 11px; flex: none; }.cc-app .tree-row .t-rev{ font-family: var(--mono); }.cc-app .tree-children.skeletonizing{ opacity: .7; }.cc-app .tree-root-badge{ font-size: 10px; color: var(--llm); border: 1px solid rgba(167,139,250,.4); border-radius: 4px; padding: 0 5px; margin-left: 4px; }.cc-app .dh{ display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }.cc-app .dh-main{ min-width: 0; }.cc-app .dh-title{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .dh-title h1{ font-size: 18px; font-weight: 700; font-family: var(--mono); letter-spacing: .2px; }.cc-app .dh-sub{ color: var(--text-2); font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.cc-app .dh-actions{ margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .path-mono{ font-family: var(--mono); color: var(--text-2); background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; }.cc-app .filter-bar{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }.cc-app .filter-bar select, .cc-app .filter-bar input[type=\"text\"], .cc-app .filter-bar input[type=\"search\"]{\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; color: var(--text);\n  font-size: 12px; padding: 5px 9px; outline: none; font-family: var(--sans);\n}.cc-app .filter-bar select:focus, .cc-app .filter-bar input:focus{ border-color: var(--accent); }.cc-app .filter-bar select option{ background: var(--panel); }.cc-app .count-note{ color: var(--text-3); font-size: 11.5px; margin-left: auto; font-family: var(--mono); }.cc-app .vlist{ position: relative; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--rad); background: var(--panel); }.cc-app .vlist-canvas{ position: absolute; top: 0; left: 0; right: 0; }.cc-app .vrow{ display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; cursor: pointer; }.cc-app .vrow:hover{ background: rgba(59,130,246,.06); }.cc-app .vrow .vc{ flex: none; }.cc-app .vrow .grow{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.cc-app .jobs-layout{ display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 14px; align-items: start; }.cc-app .jobs-list{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; max-height: 72vh; display: flex; flex-direction: column; }.cc-app .jobs-list .jl-scroll{ overflow-y: auto; flex: 1; }.cc-app .job-item{ padding: 10px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; }.cc-app .job-item:hover{ background: rgba(255,255,255,.02); }.cc-app .job-item.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .job-item .ji-top{ display: flex; align-items: center; gap: 8px; }.cc-app .job-item .ji-no{ font-family: var(--mono); font-weight: 700; color: var(--text-2); }.cc-app .job-item.sel .ji-no{ color: #9ec2ff; }.cc-app .job-item .ji-sub{ color: var(--text-3); font-size: 11px; margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .job-detail{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }.cc-app .jd-head{ padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }.cc-app .jd-title{ font-weight: 700; font-size: 14px; }.cc-app .jd-kvrow{ display: flex; gap: 18px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2); }.cc-app .jd-kvrow b{ color: var(--text); font-weight: 600; }.cc-app .jd-body{ padding: 14px 16px; display: grid; gap: 16px; }.cc-app .follow-tag{ display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-family: var(--mono); }.cc-app .follow-tag.off{ color: var(--text-3); }.cc-app .logbox{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 11.5px; max-height: 320px; overflow-y: auto; }.cc-app .log-line{ padding: 4px 12px; border-bottom: 1px solid rgba(30,37,48,.4); display: flex; gap: 10px; }.cc-app .log-line:hover{ background: rgba(255,255,255,.02); }.cc-app .log-line .lg-op{ color: #7fb0f9; flex: none; min-width: 170px; }.cc-app .log-line .lg-ts{ color: var(--text-3); flex: none; }.cc-app .log-more{ display: block; width: 100%; text-align: center; padding: 8px; background: none; border: none; border-top: 1px solid var(--border); color: var(--accent); font-size: 11.5px; cursor: pointer; font-family: var(--mono); }.cc-app .log-more:hover{ background: var(--panel-2); }.cc-app .phase-tl{ display: flex; flex-direction: column; gap: 0; }.cc-app .ptl-item{ display: flex; gap: 12px; position: relative; padding-bottom: 16px; }.cc-app .ptl-item:last-child{ padding-bottom: 0; }.cc-app .ptl-rail{ width: 22px; flex: none; display: flex; flex-direction: column; align-items: center; }.cc-app .ptl-node{ width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-2); background: var(--panel-2); flex: none; z-index: 1; }.cc-app .ptl-item.done .ptl-node{ border-color: var(--ok); background: rgba(34,197,94,.15); }.cc-app .ptl-item.current .ptl-node{ border-color: var(--accent); background: rgba(59,130,246,.2); animation: cc-pulse 1.8s ease-out infinite; }.cc-app .ptl-item.fail .ptl-node{ border-color: var(--danger); background: rgba(239,68,68,.15); }.cc-app .ptl-item.wait .ptl-node{ border-color: var(--warn); background: rgba(245,158,11,.12); }.cc-app .ptl-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .ptl-item.done .ptl-line{ background: var(--ok); }.cc-app .ptl-main{ flex: 1; min-width: 0; padding-top: 0; }.cc-app .ptl-head{ display: flex; align-items: baseline; gap: 8px; }.cc-app .ptl-phase{ font-weight: 650; font-size: 12.5px; }.cc-app .ptl-ts{ color: var(--text-3); font-size: 11px; font-family: var(--mono); }.cc-app .ptl-note{ color: var(--text-2); font-size: 11.5px; margin-top: 2px; }.cc-app .flowwrap{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 22px; overflow-x: auto; }.cc-app .fnode{ cursor: pointer; }.cc-app .fnode rect{ fill: var(--panel-2); stroke: var(--border-2); stroke-width: 1.4; rx: 8; }.cc-app .fnode:hover rect{ stroke: var(--accent); }.cc-app .fnode.cur rect{ stroke: var(--accent); stroke-width: 2; fill: rgba(59,130,246,.1); }.cc-app .fnode.abn rect{ stroke: var(--danger); }.cc-app .fnode text{ fill: var(--text); font-size: 12px; font-family: var(--sans); }.cc-app .fnode .fsub{ fill: var(--text-3); font-size: 10px; }.cc-app .fedge{ stroke: var(--border-2); stroke-width: 1.6; fill: none; marker-end: url(#arrow); }.cc-app .fedge.hot{ stroke: var(--accent); }.cc-app .fedge.abn{ stroke: var(--danger); stroke-dasharray: 4 3; }.cc-app .topo-svg text{ fill: var(--text-2); font-size: 11px; font-family: var(--mono); }.cc-app .topo-node{ cursor: pointer; }.cc-app .topo-node rect{ fill: var(--panel-2); stroke: var(--border-2); rx: 7; }.cc-app .topo-node:hover rect{ stroke: var(--accent); }.cc-app .topo-edge{ stroke: #2b3646; stroke-width: 1.4; fill: none; cursor: pointer; }.cc-app .topo-edge:hover{ stroke: var(--accent); }.cc-app .metric-chart{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; }.cc-app .metric-chart text{ font-size: 9.5px; fill: var(--text-3); font-family: var(--mono); }.cc-app .doc-layout{ display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }.cc-app .doc-main{ min-width: 0; display: grid; gap: 12px; }.cc-app .doc-headbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .doc-path{ font-family: var(--mono); font-size: 13px; font-weight: 650; }.cc-app .doc-meta-row{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text-2); font-size: 12px; }.cc-app .doc-editor-wrap{ position: relative; }.cc-app textarea.doc-editor{\n  width: 100%; min-height: 480px; background: var(--bg); color: var(--text);\n  border: 1px solid var(--border-2); border-radius: var(--rad); padding: 14px 16px;\n  font: 12px/1.7 var(--mono); outline: none; resize: vertical; tab-size: 2;\n}.cc-app textarea.doc-editor:focus{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,.15); }.cc-app .doc-collab{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); position: sticky; top: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 90px); }.cc-app .collab-tabs{ display: flex; border-bottom: 1px solid var(--border); flex: none; }.cc-app .collab-tab{ flex: 1; text-align: center; padding: 9px 4px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .collab-tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .collab-tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .collab-tab .ct-badge{ font-size: 9.5px; background: var(--warn); color: #201200; border-radius: 8px; padding: 0 5px; margin-left: 3px; font-weight: 700; }.cc-app .collab-body{ flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; min-height: 0; }.cc-app .llm-msgs{ flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 120px; }.cc-app .llm-msg{ border-radius: 9px; padding: 9px 12px; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }.cc-app .llm-msg.user{ background: var(--accent-dim); align-self: flex-end; max-width: 90%; }.cc-app .llm-msg.agent{ background: var(--panel-2); border: 1px solid var(--border); border-left: 2px solid var(--llm); }.cc-app .llm-chips{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; flex: none; }.cc-app .llm-chip{ font-size: 11px; padding: 3px 10px; border-radius: 14px; border: 1px solid rgba(167,139,250,.4); color: #c4b5fd; background: rgba(167,139,250,.07); cursor: pointer; }.cc-app .llm-chip:hover{ background: rgba(167,139,250,.16); }.cc-app .llm-input-row{ display: flex; gap: 8px; margin-top: 10px; flex: none; }.cc-app .llm-input-row input{ flex: 1; background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; padding: 7px 10px; color: var(--text); font-size: 12.5px; outline: none; }.cc-app .llm-input-row input:focus{ border-color: var(--llm); }.cc-app .draft-card{ border: 1px solid rgba(167,139,250,.35); border-radius: 9px; margin-top: 8px; overflow: hidden; background: var(--bg); }.cc-app .draft-card .dc-head{ display: flex; align-items: center; gap: 8px; padding: 7px 11px; font-size: 11.5px; color: #c4b5fd; background: rgba(167,139,250,.07); }.cc-app .draft-card .dc-body{ padding: 8px; }.cc-app .draft-card .dc-acts{ display: flex; gap: 8px; padding: 8px; border-top: 1px solid var(--border); }.cc-app .draft-item{ border: 1px solid var(--border-2); border-radius: 9px; margin-bottom: 10px; overflow: hidden; }.cc-app .draft-item .di-head{ display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--panel-2); font-size: 12px; }.cc-app .draft-item .di-src{ font-size: 10px; border-radius: 4px; padding: 0 6px; font-weight: 700; }.cc-app .draft-item .di-src.llm{ background: rgba(167,139,250,.15); color: #c4b5fd; }.cc-app .draft-item .di-src.manual{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .draft-item .di-acts{ display: flex; gap: 8px; padding: 8px 11px; border-top: 1px solid var(--border); }.cc-app .apply-dock{ position: sticky; bottom: 0; padding: 12px; border-top: 1px solid var(--border); background: var(--panel); flex: none; }.cc-app .apply-dock .hint{ font-size: 11px; color: var(--text-3); margin-bottom: 8px; }.cc-app .rev-item{ display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; font-size: 12px; border-radius: 6px; }.cc-app .rev-item:hover{ background: var(--panel-2); }.cc-app .rev-item .rv-no{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; width: 34px; }.cc-app .rev-item .rv-author{ color: var(--text-2); }.cc-app .rev-item .rv-sum{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }.cc-app .checklist{ display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }.cc-app .check-item{ display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--text-2); padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; }.cc-app .check-item .ci-ic{ color: var(--text-3); }.cc-app .check-item.pass .ci-ic{ color: var(--ok); }.cc-app .check-item.pass{ color: var(--text); border-color: rgba(34,197,94,.3); }.cc-app .apply-progress{ margin: 14px 0 6px; }.cc-app .chat-layout{ display: grid; grid-template-columns: 240px 1fr 300px; height: calc(100vh - var(--top-h)); }.cc-app .chat-sub{ background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }.cc-app .cs-head{ padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }.cc-app .cs-agent{ display: flex; align-items: center; gap: 9px; }.cc-app .cs-agent .ca-name{ font-family: var(--mono); font-weight: 700; font-size: 13px; }.cc-app .cs-agent .ca-sub{ color: var(--text-3); font-size: 10.5px; }.cc-app .cs-filter{ display: flex; gap: 4px; }.cc-app .cs-filter .cf-tab{ flex: 1; text-align: center; font-size: 11px; padding: 3px 0; border-radius: 5px; color: var(--text-3); cursor: pointer; }.cc-app .cs-filter .cf-tab.on{ background: var(--panel-3); color: var(--text); }.cc-app .cs-search{ display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border-2); border-radius: 6px; padding: 4px 8px; color: var(--text-3); }.cc-app .cs-search input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 11.5px; min-width: 0; }.cc-app .cs-list{ flex: 1; overflow-y: auto; }.cc-app .sess-row{ padding: 9px 12px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; position: relative; }.cc-app .sess-row:hover{ background: var(--panel-2); }.cc-app .sess-row.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .sess-row.archived{ opacity: .55; }.cc-app .sess-row .ss-title{ font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 18px; }.cc-app .sess-row .ss-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; display: flex; gap: 7px; align-items: center; }.cc-app .sess-row .ss-pin{ position: absolute; top: 8px; right: 8px; color: var(--warn); }.cc-app .sess-row .ss-menu{ position: absolute; top: 6px; right: 6px; opacity: 0; }.cc-app .sess-row:hover .ss-menu{ opacity: 1; }.cc-app .runner-tag{ font-size: 9.5px; font-family: var(--mono); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; color: var(--text-2); }.cc-app .chat-main{ display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }.cc-app .chat-headbar{ display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); flex: none; background: var(--panel); }.cc-app .view-switch{ display: flex; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 7px; overflow: hidden; }.cc-app .view-switch .vs-opt{ padding: 4px 13px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }.cc-app .view-switch .vs-opt.on{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .chat-scroll{ flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }.cc-app .msg-row{ display: flex; gap: 10px; margin-bottom: 18px; }.cc-app .msg-avatar{ width: 26px; height: 26px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; }.cc-app .msg-avatar.user{ background: var(--panel-3); color: var(--text-2); }.cc-app .msg-avatar.agent{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .msg-body{ flex: 1; min-width: 0; }.cc-app .msg-who{ font-size: 11px; color: var(--text-3); margin-bottom: 3px; display: flex; gap: 8px; align-items: center; }.cc-app .msg-who .who-name{ font-weight: 650; color: var(--text-2); }.cc-app .msg-text{ white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.65; }.cc-app .msg-cards{ display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }.cc-app .mcard{ border: 1px solid var(--border-2); border-radius: 9px; background: var(--panel); overflow: hidden; max-width: 640px; }.cc-app .mcard .mc-head{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12px; color: var(--text-2); cursor: pointer; }.cc-app .mcard .mc-head:hover{ background: var(--panel-2); }.cc-app .mcard .mc-op{ font-family: var(--mono); color: #7fb0f9; font-weight: 650; }.cc-app .mcard .mc-title{ color: var(--text); font-weight: 600; }.cc-app .mcard .mc-body{ border-top: 1px solid var(--border); padding: 10px 12px; font-size: 12px; }.cc-app .mcard.op{ border-left: 3px solid var(--accent); }.cc-app .mcard.files{ border-left: 3px solid var(--warn); }.cc-app .mcard.proposal{ border-left: 3px solid var(--llm); }.cc-app .mcard.approval{ border-left: 3px solid var(--danger); }.cc-app .mcard.diag{ border-left: 3px solid var(--esc); }.cc-app .mcard .mc-status{ margin-left: auto; }.cc-app .file-row{ display: flex; align-items: center; gap: 10px; padding: 5px 4px; font-family: var(--mono); font-size: 11.5px; border-bottom: 1px solid rgba(30,37,48,.4); }.cc-app .file-row:last-child{ border-bottom: none; }.cc-app .file-row .fp{ color: var(--text); }.cc-app .file-row .fadd{ color: #4ade80; }.cc-app .file-row .fdel{ color: #f87171; }.cc-app .file-row .fst{ margin-left: auto; }.cc-app .diag-item{ display: flex; gap: 8px; padding: 4px 0; font-size: 12px; align-items: baseline; }.cc-app .diag-item .d-sev{ font-family: var(--mono); font-size: 10px; padding: 0 5px; border-radius: 4px; flex: none; }.cc-app .diag-item .d-sev.error{ background: rgba(239,68,68,.15); color: #f87171; }.cc-app .diag-item .d-sev.warning{ background: rgba(245,158,11,.15); color: #fbbf24; }.cc-app .turn-tail{ margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-2); display: flex; gap: 14px; font-size: 10.5px; color: var(--text-3); font-family: var(--mono); flex-wrap: wrap; }.cc-app .chat-inputbar{ border-top: 1px solid var(--border); padding: 12px 16px; flex: none; background: var(--panel); }.cc-app .chat-input-wrap{ display: flex; gap: 10px; align-items: flex-end; background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 9px 12px; }.cc-app .chat-input-wrap:focus-within{ border-color: var(--accent); }.cc-app .chat-input-wrap textarea{ flex: 1; background: none; border: none; outline: none; color: var(--text); font: 13px/1.5 var(--sans); resize: none; max-height: 120px; min-height: 22px; }.cc-app .chat-hints{ display: flex; gap: 12px; margin-top: 7px; font-size: 10.5px; color: var(--text-3); }.cc-app .traj-scroll{ flex: 1; overflow-y: auto; padding: 16px 22px; min-height: 0; }.cc-app .traj-item{ display: flex; gap: 12px; position: relative; padding-bottom: 14px; }.cc-app .traj-rail{ width: 20px; display: flex; flex-direction: column; align-items: center; flex: none; }.cc-app .traj-dot{ width: 12px; height: 12px; border-radius: 3px; border: 2px solid var(--border-2); background: var(--panel-2); z-index: 1; }.cc-app .traj-item.kind-tool .traj-dot{ border-color: var(--accent); }.cc-app .traj-item.kind-doc .traj-dot{ border-color: var(--llm); }.cc-app .traj-item.kind-user .traj-dot{ border-color: var(--text-2); }.cc-app .traj-item.kind-agent .traj-dot{ border-color: var(--ok); }.cc-app .traj-item.kind-files .traj-dot{ border-color: var(--warn); }.cc-app .traj-item.kind-diag .traj-dot{ border-color: var(--esc); }.cc-app .traj-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .traj-kind{ font-size: 10px; font-family: var(--mono); color: var(--text-3); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; }.cc-app .traj-label{ font-weight: 600; font-size: 12.5px; }.cc-app .traj-detail{ color: var(--text-2); font-size: 11.5px; }.cc-app .chat-ctx{ background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }.cc-app .ctx-sec{ border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }.cc-app .ctx-sec .cx-h{ padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: .5px; background: var(--panel-2); border-bottom: 1px solid var(--border); }.cc-app .ctx-sec .cx-b{ padding: 9px 12px; display: flex; flex-direction: column; gap: 7px; font-size: 12px; }.cc-app .ctx-row{ display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; flex-wrap: wrap; }.cc-app .ctx-row .cr-k{ color: var(--text-3); width: 78px; flex: none; }.cc-app .live-status{ display: flex; align-items: center; gap: 8px; font-size: 12px; }.cc-app .term-tabs{ display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }.cc-app .term-tab{ padding: 7px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .term-tab.active{ color: #4ade80; border-bottom-color: var(--ok); }.cc-app .term-wrap{ flex: 1; min-height: 0; padding: 14px 22px; display: flex; }.cc-app .term{\n  flex: 1; background: #060a0f; border: 1px solid #14202c; border-radius: 10px; overflow-y: auto;\n  font: 12px/1.6 var(--mono); color: #9fd8b8; padding: 14px 16px; cursor: text;\n}.cc-app .term .t-line{ white-space: pre-wrap; word-break: break-all; }.cc-app .term .t-cmd{ color: #7fb0f9; }.cc-app .term .t-dim{ color: #4d6076; }.cc-app .term .caret{ display: inline-block; width: 7px; height: 14px; background: #9fd8b8; vertical-align: -2px; animation: cc-blink .9s steps(1) infinite; }.cc-app .runner-cards{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.cc-app .runner-card{ border: 1px solid var(--border-2); border-radius: 10px; padding: 13px; cursor: pointer; background: var(--panel-2); }.cc-app .runner-card:hover{ border-color: #33405a; }.cc-app .runner-card.sel{ border-color: var(--accent); background: var(--accent-dim); }.cc-app .runner-card .rc-name{ font-weight: 700; font-size: 13px; margin-bottom: 3px; }.cc-app .runner-card .rc-desc{ font-size: 11px; color: var(--text-2); }.cc-app .runner-card.sel .rc-desc{ color: #9ec2ff; }.cc-app .conn-group{ margin-bottom: 22px; }.cc-app .conncards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .conncard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 13px 15px; cursor: pointer; transition: border-color .12s; }.cc-app .conncard:hover{ border-color: var(--border-2); }.cc-app .conncard .cc-top{ display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }.cc-app .conncard .cc-name{ font-family: var(--mono); font-weight: 650; font-size: 12.5px; }.cc-app .conncard .cc-desc{ font-size: 11px; color: var(--text-3); min-height: 30px; }.cc-app .op-cards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .op-card{ background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 12px 14px; }.cc-app .op-card .oc-name{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; font-size: 12.5px; }.cc-app .op-card .oc-desc{ font-size: 11px; color: var(--text-2); margin-top: 4px; }.cc-app .yaml-block{ background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font: 11.5px/1.7 var(--mono); overflow-x: auto; white-space: pre; color: #b6c2d9; }.cc-app .yaml-block .y-key{ color: #7fb0f9; }.cc-app .env-table{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .env-table th{ text-align: left; color: var(--text-3); font-size: 11px; padding: 6px 10px; border-bottom: 1px solid var(--border); }.cc-app .env-table td{ padding: 6px 10px; border-bottom: 1px solid rgba(30,37,48,.5); }.cc-app .env-table td.mono{ color: #7fb0f9; }.cc-app .ap-card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); margin-bottom: 14px; overflow: hidden; }.cc-app .ap-card.resolved{ opacity: .68; }.cc-app .ap-card .ap-head{ display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }.cc-app .ap-card .ap-title{ font-weight: 650; font-size: 13px; }.cc-app .ap-card .ap-meta{ display: flex; gap: 14px; padding: 9px 16px; color: var(--text-2); font-size: 11.5px; flex-wrap: wrap; }.cc-app .ap-card .ap-body{ padding: 0 16px 14px; }.cc-app .ap-card .ap-acts{ display: flex; gap: 8px; padding: 0 16px 14px; }.cc-app .keys-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }.cc-app .keys-row{ display: flex; align-items: center; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; }.cc-app .keys-row .kr-desc{ color: var(--text-2); }.cc-app .keys-row .kr-keys{ display: flex; gap: 3px; }@media (max-width: 1100px){.cc-app .doc-layout{ grid-template-columns: 1fr; }.cc-app .doc-collab{ position: static; max-height: none; }.cc-app .chat-layout{ grid-template-columns: 220px 1fr; }.cc-app .chat-ctx{ display: none; }.cc-app .jobs-layout{ grid-template-columns: 1fr; }.cc-app .statbar{ grid-template-columns: repeat(3, 1fr); }.cc-app .syscards, .cc-app .w-services{ grid-template-columns: 1fr 1fr; }.cc-app .conncards{ grid-template-columns: 1fr 1fr; }\n}\n\n/* E2 真数据屏补充（welcome 阶段条失败态 + 对象 viewer 正文块） */\n.cc-app .w-stage.bad::before{ background: var(--danger); }\n.cc-app .w-stage.bad .w-stage-dot{ background: rgba(239,68,68,.15); border-color: var(--danger); color: var(--danger); }\n.cc-app pre.mono{ font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace); color: var(--text-2); }\n";
+var CC_CSS = "/* console-proto app.css 作用域化（构建手术 v3，loop-36）：全部规则选择器收进 .cc-app 容器（不污染 dsh 宿主）；:root/body→.cc-app；keyframes 与 animation 引用加 cc- 前缀；.cc-app.app 高度=100%（宿主面板内非视口）；原文注释已剥离（手术脚本管辖） */\n.cc-app{\n  --bg: #0b0e14;\n  --panel: #11151c;\n  --panel-2: #161b24;\n  --panel-3: #1a2029;\n  --border: #1e2530;\n  --border-2: #273041;\n  --text: #e6e9ef;\n  --text-2: #8b93a7;\n  --text-3: #5b6378;\n  --accent: #3b82f6;\n  --accent-dim: #1d3a68;\n  --ok: #22c55e;\n  --warn: #f59e0b;\n  --danger: #ef4444;\n  --esc: #fb7185;\n  --llm: #a78bfa;\n  --mono: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, monospace;\n  --sans: system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n  --rad: 8px;\n  --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);\n  --side-w: 240px;\n  --top-h: 46px;\n}.cc-app, .cc-app *{ box-sizing: border-box; margin: 0; padding: 0; }.cc-app, .cc-app{ height: 100%; }.cc-app{\n  background: var(--bg); color: var(--text);\n  font: 13px/1.55 var(--sans);\n  -webkit-font-smoothing: antialiased;\n  overflow: hidden;\n}.cc-app .mono{ font-family: var(--mono); }.cc-app .ic{ width: 15px; height: 15px; flex: none; vertical-align: -2px; }.cc-app a, .cc-app .lk{ color: var(--accent); text-decoration: none; cursor: pointer; }.cc-app .lk:hover, .cc-app a:hover{ text-decoration: underline; }.cc-app ::selection{ background: rgba(59,130,246,.32); }.cc-app ::-webkit-scrollbar{ width: 10px; height: 10px; }.cc-app ::-webkit-scrollbar-thumb{ background: #232b3a; border-radius: 6px; border: 2px solid var(--bg); }.cc-app ::-webkit-scrollbar-thumb:hover{ background: #2e3a4e; }.cc-app ::-webkit-scrollbar-corner, .cc-app ::-webkit-scrollbar-track{ background: transparent; }.cc-app .app{ display: flex; height: 100vh; }.cc-app .sidebar{\n  width: var(--side-w); flex: none; background: var(--panel);\n  border-right: 1px solid var(--border);\n  display: flex; flex-direction: column;\n  transition: margin-left .18s ease;\n  z-index: 30;\n}.cc-app .app.side-collapsed .sidebar{ margin-left: calc(var(--side-w) * -1); }.cc-app .side-rail{\n  display: none; position: fixed; left: 0; top: 8px; z-index: 40;\n  width: 26px; height: 26px; border-radius: 6px; background: var(--panel-2);\n  border: 1px solid var(--border-2); color: var(--accent);\n  font-size: 13px; text-align: center; line-height: 24px; cursor: pointer;\n}.cc-app .app.side-collapsed .side-rail{ display: block; }.cc-app .main{ flex: 1; min-width: 0; display: flex; flex-direction: column; }.cc-app .view{ flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 18px 22px 60px; position: relative; }.cc-app .view.nopad{ padding: 0; }.cc-app .view-inner{ max-width: 1460px; margin: 0 auto; }.cc-app .side-logo{ display: flex; align-items: center; gap: 9px; padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }.cc-app .logo-mark{ width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #1d3a68, #3b82f6); color: #dbe7ff; font-size: 13px; text-align: center; line-height: 28px; flex: none; }.cc-app .logo-name{ font-weight: 650; letter-spacing: .2px; font-size: 13.5px; }.cc-app .logo-sub{ font-size: 10.5px; color: var(--text-3); font-family: var(--mono); }.cc-app .side-collapse{ margin-left: auto; }.cc-app .side-nav{ flex: 1; overflow-y: auto; padding: 10px 8px; }.cc-app .nav-item{\n  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px;\n  color: var(--text-2); cursor: pointer; margin-bottom: 2px; user-select: none;\n  font-size: 13px; border: 1px solid transparent;\n}.cc-app .nav-item:hover{ background: var(--panel-2); color: var(--text); }.cc-app .nav-item.active{ background: var(--accent-dim); color: #dbe7ff; border-color: rgba(59,130,246,.35); }.cc-app .nav-item .ic{ opacity: .9; }.cc-app .nav-item .nav-badge{\n  margin-left: auto; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger);\n  color: #fff; font-size: 10.5px; font-weight: 600; text-align: center; line-height: 18px; padding: 0 5px;\n}.cc-app .nav-sec{ font-size: 10.5px; color: var(--text-3); letter-spacing: .8px; padding: 12px 10px 4px; text-transform: uppercase; }.cc-app .side-foot{ border-top: 1px solid var(--border); padding: 10px 14px 12px; display: grid; gap: 6px; }.cc-app .side-user{ display: flex; align-items: center; gap: 8px; color: var(--text); }.cc-app .avatar{ width: 22px; height: 22px; border-radius: 50%; background: var(--accent-dim); color: #9ec2ff; font-size: 11px; text-align: center; line-height: 22px; flex: none; }.cc-app .side-conn{ display: flex; align-items: center; gap: 7px; color: var(--text-3); font-size: 11px; }.cc-app .lamp{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }.cc-app .lamp.ok{ background: var(--ok); }.cc-app .lamp.warn{ background: var(--warn); }.cc-app .lamp.danger{ background: var(--danger); }.cc-app .lamp.esc{ background: var(--esc); }.cc-app .lamp.acc{ background: var(--accent); }.cc-app .lamp.off{ background: var(--text-3); }.cc-app .pulse-dot{ animation: cc-pulse 1.8s ease-out infinite; }@keyframes cc-pulse{\n  0% { box-shadow: 0 0 0 0 rgba(59,130,246,.45); }\n  70% { box-shadow: 0 0 0 7px rgba(59,130,246,0); }\n  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }\n}.cc-app .lamp.pulse-ok{ animation: cc-pulse-ok 1.8s ease-out infinite; }@keyframes cc-pulse-ok{ 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }.cc-app .lamp.pulse-warn{ animation: cc-pulse-warn 1.6s ease-out infinite; }@keyframes cc-pulse-warn{ 0% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); } 70% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } }.cc-app .lamp.pulse-danger{ animation: cc-pulse-danger 1.5s ease-out infinite; }@keyframes cc-pulse-danger{ 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.5); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }.cc-app .chip{\n  display: inline-flex; align-items: center; gap: 6px; padding: 1px 9px; border-radius: 20px;\n  font-size: 11.5px; font-weight: 550; border: 1px solid var(--border-2); color: var(--text-2);\n  background: var(--panel-2); white-space: nowrap; line-height: 20px;\n}.cc-app .chip.lg{ font-size: 12.5px; padding: 3px 12px; line-height: 22px; }.cc-app .chip.ok{ color: #4ade80; border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.09); }.cc-app .chip.warn{ color: #fbbf24; border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.09); }.cc-app .chip.danger{ color: #f87171; border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.09); }.cc-app .chip.esc{ color: var(--esc); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.09); }.cc-app .chip.acc{ color: #7fb0f9; border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.09); }.cc-app .chip.llm{ color: #c4b5fd; border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.09); }.cc-app .chip.mute{ color: var(--text-3); }.cc-app .chip.kind{ font-family: var(--mono); font-size: 10.5px; color: #9db2d0; background: #182130; border-color: var(--border-2); }.cc-app .chip.click{ cursor: pointer; }.cc-app .chip.click:hover{ border-color: var(--accent); color: var(--text); }.cc-app .tag{\n  display: inline-block; font-size: 10.5px; font-family: var(--mono); padding: 0 7px; line-height: 18px;\n  border-radius: 5px; background: #17202e; color: #8fa3c2; border: 1px solid var(--border);\n}.cc-app .badge-dot{ position: absolute; top: -2px; right: -3px; min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; padding: 0 4px; }.cc-app .badge-dot.hidden{ display: none; }.cc-app .draft-dot{ color: var(--warn); font-size: 15px; line-height: 1; margin-left: 4px; }.cc-app .kbd{\n  display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--text-2);\n  background: var(--panel-3); border: 1px solid var(--border-2); border-bottom-width: 2px;\n  border-radius: 5px; padding: 0 5px; line-height: 16px; margin: 0 1px;\n}.cc-app .btn{\n  display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 7px;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text);\n  font-size: 12.5px; font-weight: 550; cursor: pointer; user-select: none; white-space: nowrap;\n}.cc-app .btn:hover{ background: var(--panel-3); border-color: #33405a; }.cc-app .btn:active{ transform: translateY(1px); }.cc-app .btn.primary{ background: var(--accent); border-color: var(--accent); color: #fff; }.cc-app .btn.primary:hover{ background: #2f74e8; }.cc-app .btn.ok{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color: #4ade80; }.cc-app .btn.ok:hover{ background: rgba(34,197,94,.2); }.cc-app .btn.danger{ background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.45); color: #f87171; }.cc-app .btn.danger:hover{ background: rgba(239,68,68,.18); }.cc-app .btn.llm{ background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.45); color: #c4b5fd; }.cc-app .btn.llm:hover{ background: rgba(167,139,250,.2); }.cc-app .btn.sm{ padding: 2px 9px; font-size: 11.5px; border-radius: 6px; }.cc-app .btn.xs{ padding: 1px 7px; font-size: 11px; border-radius: 5px; }.cc-app .btn.lg{ padding: 8px 18px; font-size: 13.5px; }.cc-app .btn.block{ width: 100%; justify-content: center; }.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }.cc-app .btn:disabled:active{ transform: none; }.cc-app .icon-btn{\n  position: relative; width: 28px; height: 28px; border-radius: 7px; display: inline-flex;\n  align-items: center; justify-content: center; background: transparent; border: none;\n  color: var(--text-2); cursor: pointer;\n}.cc-app .icon-btn:hover{ background: var(--panel-3); color: var(--text); }.cc-app .icon-btn.on{ color: var(--accent); background: var(--accent-dim); }.cc-app .btn-group{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }.cc-app .topbar{\n  height: var(--top-h); flex: none; display: flex; align-items: center; gap: 16px;\n  border-bottom: 1px solid var(--border); background: rgba(17,21,28,.75); backdrop-filter: blur(6px);\n  padding: 0 18px; position: sticky; top: 0; z-index: 20;\n}.cc-app .crumbs{ display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 12.5px; }.cc-app .crumb{ color: var(--text-2); cursor: pointer; padding: 3px 6px; border-radius: 5px; }.cc-app .crumb:hover{ background: var(--panel-2); color: var(--text); }.cc-app .crumb.here{ color: var(--text); font-weight: 600; cursor: default; }.cc-app .crumb.here:hover{ background: transparent; }.cc-app .crumb-sep{ color: var(--text-3); }.cc-app .top-search{\n  margin-left: auto; display: flex; align-items: center; gap: 8px; width: 330px; height: 29px;\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 8px; padding: 0 9px;\n  color: var(--text-3); cursor: pointer; font-size: 12px;\n}.cc-app .top-search:hover{ border-color: #33405a; color: var(--text-2); }.cc-app .ts-placeholder{ flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }.cc-app .top-right{ display: flex; align-items: center; gap: 10px; }.cc-app .ev-count{ font-size: 11px; color: var(--text-2); background: var(--panel-2); border: 1px solid var(--border-2); padding: 2px 9px; border-radius: 14px; }.cc-app .ev-count b{ color: var(--text); }.cc-app .panel{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); box-shadow: var(--shadow); }.cc-app .card-h{ display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--border); }.cc-app .card-h .h-title{ font-weight: 620; font-size: 13px; }.cc-app .card-h .h-sub{ color: var(--text-3); font-size: 11.5px; }.cc-app .card-h .h-right{ margin-left: auto; display: flex; gap: 8px; align-items: center; }.cc-app .card-b{ padding: 14px; }.cc-app .grid{ display: grid; gap: 14px; }.cc-app .cols-2{ grid-template-columns: 1fr 1fr; }.cc-app .cols-3{ grid-template-columns: repeat(3, 1fr); }.cc-app .muted{ color: var(--text-2); }.cc-app .faint{ color: var(--text-3); }.cc-app .small{ font-size: 11.5px; }.cc-app .sec-title{ font-size: 12px; font-weight: 650; color: var(--text-2); letter-spacing: .4px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }.cc-app .hr{ border: 0; border-top: 1px solid var(--border); margin: 10px 0; }.cc-app .tbl{ width: 100%; border-collapse: collapse; font-size: 12.5px; }.cc-app .tbl th{\n  text-align: left; font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .3px;\n  padding: 6px 12px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 2;\n  white-space: nowrap;\n}.cc-app .tbl td{ padding: 0 12px; height: 36px; border-bottom: 1px solid rgba(30,37,48,.6); vertical-align: middle; }.cc-app .tbl tr.row-click{ cursor: pointer; }.cc-app .tbl tbody tr.row-click:hover{ background: rgba(59,130,246,.06); }.cc-app .tbl tbody tr:hover{ background: rgba(255,255,255,.018); }.cc-app .tbl .num{ font-variant-numeric: tabular-nums; }.cc-app .tbl-mini{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .tbl-mini td{ padding: 5px 8px; border-bottom: 1px solid rgba(30,37,48,.55); }.cc-app .tabs{ display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }.cc-app .tab{\n  padding: 7px 14px; font-size: 12.5px; font-weight: 560; color: var(--text-2); cursor: pointer;\n  border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; user-select: none; white-space: nowrap;\n}.cc-app .tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .tab .t-badge{ font-size: 10px; background: var(--panel-3); border-radius: 8px; padding: 0 5px; margin-left: 4px; color: var(--text-2); }.cc-app .tab.active .t-badge{ background: var(--accent-dim); color: #9ec2ff; }.cc-app .empty{ text-align: center; padding: 42px 20px; color: var(--text-3); }.cc-app .empty .ic{ width: 34px; height: 34px; opacity: .4; margin-bottom: 10px; }.cc-app .empty .e-title{ color: var(--text-2); font-weight: 600; margin-bottom: 4px; }.cc-app .empty .e-act{ margin-top: 14px; }.cc-app .skel{ position: relative; overflow: hidden; background: var(--panel-2); border-radius: 5px; height: 14px; }.cc-app .skel::after{\n  content: \"\"; position: absolute; inset: 0; transform: translateX(-100%);\n  background: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent);\n  animation: cc-shimmer 1.2s infinite;\n}@keyframes cc-shimmer{ to { transform: translateX(100%); } }.cc-app .skel-row{ display: flex; align-items: center; gap: 10px; padding: 9px 12px; }.cc-app .diff{ font-family: var(--mono); font-size: 11.5px; line-height: 1.65; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; overflow-x: auto; }.cc-app .diff-line{ padding: 0 10px; white-space: pre; }.cc-app .diff-line.add{ background: rgba(34,197,94,.09); color: #86efac; }.cc-app .diff-line.del{ background: rgba(239,68,68,.09); color: #fca5a5; }.cc-app .diff-line.ctx{ color: var(--text-2); }.cc-app .diff-line .d-sign{ display: inline-block; width: 12px; color: var(--text-3); }.cc-app .toast-stack{ position: fixed; right: 18px; bottom: 60px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }.cc-app .toast{\n  min-width: 240px; max-width: 380px; background: var(--panel-2); border: 1px solid var(--border-2);\n  border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; box-shadow: var(--shadow);\n  animation: cc-toast-in .22s ease; font-size: 12.5px;\n}.cc-app .toast.ok{ border-left-color: var(--ok); }.cc-app .toast.warn{ border-left-color: var(--warn); }.cc-app .toast.err{ border-left-color: var(--danger); }.cc-app .toast .t-msg{ color: var(--text); }.cc-app .toast .t-sub{ color: var(--text-3); font-size: 11px; margin-top: 2px; }@keyframes cc-toast-in{ from { opacity: 0; transform: translateY(8px); } }.cc-app .overlay{ position: fixed; inset: 0; background: rgba(4,6,10,.62); backdrop-filter: blur(2px); z-index: 100; display: flex; align-items: flex-start; justify-content: center; }.cc-app .overlay[hidden]{ display: none; }.cc-app .modal{\n  margin-top: 12vh; width: min(720px, 92vw); max-height: 76vh; display: flex; flex-direction: column;\n  background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow);\n  animation: cc-modal-in .16s ease;\n}.cc-app .modal.wide{ width: min(900px, 94vw); }.cc-app .modal.narrow{ width: min(480px, 92vw); }@keyframes cc-modal-in{ from { opacity: 0; transform: translateY(-6px) scale(.985); } }.cc-app .modal-h{ display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 10px; }.cc-app .modal-h .m-title{ font-weight: 650; font-size: 14px; }.cc-app .modal-h .icon-btn{ margin-left: auto; }.cc-app .modal-b{ padding: 16px; overflow-y: auto; }.cc-app .modal-f{ padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }.cc-app .palette{ margin-top: 11vh; width: min(640px, 92vw); background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; animation: cc-modal-in .16s ease; }.cc-app .pal-input-row{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text-3); }.cc-app .pal-input-row input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; font-family: var(--sans); }.cc-app .pal-list{ max-height: 46vh; overflow-y: auto; padding: 6px; }.cc-app .pal-item{ display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 7px; cursor: pointer; color: var(--text-2); }.cc-app .pal-item .pi-label{ color: var(--text); }.cc-app .pal-item .pi-sub{ color: var(--text-3); font-size: 11px; margin-left: auto; font-family: var(--mono); }.cc-app .pal-item.sel{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .pal-item.sel .pi-label{ color: #fff; }.cc-app .pal-item.sel .pi-sub{ color: #9ec2ff; }.cc-app .pal-sec{ font-size: 10.5px; color: var(--text-3); padding: 8px 12px 2px; letter-spacing: .6px; }.cc-app .pal-foot{ display: flex; gap: 14px; padding: 9px 16px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 11px; }.cc-app .drawer-wrap{ position: fixed; inset: 0; z-index: 90; }.cc-app .drawer-mask{ position: absolute; inset: 0; background: rgba(4,6,10,.5); }.cc-app .drawer{\n  position: absolute; top: 0; right: 0; bottom: 0; width: min(680px, 86vw);\n  background: var(--panel); border-left: 1px solid var(--border-2); box-shadow: var(--shadow);\n  display: flex; flex-direction: column; animation: cc-drawer-in .2s ease;\n}@keyframes cc-drawer-in{ from { transform: translateX(30px); opacity: .6; } }.cc-app .drawer-h{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); }.cc-app .drawer-h .d-title{ font-weight: 650; }.cc-app .drawer-b{ flex: 1; overflow-y: auto; padding: 16px; }.cc-app .help-fab{\n  position: fixed; right: 16px; bottom: 16px; width: 32px; height: 32px; border-radius: 50%;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text-2);\n  font-size: 14px; font-weight: 700; cursor: pointer; z-index: 80; box-shadow: var(--shadow);\n}.cc-app .help-fab:hover{ color: var(--accent); border-color: var(--accent); }.cc-app .settings-cards{ display: grid; gap: 14px; max-width: 760px; }.cc-app .set-card{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }.cc-app .set-card-h{ padding: 12px 16px 4px; font-weight: 650; font-size: 13px; }.cc-app .set-card-sub{ padding: 0 16px 8px; color: var(--text-3); font-size: 11.5px; }.cc-app .set-row{ display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid rgba(30,37,48,.6); font-size: 12.5px; }.cc-app .set-row .sr-label{ color: var(--text-2); width: 150px; flex: none; }.cc-app .set-row .sr-val{ color: var(--text); flex: 1; min-width: 0; }.cc-app .set-row .sr-ctl{ margin-left: auto; flex: none; }.cc-app .switch{ position: relative; width: 34px; height: 19px; border-radius: 10px; background: var(--panel-3); border: 1px solid var(--border-2); cursor: pointer; flex: none; transition: background .15s; }.cc-app .switch::after{ content: \"\"; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-3); transition: all .15s; }.cc-app .switch.on{ background: var(--accent); border-color: var(--accent); }.cc-app .switch.on::after{ left: 16px; background: #fff; }.cc-app .kv{ display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 12px; }.cc-app .kv .k{ color: var(--text-3); white-space: nowrap; }.cc-app .kv .v{ color: var(--text); min-width: 0; }.cc-app .progress{ height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; }.cc-app .progress > i{ display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }.cc-app .bar-mini{ display: inline-block; width: 56px; height: 5px; border-radius: 3px; background: var(--panel-3); overflow: hidden; vertical-align: middle; margin-right: 6px; }.cc-app .bar-mini > i{ display: block; height: 100%; background: var(--ok); }.cc-app .bar-mini.mid > i{ background: var(--warn); }.cc-app .bar-mini.low > i{ background: var(--danger); }.cc-app .spin{ animation: cc-rot 1s linear infinite; display: inline-block; }@keyframes cc-rot{ to { transform: rotate(360deg); } }.cc-app .typing-caret::after{ content: \"▍\"; color: var(--llm); animation: cc-blink .9s steps(1) infinite; }@keyframes cc-blink{ 50% { opacity: 0; } }.cc-app .welcome{ max-width: 1180px; margin: 0 auto; padding-top: 4vh; }.cc-app .w-hello{ display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; }.cc-app .w-hello h1{ font-size: 26px; font-weight: 700; letter-spacing: .3px; }.cc-app .w-hello .w-date{ color: var(--text-3); font-size: 13px; }.cc-app .w-health-row{ display: flex; gap: 18px; align-items: stretch; margin-bottom: 30px; flex-wrap: wrap; }.cc-app .w-health{\n  flex: none; display: flex; align-items: center; gap: 18px; background: var(--panel);\n  border: 1px solid var(--border); border-radius: 14px; padding: 20px 26px; box-shadow: var(--shadow);\n  position: relative;\n}.cc-app .w-health-num{ font-size: 54px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }.cc-app .w-health-num .unit{ font-size: 20px; color: var(--text-3); font-weight: 500; }.cc-app .w-health.good{ color: #4ade80; }.cc-app .w-health.mid{ color: var(--warn); }.cc-app .w-health.bad{ color: var(--danger); }.cc-app .w-health-meta{ font-size: 12px; color: var(--text-2); line-height: 1.7; }.cc-app .w-health-meta b{ color: var(--text); }.cc-app .w-insync{ flex: 1; min-width: 260px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }.cc-app .w-insync-num{ font-size: 30px; font-weight: 700; }.cc-app .w-insync-bar{ display: flex; gap: 5px; }.cc-app .w-insync-cell{ flex: 1; height: 10px; border-radius: 4px; background: var(--panel-3); position: relative; }.cc-app .w-insync-cell.lit-ok{ background: var(--ok); }.cc-app .w-insync-cell.lit-warn{ background: var(--warn); }.cc-app .w-insync-cell.lit-acc{ background: var(--accent); }.cc-app .w-insync-cell.lit-esc{ background: var(--esc); }.cc-app .w-insync-cell .cell-tip{ position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-3); white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; }.cc-app .w-insync-cell:hover .cell-tip{ opacity: 1; }.cc-app .w-quick{ display: flex; gap: 10px; align-items: center; margin-left: auto; }.cc-app .w-stagebar{ margin-bottom: 30px; }.cc-app .w-stages{ display: flex; align-items: center; gap: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; overflow-x: auto; }.cc-app .w-stage{ flex: 1; min-width: 108px; position: relative; cursor: pointer; text-align: center; padding-top: 4px; }.cc-app .w-stage:hover .ws-name{ color: var(--accent); }.cc-app .w-stage::before{ content: \"\"; position: absolute; top: 16px; left: -50%; width: 100%; height: 2px; background: var(--border-2); }.cc-app .w-stage:first-child::before{ display: none; }.cc-app .w-stage.done::before{ background: var(--ok); }.cc-app .w-stage.current::before{ background: var(--accent); }.cc-app .w-stage-dot{\n  width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 8px; position: relative; z-index: 1;\n  background: var(--panel-3); border: 2px solid var(--border-2); color: var(--text-3);\n  font-size: 11px; font-weight: 700; line-height: 20px; text-align: center;\n}.cc-app .w-stage.done .w-stage-dot{ background: rgba(34,197,94,.15); border-color: var(--ok); color: #4ade80; }.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent); color: #7fb0f9; animation: cc-pulse 1.8s ease-out infinite; }.cc-app .w-stage.wait .w-stage-dot{ border-color: var(--warn); color: #fbbf24; }.cc-app .ws-name{ font-weight: 640; font-size: 12.5px; }.cc-app .ws-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; }.cc-app .ws-note{ font-size: 10.5px; color: var(--text-2); margin-top: 4px; max-width: 140px; margin-left: auto; margin-right: auto; }.cc-app .w-services{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }.cc-app .w-svc{\n  display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border);\n  border-radius: 10px; padding: 13px 16px; cursor: pointer; transition: border-color .12s;\n}.cc-app .w-svc:hover{ border-color: var(--border-2); background: var(--panel-2); }.cc-app .w-svc .ws-main{ min-width: 0; }.cc-app .w-svc .ws-title{ font-weight: 620; font-family: var(--mono); font-size: 12.5px; }.cc-app .w-svc .ws-desc{ color: var(--text-3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.cc-app .w-svc .ws-chip{ margin-left: auto; }.cc-app .w-ev-filter{ display: flex; gap: 8px; margin-bottom: 10px; }.cc-app .fchip{ padding: 3px 12px; border-radius: 16px; font-size: 12px; font-weight: 560; border: 1px solid var(--border-2); color: var(--text-2); cursor: pointer; background: var(--panel-2); }.cc-app .fchip:hover{ color: var(--text); }.cc-app .fchip.on{ border-color: var(--accent); color: #7fb0f9; background: rgba(59,130,246,.1); }.cc-app .fchip.on.crit{ border-color: var(--danger); color: #f87171; background: rgba(239,68,68,.09); }.cc-app .w-ev-item{ display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid rgba(30,37,48,.6); }.cc-app .w-ev-item:hover{ background: rgba(255,255,255,.02); }.cc-app .w-ev-dot{ width: 8px; height: 8px; border-radius: 50%; flex: none; }.cc-app .w-ev-title{ color: var(--text); }.cc-app .w-ev-obj{ margin-left: auto; }.cc-app .w-ev-time{ color: var(--text-3); font-size: 11px; width: 44px; text-align: right; }.cc-app .statbar{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }.cc-app .stat{\n  background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);\n  padding: 12px 16px; display: flex; flex-direction: column; gap: 2px;\n}.cc-app .stat .st-num{ font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }.cc-app .stat .st-num .dim{ color: var(--text-3); font-size: 14px; font-weight: 500; }.cc-app .stat .st-label{ font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }.cc-app .stat.alert .st-num{ color: var(--esc); }.cc-app .syscards{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }.cc-app .syscard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; cursor: pointer; transition: border-color .12s, transform .12s; }.cc-app .syscard:hover{ border-color: var(--border-2); transform: translateY(-1px); }.cc-app .syscard .sc-top{ display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }.cc-app .syscard .sc-name{ font-family: var(--mono); font-weight: 650; font-size: 13px; }.cc-app .syscard .sc-meta{ display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 11.5px; color: var(--text-2); margin-bottom: 10px; }.cc-app .syscard .sc-meta .k{ color: var(--text-3); }.cc-app .syscard .sc-foot{ display: flex; align-items: center; gap: 8px; border-top: 1px solid rgba(30,37,48,.6); padding-top: 9px; }.cc-app .mini-list{ display: flex; flex-direction: column; }.cc-app .mini-row{ display: flex; align-items: center; gap: 9px; padding: 8px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; font-size: 12.5px; }.cc-app .mini-row:hover{ background: rgba(59,130,246,.06); }.cc-app .mini-row:last-child{ border-bottom: none; }.cc-app .mini-row .mr-main{ min-width: 0; flex: 1; }.cc-app .mini-row .mr-sub{ color: var(--text-3); font-size: 11px; }.cc-app .tree-toolbar{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }.cc-app .tree-box{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .tree-node{ user-select: none; }.cc-app .tree-row{\n  display: flex; align-items: center; gap: 7px; padding: 0 10px; height: 34px; cursor: pointer;\n  border-bottom: 1px solid rgba(30,37,48,.45); font-size: 12.5px; position: relative;\n}.cc-app .tree-row:hover{ background: rgba(59,130,246,.05); }.cc-app .tree-row .t-caret{ width: 14px; color: var(--text-3); flex: none; transition: transform .12s; font-size: 10px; text-align: center; }.cc-app .tree-row .t-caret.open{ transform: rotate(90deg); }.cc-app .tree-row .t-name{ font-family: var(--mono); font-weight: 560; color: var(--text); }.cc-app .tree-row:hover .t-name{ color: var(--accent); }.cc-app .tree-row .t-kind{ margin-left: 2px; }.cc-app .tree-row .t-meta{ margin-left: auto; display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 11px; flex: none; }.cc-app .tree-row .t-rev{ font-family: var(--mono); }.cc-app .tree-children.skeletonizing{ opacity: .7; }.cc-app .tree-root-badge{ font-size: 10px; color: var(--llm); border: 1px solid rgba(167,139,250,.4); border-radius: 4px; padding: 0 5px; margin-left: 4px; }.cc-app .dh{ display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }.cc-app .dh-main{ min-width: 0; }.cc-app .dh-title{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .dh-title h1{ font-size: 18px; font-weight: 700; font-family: var(--mono); letter-spacing: .2px; }.cc-app .dh-sub{ color: var(--text-2); font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.cc-app .dh-actions{ margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .path-mono{ font-family: var(--mono); color: var(--text-2); background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; }.cc-app .filter-bar{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }.cc-app .filter-bar select, .cc-app .filter-bar input[type=\"text\"], .cc-app .filter-bar input[type=\"search\"]{\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; color: var(--text);\n  font-size: 12px; padding: 5px 9px; outline: none; font-family: var(--sans);\n}.cc-app .filter-bar select:focus, .cc-app .filter-bar input:focus{ border-color: var(--accent); }.cc-app .filter-bar select option{ background: var(--panel); }.cc-app .count-note{ color: var(--text-3); font-size: 11.5px; margin-left: auto; font-family: var(--mono); }.cc-app .vlist{ position: relative; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--rad); background: var(--panel); }.cc-app .vlist-canvas{ position: absolute; top: 0; left: 0; right: 0; }.cc-app .vrow{ display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; cursor: pointer; }.cc-app .vrow:hover{ background: rgba(59,130,246,.06); }.cc-app .vrow .vc{ flex: none; }.cc-app .vrow .grow{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.cc-app .jobs-layout{ display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 14px; align-items: start; }.cc-app .jobs-list{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; max-height: 72vh; display: flex; flex-direction: column; }.cc-app .jobs-list .jl-scroll{ overflow-y: auto; flex: 1; }.cc-app .job-item{ padding: 10px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; }.cc-app .job-item:hover{ background: rgba(255,255,255,.02); }.cc-app .job-item.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .job-item .ji-top{ display: flex; align-items: center; gap: 8px; }.cc-app .job-item .ji-no{ font-family: var(--mono); font-weight: 700; color: var(--text-2); }.cc-app .job-item.sel .ji-no{ color: #9ec2ff; }.cc-app .job-item .ji-sub{ color: var(--text-3); font-size: 11px; margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .job-detail{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }.cc-app .jd-head{ padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }.cc-app .jd-title{ font-weight: 700; font-size: 14px; }.cc-app .jd-kvrow{ display: flex; gap: 18px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2); }.cc-app .jd-kvrow b{ color: var(--text); font-weight: 600; }.cc-app .jd-body{ padding: 14px 16px; display: grid; gap: 16px; }.cc-app .follow-tag{ display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-family: var(--mono); }.cc-app .follow-tag.off{ color: var(--text-3); }.cc-app .logbox{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 11.5px; max-height: 320px; overflow-y: auto; }.cc-app .log-line{ padding: 4px 12px; border-bottom: 1px solid rgba(30,37,48,.4); display: flex; gap: 10px; }.cc-app .log-line:hover{ background: rgba(255,255,255,.02); }.cc-app .log-line .lg-op{ color: #7fb0f9; flex: none; min-width: 170px; }.cc-app .log-line .lg-ts{ color: var(--text-3); flex: none; }.cc-app .log-more{ display: block; width: 100%; text-align: center; padding: 8px; background: none; border: none; border-top: 1px solid var(--border); color: var(--accent); font-size: 11.5px; cursor: pointer; font-family: var(--mono); }.cc-app .log-more:hover{ background: var(--panel-2); }.cc-app .phase-tl{ display: flex; flex-direction: column; gap: 0; }.cc-app .ptl-item{ display: flex; gap: 12px; position: relative; padding-bottom: 16px; }.cc-app .ptl-item:last-child{ padding-bottom: 0; }.cc-app .ptl-rail{ width: 22px; flex: none; display: flex; flex-direction: column; align-items: center; }.cc-app .ptl-node{ width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-2); background: var(--panel-2); flex: none; z-index: 1; }.cc-app .ptl-item.done .ptl-node{ border-color: var(--ok); background: rgba(34,197,94,.15); }.cc-app .ptl-item.current .ptl-node{ border-color: var(--accent); background: rgba(59,130,246,.2); animation: cc-pulse 1.8s ease-out infinite; }.cc-app .ptl-item.fail .ptl-node{ border-color: var(--danger); background: rgba(239,68,68,.15); }.cc-app .ptl-item.wait .ptl-node{ border-color: var(--warn); background: rgba(245,158,11,.12); }.cc-app .ptl-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .ptl-item.done .ptl-line{ background: var(--ok); }.cc-app .ptl-main{ flex: 1; min-width: 0; padding-top: 0; }.cc-app .ptl-head{ display: flex; align-items: baseline; gap: 8px; }.cc-app .ptl-phase{ font-weight: 650; font-size: 12.5px; }.cc-app .ptl-ts{ color: var(--text-3); font-size: 11px; font-family: var(--mono); }.cc-app .ptl-note{ color: var(--text-2); font-size: 11.5px; margin-top: 2px; }.cc-app .flowwrap{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 22px; overflow-x: auto; }.cc-app .fnode{ cursor: pointer; }.cc-app .fnode rect{ fill: var(--panel-2); stroke: var(--border-2); stroke-width: 1.4; rx: 8; }.cc-app .fnode:hover rect{ stroke: var(--accent); }.cc-app .fnode.cur rect{ stroke: var(--accent); stroke-width: 2; fill: rgba(59,130,246,.1); }.cc-app .fnode.abn rect{ stroke: var(--danger); }.cc-app .fnode text{ fill: var(--text); font-size: 12px; font-family: var(--sans); }.cc-app .fnode .fsub{ fill: var(--text-3); font-size: 10px; }.cc-app .fedge{ stroke: var(--border-2); stroke-width: 1.6; fill: none; marker-end: url(#arrow); }.cc-app .fedge.hot{ stroke: var(--accent); }.cc-app .fedge.abn{ stroke: var(--danger); stroke-dasharray: 4 3; }.cc-app .topo-svg text{ fill: var(--text-2); font-size: 11px; font-family: var(--mono); }.cc-app .topo-node{ cursor: pointer; }.cc-app .topo-node rect{ fill: var(--panel-2); stroke: var(--border-2); rx: 7; }.cc-app .topo-node:hover rect{ stroke: var(--accent); }.cc-app .topo-edge{ stroke: #2b3646; stroke-width: 1.4; fill: none; cursor: pointer; }.cc-app .topo-edge:hover{ stroke: var(--accent); }.cc-app .metric-chart{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; }.cc-app .metric-chart text{ font-size: 9.5px; fill: var(--text-3); font-family: var(--mono); }.cc-app .doc-layout{ display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }.cc-app .doc-main{ min-width: 0; display: grid; gap: 12px; }.cc-app .doc-headbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .doc-path{ font-family: var(--mono); font-size: 13px; font-weight: 650; }.cc-app .doc-meta-row{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text-2); font-size: 12px; }.cc-app .doc-editor-wrap{ position: relative; }.cc-app textarea.doc-editor{\n  width: 100%; min-height: 480px; background: var(--bg); color: var(--text);\n  border: 1px solid var(--border-2); border-radius: var(--rad); padding: 14px 16px;\n  font: 12px/1.7 var(--mono); outline: none; resize: vertical; tab-size: 2;\n}.cc-app textarea.doc-editor:focus{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,.15); }.cc-app .doc-collab{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); position: sticky; top: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 90px); }.cc-app .collab-tabs{ display: flex; border-bottom: 1px solid var(--border); flex: none; }.cc-app .collab-tab{ flex: 1; text-align: center; padding: 9px 4px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .collab-tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .collab-tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .collab-tab .ct-badge{ font-size: 9.5px; background: var(--warn); color: #201200; border-radius: 8px; padding: 0 5px; margin-left: 3px; font-weight: 700; }.cc-app .collab-body{ flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; min-height: 0; }.cc-app .llm-msgs{ flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 120px; }.cc-app .llm-msg{ border-radius: 9px; padding: 9px 12px; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }.cc-app .llm-msg.user{ background: var(--accent-dim); align-self: flex-end; max-width: 90%; }.cc-app .llm-msg.agent{ background: var(--panel-2); border: 1px solid var(--border); border-left: 2px solid var(--llm); }.cc-app .llm-chips{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; flex: none; }.cc-app .llm-chip{ font-size: 11px; padding: 3px 10px; border-radius: 14px; border: 1px solid rgba(167,139,250,.4); color: #c4b5fd; background: rgba(167,139,250,.07); cursor: pointer; }.cc-app .llm-chip:hover{ background: rgba(167,139,250,.16); }.cc-app .llm-input-row{ display: flex; gap: 8px; margin-top: 10px; flex: none; }.cc-app .llm-input-row input{ flex: 1; background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; padding: 7px 10px; color: var(--text); font-size: 12.5px; outline: none; }.cc-app .llm-input-row input:focus{ border-color: var(--llm); }.cc-app .draft-card{ border: 1px solid rgba(167,139,250,.35); border-radius: 9px; margin-top: 8px; overflow: hidden; background: var(--bg); }.cc-app .draft-card .dc-head{ display: flex; align-items: center; gap: 8px; padding: 7px 11px; font-size: 11.5px; color: #c4b5fd; background: rgba(167,139,250,.07); }.cc-app .draft-card .dc-body{ padding: 8px; }.cc-app .draft-card .dc-acts{ display: flex; gap: 8px; padding: 8px; border-top: 1px solid var(--border); }.cc-app .draft-item{ border: 1px solid var(--border-2); border-radius: 9px; margin-bottom: 10px; overflow: hidden; }.cc-app .draft-item .di-head{ display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--panel-2); font-size: 12px; }.cc-app .draft-item .di-src{ font-size: 10px; border-radius: 4px; padding: 0 6px; font-weight: 700; }.cc-app .draft-item .di-src.llm{ background: rgba(167,139,250,.15); color: #c4b5fd; }.cc-app .draft-item .di-src.manual{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .draft-item .di-acts{ display: flex; gap: 8px; padding: 8px 11px; border-top: 1px solid var(--border); }.cc-app .apply-dock{ position: sticky; bottom: 0; padding: 12px; border-top: 1px solid var(--border); background: var(--panel); flex: none; }.cc-app .apply-dock .hint{ font-size: 11px; color: var(--text-3); margin-bottom: 8px; }.cc-app .rev-item{ display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; font-size: 12px; border-radius: 6px; }.cc-app .rev-item:hover{ background: var(--panel-2); }.cc-app .rev-item .rv-no{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; width: 34px; }.cc-app .rev-item .rv-author{ color: var(--text-2); }.cc-app .rev-item .rv-sum{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }.cc-app .checklist{ display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }.cc-app .check-item{ display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--text-2); padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; }.cc-app .check-item .ci-ic{ color: var(--text-3); }.cc-app .check-item.pass .ci-ic{ color: var(--ok); }.cc-app .check-item.pass{ color: var(--text); border-color: rgba(34,197,94,.3); }.cc-app .apply-progress{ margin: 14px 0 6px; }.cc-app .chat-layout{ display: grid; grid-template-columns: 240px 1fr 300px; height: calc(100vh - var(--top-h)); }.cc-app .chat-sub{ background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }.cc-app .cs-head{ padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }.cc-app .cs-agent{ display: flex; align-items: center; gap: 9px; }.cc-app .cs-agent .ca-name{ font-family: var(--mono); font-weight: 700; font-size: 13px; }.cc-app .cs-agent .ca-sub{ color: var(--text-3); font-size: 10.5px; }.cc-app .cs-filter{ display: flex; gap: 4px; }.cc-app .cs-filter .cf-tab{ flex: 1; text-align: center; font-size: 11px; padding: 3px 0; border-radius: 5px; color: var(--text-3); cursor: pointer; }.cc-app .cs-filter .cf-tab.on{ background: var(--panel-3); color: var(--text); }.cc-app .cs-search{ display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border-2); border-radius: 6px; padding: 4px 8px; color: var(--text-3); }.cc-app .cs-search input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 11.5px; min-width: 0; }.cc-app .cs-list{ flex: 1; overflow-y: auto; }.cc-app .sess-row{ padding: 9px 12px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; position: relative; }.cc-app .sess-row:hover{ background: var(--panel-2); }.cc-app .sess-row.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .sess-row.archived{ opacity: .55; }.cc-app .sess-row .ss-title{ font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 18px; }.cc-app .sess-row .ss-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; display: flex; gap: 7px; align-items: center; }.cc-app .sess-row .ss-pin{ position: absolute; top: 8px; right: 8px; color: var(--warn); }.cc-app .sess-row .ss-menu{ position: absolute; top: 6px; right: 6px; opacity: 0; }.cc-app .sess-row:hover .ss-menu{ opacity: 1; }.cc-app .runner-tag{ font-size: 9.5px; font-family: var(--mono); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; color: var(--text-2); }.cc-app .chat-main{ display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }.cc-app .chat-headbar{ display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); flex: none; background: var(--panel); }.cc-app .view-switch{ display: flex; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 7px; overflow: hidden; }.cc-app .view-switch .vs-opt{ padding: 4px 13px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }.cc-app .view-switch .vs-opt.on{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .chat-scroll{ flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }.cc-app .msg-row{ display: flex; gap: 10px; margin-bottom: 18px; }.cc-app .msg-avatar{ width: 26px; height: 26px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; }.cc-app .msg-avatar.user{ background: var(--panel-3); color: var(--text-2); }.cc-app .msg-avatar.agent{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .msg-body{ flex: 1; min-width: 0; }.cc-app .msg-who{ font-size: 11px; color: var(--text-3); margin-bottom: 3px; display: flex; gap: 8px; align-items: center; }.cc-app .msg-who .who-name{ font-weight: 650; color: var(--text-2); }.cc-app .msg-text{ white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.65; }.cc-app .msg-cards{ display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }.cc-app .mcard{ border: 1px solid var(--border-2); border-radius: 9px; background: var(--panel); overflow: hidden; max-width: 640px; }.cc-app .mcard .mc-head{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12px; color: var(--text-2); cursor: pointer; }.cc-app .mcard .mc-head:hover{ background: var(--panel-2); }.cc-app .mcard .mc-op{ font-family: var(--mono); color: #7fb0f9; font-weight: 650; }.cc-app .mcard .mc-title{ color: var(--text); font-weight: 600; }.cc-app .mcard .mc-body{ border-top: 1px solid var(--border); padding: 10px 12px; font-size: 12px; }.cc-app .mcard.op{ border-left: 3px solid var(--accent); }.cc-app .mcard.files{ border-left: 3px solid var(--warn); }.cc-app .mcard.proposal{ border-left: 3px solid var(--llm); }.cc-app .mcard.approval{ border-left: 3px solid var(--danger); }.cc-app .mcard.diag{ border-left: 3px solid var(--esc); }.cc-app .mcard .mc-status{ margin-left: auto; }.cc-app .file-row{ display: flex; align-items: center; gap: 10px; padding: 5px 4px; font-family: var(--mono); font-size: 11.5px; border-bottom: 1px solid rgba(30,37,48,.4); }.cc-app .file-row:last-child{ border-bottom: none; }.cc-app .file-row .fp{ color: var(--text); }.cc-app .file-row .fadd{ color: #4ade80; }.cc-app .file-row .fdel{ color: #f87171; }.cc-app .file-row .fst{ margin-left: auto; }.cc-app .diag-item{ display: flex; gap: 8px; padding: 4px 0; font-size: 12px; align-items: baseline; }.cc-app .diag-item .d-sev{ font-family: var(--mono); font-size: 10px; padding: 0 5px; border-radius: 4px; flex: none; }.cc-app .diag-item .d-sev.error{ background: rgba(239,68,68,.15); color: #f87171; }.cc-app .diag-item .d-sev.warning{ background: rgba(245,158,11,.15); color: #fbbf24; }.cc-app .turn-tail{ margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-2); display: flex; gap: 14px; font-size: 10.5px; color: var(--text-3); font-family: var(--mono); flex-wrap: wrap; }.cc-app .chat-inputbar{ border-top: 1px solid var(--border); padding: 12px 16px; flex: none; background: var(--panel); }.cc-app .chat-input-wrap{ display: flex; gap: 10px; align-items: flex-end; background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 9px 12px; }.cc-app .chat-input-wrap:focus-within{ border-color: var(--accent); }.cc-app .chat-input-wrap textarea{ flex: 1; background: none; border: none; outline: none; color: var(--text); font: 13px/1.5 var(--sans); resize: none; max-height: 120px; min-height: 22px; }.cc-app .chat-hints{ display: flex; gap: 12px; margin-top: 7px; font-size: 10.5px; color: var(--text-3); }.cc-app .traj-scroll{ flex: 1; overflow-y: auto; padding: 16px 22px; min-height: 0; }.cc-app .traj-item{ display: flex; gap: 12px; position: relative; padding-bottom: 14px; }.cc-app .traj-rail{ width: 20px; display: flex; flex-direction: column; align-items: center; flex: none; }.cc-app .traj-dot{ width: 12px; height: 12px; border-radius: 3px; border: 2px solid var(--border-2); background: var(--panel-2); z-index: 1; }.cc-app .traj-item.kind-tool .traj-dot{ border-color: var(--accent); }.cc-app .traj-item.kind-doc .traj-dot{ border-color: var(--llm); }.cc-app .traj-item.kind-user .traj-dot{ border-color: var(--text-2); }.cc-app .traj-item.kind-agent .traj-dot{ border-color: var(--ok); }.cc-app .traj-item.kind-files .traj-dot{ border-color: var(--warn); }.cc-app .traj-item.kind-diag .traj-dot{ border-color: var(--esc); }.cc-app .traj-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .traj-kind{ font-size: 10px; font-family: var(--mono); color: var(--text-3); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; }.cc-app .traj-label{ font-weight: 600; font-size: 12.5px; }.cc-app .traj-detail{ color: var(--text-2); font-size: 11.5px; }.cc-app .chat-ctx{ background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }.cc-app .ctx-sec{ border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }.cc-app .ctx-sec .cx-h{ padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: .5px; background: var(--panel-2); border-bottom: 1px solid var(--border); }.cc-app .ctx-sec .cx-b{ padding: 9px 12px; display: flex; flex-direction: column; gap: 7px; font-size: 12px; }.cc-app .ctx-row{ display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; flex-wrap: wrap; }.cc-app .ctx-row .cr-k{ color: var(--text-3); width: 78px; flex: none; }.cc-app .live-status{ display: flex; align-items: center; gap: 8px; font-size: 12px; }.cc-app .term-tabs{ display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }.cc-app .term-tab{ padding: 7px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .term-tab.active{ color: #4ade80; border-bottom-color: var(--ok); }.cc-app .term-wrap{ flex: 1; min-height: 0; padding: 14px 22px; display: flex; }.cc-app .term{\n  flex: 1; background: #060a0f; border: 1px solid #14202c; border-radius: 10px; overflow-y: auto;\n  font: 12px/1.6 var(--mono); color: #9fd8b8; padding: 14px 16px; cursor: text;\n}.cc-app .term .t-line{ white-space: pre-wrap; word-break: break-all; }.cc-app .term .t-cmd{ color: #7fb0f9; }.cc-app .term .t-dim{ color: #4d6076; }.cc-app .term .caret{ display: inline-block; width: 7px; height: 14px; background: #9fd8b8; vertical-align: -2px; animation: cc-blink .9s steps(1) infinite; }.cc-app .runner-cards{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.cc-app .runner-card{ border: 1px solid var(--border-2); border-radius: 10px; padding: 13px; cursor: pointer; background: var(--panel-2); }.cc-app .runner-card:hover{ border-color: #33405a; }.cc-app .runner-card.sel{ border-color: var(--accent); background: var(--accent-dim); }.cc-app .runner-card .rc-name{ font-weight: 700; font-size: 13px; margin-bottom: 3px; }.cc-app .runner-card .rc-desc{ font-size: 11px; color: var(--text-2); }.cc-app .runner-card.sel .rc-desc{ color: #9ec2ff; }.cc-app .conn-group{ margin-bottom: 22px; }.cc-app .conncards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .conncard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 13px 15px; cursor: pointer; transition: border-color .12s; }.cc-app .conncard:hover{ border-color: var(--border-2); }.cc-app .conncard .cc-top{ display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }.cc-app .conncard .cc-name{ font-family: var(--mono); font-weight: 650; font-size: 12.5px; }.cc-app .conncard .cc-desc{ font-size: 11px; color: var(--text-3); min-height: 30px; }.cc-app .op-cards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .op-card{ background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 12px 14px; }.cc-app .op-card .oc-name{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; font-size: 12.5px; }.cc-app .op-card .oc-desc{ font-size: 11px; color: var(--text-2); margin-top: 4px; }.cc-app .yaml-block{ background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font: 11.5px/1.7 var(--mono); overflow-x: auto; white-space: pre; color: #b6c2d9; }.cc-app .yaml-block .y-key{ color: #7fb0f9; }.cc-app .env-table{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .env-table th{ text-align: left; color: var(--text-3); font-size: 11px; padding: 6px 10px; border-bottom: 1px solid var(--border); }.cc-app .env-table td{ padding: 6px 10px; border-bottom: 1px solid rgba(30,37,48,.5); }.cc-app .env-table td.mono{ color: #7fb0f9; }.cc-app .ap-card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); margin-bottom: 14px; overflow: hidden; }.cc-app .ap-card.resolved{ opacity: .68; }.cc-app .ap-card .ap-head{ display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }.cc-app .ap-card .ap-title{ font-weight: 650; font-size: 13px; }.cc-app .ap-card .ap-meta{ display: flex; gap: 14px; padding: 9px 16px; color: var(--text-2); font-size: 11.5px; flex-wrap: wrap; }.cc-app .ap-card .ap-body{ padding: 0 16px 14px; }.cc-app .ap-card .ap-acts{ display: flex; gap: 8px; padding: 0 16px 14px; }.cc-app .keys-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }.cc-app .keys-row{ display: flex; align-items: center; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; }.cc-app .keys-row .kr-desc{ color: var(--text-2); }.cc-app .keys-row .kr-keys{ display: flex; gap: 3px; }@media (max-width: 1100px){.cc-app .doc-layout{ grid-template-columns: 1fr; }.cc-app .doc-collab{ position: static; max-height: none; }.cc-app .chat-layout{ grid-template-columns: 220px 1fr; }.cc-app .chat-ctx{ display: none; }.cc-app .jobs-layout{ grid-template-columns: 1fr; }.cc-app .statbar{ grid-template-columns: repeat(3, 1fr); }.cc-app .syscards, .cc-app .w-services{ grid-template-columns: 1fr 1fr; }.cc-app .conncards{ grid-template-columns: 1fr 1fr; }\n}\n\n/* E2 真数据屏补充（welcome 阶段条失败态 + 对象 viewer 正文块） */\n.cc-app .w-stage.bad::before{ background: var(--danger); }\n.cc-app .w-stage.bad .w-stage-dot{ background: rgba(239,68,68,.15); border-color: var(--danger); color: var(--danger); }\n.cc-app pre.mono{ font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace); color: var(--text-2); }\n/* E4 编辑器增量：确认弹窗三检查的失败态与行内判据注记（console-adoption.md §1.10） */\n.cc-app .check-item.fail .ci-ic{ color: var(--danger); }\n.cc-app .check-item.fail{ color: var(--text); border-color: rgba(239,68,68,.35); }\n.cc-app .check-item .ci-note{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }\n";
 var __CC = { MOCK: {} };
 // console-proto index.html 骨架（整体内嵌起点代码，图标 id 加 cc- 前缀防宿主碰撞；保留 .app 布局根；尾部两节点=E1 连接态灯/细条 §1.5）
 var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 sprite\uff08\u96f6\u5916\u94fe\uff09 ===== -->\n  <svg width=\"0\" height=\"0\" style=\"position:absolute\" aria-hidden=\"true\">\n    <defs>\n      <symbol id=\"cc-i-home\" viewBox=\"0 0 16 16\"><path d=\"M2 8.5 8 3l6 5.5V14H9.5v-4h-3v4H2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-grid\" viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"2\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"9\" y=\"2\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"2\" y=\"9\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"9\" y=\"9\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-tree\" viewBox=\"0 0 16 16\"><path d=\"M3 2v12M3 5h5M3 9h5M8 5v1.5M8 9v1.5M8 6.5h4M8 10.5h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-flow\" viewBox=\"0 0 16 16\"><rect x=\"5.5\" y=\"1.5\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"1.5\" y=\"11\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"9.5\" y=\"11\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><path d=\"M8 5v3M8 8H4v3M8 8h4v3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/></symbol>\n      <symbol id=\"cc-i-doc\" viewBox=\"0 0 16 16\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M9.5 1.5V5H13M6 8h4.5M6 10.5h4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-pulse\" viewBox=\"0 0 16 16\"><path d=\"M1.5 8h3l2-5 3 10 2-5h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-check\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"6.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m5 8.2 2.1 2.1L11.2 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-plug\" viewBox=\"0 0 16 16\"><path d=\"M5 1.5v3M11 1.5v3M4 4.5h8v3a4 4 0 0 1-8 0zM8 11.5v3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-chat\" viewBox=\"0 0 16 16\"><path d=\"M2 3.5h12v8H8l-3 3v-3H2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M5 6.5h6M5 8.8h4\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-search\" viewBox=\"0 0 16 16\"><circle cx=\"7\" cy=\"7\" r=\"4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/><path d=\"m10.5 10.5 3.5 3.5\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-bell\" viewBox=\"0 0 16 16\"><path d=\"M8 2a4 4 0 0 1 4 4c0 3 .8 4.2 1.5 5h-11C3.2 10.2 4 9 4 6a4 4 0 0 1 4-4zM6.5 13a1.6 1.6 0 0 0 3 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-chev\" viewBox=\"0 0 16 16\"><path d=\"m6 4 4 4-4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-down\" viewBox=\"0 0 16 16\"><path d=\"m4 6 4 4 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-folder\" viewBox=\"0 0 16 16\"><path d=\"M1.5 3.5h4.5l1.5 2h7v8h-13z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-term\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"2.5\" width=\"13\" height=\"11\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m4 6 2.5 2.2L4 10.5M8.5 11h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-close\" viewBox=\"0 0 16 16\"><path d=\"m4 4 8 8M12 4l-8 8\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-plus\" viewBox=\"0 0 16 16\"><path d=\"M8 3v10M3 8h10\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-bot\" viewBox=\"0 0 16 16\"><rect x=\"3\" y=\"5\" width=\"10\" height=\"8\" rx=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><circle cx=\"6.2\" cy=\"9\" r=\"1\" fill=\"currentColor\"/><circle cx=\"9.8\" cy=\"9\" r=\"1\" fill=\"currentColor\"/><path d=\"M8 5V2.5M1.5 8.5v2M14.5 8.5v2\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-spark\" viewBox=\"0 0 16 16\"><path d=\"M8 1.5 9.6 6 14 8l-4.4 2L8 14.5 6.4 10 2 8l4.4-2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-link\" viewBox=\"0 0 16 16\"><path d=\"M6.5 9.5a3 3 0 0 0 4.3 0l2.4-2.4a3 3 0 1 0-4.3-4.3L7.6 4.1M9.5 6.5a3 3 0 0 0-4.3 0L2.8 8.9a3 3 0 1 0 4.3 4.3l1.3-1.3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-key\" viewBox=\"0 0 16 16\"><circle cx=\"5\" cy=\"11\" r=\"2.8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m7 9 6.5-6.5M11 5l2 2M9 7l1.6 1.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-filter\" viewBox=\"0 0 16 16\"><path d=\"M2 3.5h12L9.5 8.5v4L6.5 14V8.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-pin\" viewBox=\"0 0 16 16\"><path d=\"m8 1.5 1.8 3.4 3.7.5-2.7 2.6.7 3.7L8 9.9l-3.5 1.8.7-3.7-2.7-2.6 3.7-.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/><path d=\"M8 11v3.5\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-archive\" viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"2.5\" width=\"12\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M3.5 6v7.5h9V6M6.5 9h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-more\" viewBox=\"0 0 16 16\"><circle cx=\"3.5\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"8\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"12.5\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/></symbol>\n      <symbol id=\"cc-i-refresh\" viewBox=\"0 0 16 16\"><path d=\"M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5V6H10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-play\" viewBox=\"0 0 16 16\"><path d=\"M4.5 2.5 13 8l-8.5 5.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-stop\" viewBox=\"0 0 16 16\"><rect x=\"3.5\" y=\"3.5\" width=\"9\" height=\"9\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/></symbol>\n      <symbol id=\"cc-i-clone\" viewBox=\"0 0 16 16\"><rect x=\"5.5\" y=\"5.5\" width=\"8\" height=\"8\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-import\" viewBox=\"0 0 16 16\"><path d=\"M8 2v8M5 7.5 8 10.5 11 7.5M2.5 13.5h11\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-expand\" viewBox=\"0 0 16 16\"><path d=\"M2 6V2h4M14 10v4h-4M2 2l5 5M14 14 9 9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-warn\" viewBox=\"0 0 16 16\"><path d=\"M8 2 15 14H1z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M8 6.5v3.2M8 11.4v.1\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-ext\" viewBox=\"0 0 16 16\"><path d=\"M6.5 3H3v10h10V9.5M9 2.5h4.5V7M13.5 2.5 8 8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-empty\" viewBox=\"0 0 16 16\"><path d=\"M2 4.5h12V12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12zM2 4.5 4 2h8l2 2.5M6.5 8.5h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-user\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"5.5\" r=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M2.5 14a5.5 5.5 0 0 1 11 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-db\" viewBox=\"0 0 16 16\"><ellipse cx=\"8\" cy=\"3.5\" rx=\"5.5\" ry=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M2.5 3.5v9c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2v-9M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-clock\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M8 4.5V8l2.5 1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-split\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"2\" width=\"5.5\" height=\"12\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"9\" y=\"2\" width=\"5.5\" height=\"12\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/></symbol>\n    </defs>\n  </svg>\n\n  <!-- ===== \u4fa7\u680f ===== -->\n  <aside class=\"sidebar\" id=\"sidebar\">\n    <div class=\"side-logo\">\n      <div class=\"logo-mark\">\u25c6</div>\n      <div class=\"logo-text\">\n        <div class=\"logo-name\">core console</div>\n        <div class=\"logo-sub\">core console \u00b7 live</div>\n      </div>\n      <button class=\"icon-btn side-collapse\" id=\"btn-side-collapse\" title=\"\u6298\u53e0\u4fa7\u680f\"><svg class=\"ic\"><use href=\"#cc-i-chev\"/></svg></button>\n    </div>\n    <nav class=\"side-nav\" id=\"side-nav\"></nav>\n    <div class=\"side-foot\">\n      <div class=\"side-user\">\n        <span class=\"avatar\">r</span>\n        <span class=\"mono\">root@core</span>\n      </div>\n      <div class=\"side-conn\"><span class=\"lamp ok pulse-dot\"></span><span class=\"mono\">cored: connected</span></div>\n    </div>\n  </aside>\n  <div class=\"side-rail\" id=\"side-rail\" title=\"\u5c55\u5f00\u4fa7\u680f\">\u25c6</div>\n\n  <!-- ===== \u4e3b\u533a ===== -->\n  <div class=\"main\">\n    <header class=\"topbar\">\n      <div class=\"crumbs\" id=\"crumbs\"></div>\n      <div class=\"top-search\" id=\"top-search\">\n        <svg class=\"ic\"><use href=\"#cc-i-search\"/></svg>\n        <span class=\"ts-placeholder\">\u641c\u7d22 services / workflows / docs / agents / runs\u2026</span>\n        <span class=\"kbd\">\u2318K</span>\n      </div>\n      <div class=\"top-right\">\n        <div class=\"ev-count mono\" id=\"ev-count\" title=\"24h \u4e8b\u4ef6\u6570\"></div>\n        <button class=\"icon-btn\" id=\"btn-bell\" title=\"\u901a\u77e5\">\n          <svg class=\"ic\"><use href=\"#cc-i-bell\"/></svg><span class=\"badge-dot\" id=\"bell-badge\"></span>\n        </button>\n      </div>\n    </header>\n    <div id=\"view\" class=\"view\"></div>\n  </div>\n\n  <!-- ===== \u6d6e\u5c42 ===== -->\n  <div class=\"overlay\" id=\"overlay-palette\" hidden>\n    <div class=\"palette\" id=\"palette\">\n      <div class=\"pal-input-row\">\n        <svg class=\"ic\"><use href=\"#cc-i-search\"/></svg>\n        <input id=\"pal-input\" type=\"text\" placeholder=\"\u6a21\u7cca\u641c\u7d22\uff1a\u670d\u52a1 / workflow / \u6587\u6863 / agent / \u8fd0\u884c\u8f6e\u6b21\uff0c\u6216\u8f93\u5165\u52a8\u4f5c\u540d\u2026\" autocomplete=\"off\">\n        <span class=\"kbd\">Esc</span>\n      </div>\n      <div class=\"pal-list\" id=\"pal-list\"></div>\n      <div class=\"pal-foot\"><span><span class=\"kbd\">\u2191</span><span class=\"kbd\">\u2193</span> \u9009\u62e9</span><span><span class=\"kbd\">Enter</span> \u8df3\u8f6c</span><span><span class=\"kbd\">Esc</span> \u5173\u95ed</span></div>\n    </div>\n  </div>\n\n  <div class=\"overlay\" id=\"overlay-modal\" hidden><div id=\"modal-root\"></div></div>\n  <div id=\"drawer-root\"></div>\n  <div id=\"toast-stack\" class=\"toast-stack\"></div>\n\n  <button class=\"help-fab\" id=\"btn-help\" title=\"\u5173\u4e8e\u672c\u539f\u578b\">?</button>\n  <div id=\"help-root\"></div>\n  <div class=\"cc-conn-strip\" id=\"cc-conn-strip\" hidden><span class=\"lamp warn\" id=\"cc-conn-strip-lamp\"></span><span id=\"cc-conn-strip-text\"></span></div>\n  <button class=\"cc-conn-lamp\" id=\"cc-conn-lamp\" data-act=\"conn-cycle-detail\" title=\"\u8fde\u63a5\u6001\uff1a\u8fde\u63a5 dsh web \u901a\u9053\uff08\u00a71.5\uff09\"><span class=\"lamp ok\" id=\"cc-conn-dot\"></span><span class=\"mono\" id=\"cc-conn-label\">conn</span></button>\n</div>";
@@ -1618,18 +1618,6 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     lines.forEach(function (l) { if (l.t === '+') add++; else if (l.t === '-') del++; });
     return { add: add, del: del };
   }
-  // 历史版本内容（确定性扰动，演示用）
-  function revContent(doc, rev) {
-    if (rev >= doc.revision) return doc.content;
-    var lines = doc.content.split('\n');
-    var delta = doc.revision - rev;
-    for (var i = 0; i < lines.length; i++) {
-      var ln = lines[i];
-      if (/\d+\.\d+/.test(ln)) { lines[i] = ln.replace(/(\d+)\.(\d+)/, function (mm, a, b) { var v = Math.max(0, (parseFloat(mm) - delta * 0.02)).toFixed(2); return v; }); break; }
-      if (/revision|rev:/.test(ln)) { lines[i] = ln.replace(/\d+/, String(Math.max(1, parseInt(ln.match(/\d+/)[0], 10) - delta))); break; }
-    }
-    return lines.join('\n');
-  }
 
   /* ================= 草稿 / Apply 引擎 ================= */
   function docState(name) {
@@ -1650,44 +1638,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     var st = docState(name);
     return !!(st && st.working !== st.base);
   }
-  function applyPatch(docName, findText, replaceText, summary, source) {
-    var st = docState(docName);
-    if (st.working.indexOf(findText) < 0) return false;
-    st.working = st.working.replace(findText, replaceText);
-    st.entries.push({ source: source || 'llm', summary: summary, ts: new Date() });
-    return true;
-  }
   function addEvent(lane, kind, level, system, object, msg, link) {
     M.events.unshift({ id: 'ev-live-' + Date.now(), lane: lane, kind: kind, level: level, system: system, object: object, msg: msg, ts: new Date(), link: link || null });
-  }
-  function doApplyDoc(name) {
-    var doc = docByName(name), st = docState(name);
-    if (!doc || st.working === st.base) return null;
-    var newRev = doc.revision + 1;
-    var specChange = doc.kind === 'Workflow' || doc.kind === 'Goal' || doc.kind === 'Rule' || doc.kind === 'ImplDoc';
-    doc.revision = newRev;
-    if (specChange) doc.generation = doc.generation + 1;
-    doc.content = st.working;
-    doc.draft = null;
-    doc.draftSource = null;
-    doc.updated = new Date();
-    doc.history.unshift({ rev: newRev, author: 'root', ts: new Date(), summary: 'Apply：草稿落库（' + st.entries.length + ' 处变更，fieldManager: root）' });
-    addEvent('event', 'DocApplied', 'info', doc.scope.replace('systems/', ''), doc.kind + '/' + doc.name, newRev + ' 落库（fieldManager: root），DocApplied 回执', '#/doc/' + doc.name);
-    S.drafts[name] = { working: doc.content, base: doc.content, entries: [] };
-    return { rev: newRev, n: st.entries.length };
-  }
-  function applyWorkflowToggle(wfName) {
-    var wf = wfByName(wfName);
-    wf.enabled = !wf.enabled;
-    wf.phase = wf.enabled ? 'Idle' : 'Idle';
-    var specDoc = docByName(wf.specDoc || wfName + '-spec');
-    if (specDoc) {
-      specDoc.revision += 1;
-      specDoc.updated = new Date();
-      specDoc.content = specDoc.content.replace(/enabled: (true|false)/, 'enabled: ' + wf.enabled);
-      specDoc.history.unshift({ rev: specDoc.revision, author: 'root', ts: new Date(), summary: 'Apply：spec.enabled → ' + wf.enabled });
-    }
-    addEvent('event', 'DocApplied', 'info', wf.scope.replace('systems/', '') || 'global', 'Workflow/' + wfName, 'spec.enabled → ' + wf.enabled + '（Apply 落库）', '#/wf/' + wfName);
   }
   function resolveApproval(id, verdict) {
     var ap = byId(M.approvals, 'id', id);
@@ -2566,77 +2518,6 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     }
     return out;
   }
-  function objViewerHtml(kind, scope, name, ref) {
-    var path = encodeURIComponent(kind) + '/' + encodeURIComponent(scope) + '/' + encodeURIComponent(name);
-    var draft = !!treeDraftSet()[kind + '/' + scope + '/' + name];
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
-      { label: scope, go: scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + encodeURIComponent(scope) }, { label: name }]);
-    return '<div class="view-inner"><div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
-      (draft ? draftDot(true) + '<span class="chip warn small">● 未 Apply（草稿缓存）</span>' : '') + '</div>' +
-      '<div class="doc-meta-row"><span class="chip mute small">scope</span>' +
-      '<span class="chip click mute small" data-act="go" data-go="' + (scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + esc(encodeURIComponent(scope))) + '">' + esc(scope) + '</span>' +
-      '<span class="mono small">resourceVersion r' + (ref ? ref.resourceVersion : '?') + '</span>' +
-      '<span class="chip ok small">' + esc(kind) + ' 在册</span></div>' +
-      '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">对象正文（只读；编辑器=文档编辑 E4 落地，LLM 草稿→人点 Apply）</span></div>' +
-      '<div class="card-b" id="obj-content" style="padding:12px 16px">' + liveSkeletonRows(2, 0) + '</div></div>' +
-      '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">正文引用标识符（全可点）</span></div>' +
-      '<div class="card-b" id="obj-refs" style="padding:10px 16px"></div></div>' +
-      '<div class="small faint" style="margin-top:10px">对象键=(kind, scope, name) · 读面 GET /v1/objects/' + esc(kind) + '/' + esc(name) + '?scope=' + esc(scope) + '</div></div>';
-  }
-  function screenObject(view, kindHint) {
-    LIVE.ensure();
-    var p = S.params;
-    var kind = kindHint || p.kind;
-    var name = p.name;
-    var scope = p.scope || '';
-    var st = LIVE.state;
-    if (st.status === 'loading' && !st.kinds.length) {
-      // 首装未完：按路由参数先出壳，注水兜底
-      if (kind && scope) { view.innerHTML = objViewerHtml(kind, scope, name, null); hydrateObjContent(view, kind, scope, name); return; }
-    }
-    var ref = null;
-    if (kind) {
-      ref = LIVE.refs(kind).filter(function (o) { return o.name === name && (!scope || o.scope === scope); })[0] || null;
-      if (!ref && !scope) {
-        // 未带 scope 的深链：全 kind 名字解析（唯一才取，歧义=空态并提示带 scope）
-        var cands = LIVE.refs(kind).filter(function (o) { return o.name === name; });
-        if (cands.length === 1) ref = cands[0];
-        else if (cands.length > 1) {
-          view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 scope 有歧义（' + cands.length + ' 个）——请从系统树进入', name) + '</div>';
-          return;
-        }
-      }
-    } else {
-      // doc/:name 兼容深链：跨 kind 名字解析
-      var all = [];
-      st.kinds.forEach(function (kd) {
-        LIVE.refs(kd.name).forEach(function (o) { if (o.name === name) all.push(o); });
-      });
-      if (all.length === 1) ref = all[0];
-      else if (all.length > 1) {
-        view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 kind/scope 有歧义（' + all.length + ' 个）——请从系统树进入', name) + '</div>';
-        return;
-      }
-    }
-    if (!ref) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
-      return;
-    }
-    view.innerHTML = objViewerHtml(ref.kind, ref.scope, ref.name, ref);
-    hydrateObjContent(view, ref.kind, ref.scope, ref.name);
-  }
-  function hydrateObjContent(view, kind, scope, name) {
-    hydrate('obj-content', 'v1/objects/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''),
-      function (el, b) {
-        var content = String(b.content || '');
-        el.innerHTML = '<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc(content) + '</pre>';
-        var refsEl = $('#obj-refs');
-        if (refsEl) {
-          var chips = refChips(content);
-          refsEl.innerHTML = chips || '<span class="faint small">无 scheme 引用词（system:// agent:// ops:// …）</span>';
-        }
-      });
-  }
   ACTIONS['live-reload'] = function () { render(); }; // 重读=重渲染现读（读面 GET 幂等）
   /* 事件详情（E2 真数据：event_log 归档行投影，Welcome/事件流点击落点；链路=event→involved→对象） */
   function screenEventLive(view) {
@@ -3421,356 +3302,517 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       '<div class="card" id="job-detail">' + wfRunDrawerHtml(row, r, false) + '</div></div>';
   }
 
-  /* ================= 屏 6：文档编辑器 ================= */
-  S.docLLM = {};   // docName -> {msgs:[{role,text,cards,done}], tab:'llm'}
-  S.docTab = {};   // docName -> collab tab
-  var LLM_CHIPS = [
-    { id: 'scheme', label: '检查与 Scheme 一致性' },
-    { id: 'goal', label: '按 Goal 修正' },
-    { id: 'plain', label: '生成白话描述' },
-    { id: 'sum', label: '总结变更' }
-  ];
-  function llmPatchFor(doc, chipId) {
-    var c = doc.content;
-    if (chipId === 'scheme') {
-      if (/progress: on-track/.test(c)) return { find: 'progress: on-track', replace: 'progress: at-risk   # scheme-check: SLO 0.92 高于当前实测 0.88', summary: '标记 progress 为 at-risk（Scheme SLO 与实测差异）' };
-      if (/severity: info/.test(c)) return { find: 'severity: info', replace: 'severity: warn   # scheme-check: drift 报告缺 severity 依据，按 Scheme 默认 warn', summary: '补 severity 字段对齐 Scheme 枚举' };
-      var fm = c.match(/(metadata:\n(?:  .*\n)*?  ownerRefs:(?:\n    - .*)*\n)/);
-      if (fm) return { find: fm[1], replace: fm[1] + '  annotations:\n    scheme-check: pass   # LLM 复核 ' + new Date().toISOString().slice(0, 10) + '：结构与 core-scheme 一致\n', summary: '写入 scheme-check 注解（元数据面，语义不变）' };
-      return { find: c.split('\n')[0], replace: c.split('\n')[0] + '\n# scheme-check ' + new Date().toISOString().slice(0, 10) + ': 结构复核通过（LLM 注记，Apply 后随文档落库）', summary: '追加 scheme 复核注记' };
+  /* ================= 屏 6：文档编辑器（E4：cored 真数据，console-ui.md 屏幕 6 + console-adoption.md §1.10） ================= */
+  // 编辑与发布分离（concepts/apply.md）的 UI 化——LLM 止步提案，人独占发布：
+  //   · 手动编辑/已采纳提案走同一草稿通道：编辑=debounced 落稿（POST /core-console/drafts，
+  //     不触文档面、不发事件、零 Revision）；空草稿 Apply=无操作提示不落库。
+  //   · Apply 唯一入口=草稿 tab 吸底按钮（人点为准；LLM 通路上没有 Apply）→ 确认弹窗
+  //     （完整 diff + dry-run 三项检查=scheme 校验/权限准入/乐观锁）→ POST /core-console/apply
+  //     {fromDraft:true}（宿主注入主体）→ Revision+1 + DocApplied 必发 + 清稿。
+  //   · LLM 提案=草稿缓存中 fieldManager 非 console: 前缀的稿（agent 经 cored 草稿面落的
+  //     提案；会话页提案卡深链至此=E5 接线余量）——diff 卡排队等人裁，[加入草稿]/[丢弃]。
+  // 数据来源（无双源）：文档体/草稿/history 全部 cored 读面（live 层 + 本屏 hydrate）。
+  S.docTab = {}; // objKey -> collab tab（默认 llm——提案排队优先见人）
+  S.ED = {};     // objKey -> 编辑器会话态（working/base/baseRV/faceRV/entries/landed/fm）
+
+  function edKey(kind, scope, name) { return kind + '/' + scope + '/' + name; }
+  function edOf(kind, scope, name) { return S.ED[edKey(kind, scope, name)] || null; }
+  function edConsoleFM(kind, scope, name) { return 'console:editor:' + kind.toLowerCase() + '/' + name; }
+  function isConsoleFM(fm) { return /^console:/.test(String(fm || '')); }
+  // 变更块数（"Apply（N 处变更）"的 N=diff 变更块，非行数——诚实计数）
+  function hunksOf(lines) {
+    var n = 0, inHunk = false;
+    lines.forEach(function (l) {
+      if (l.t === '+' || l.t === '-') { if (!inHunk) { n++; inHunk = true; } }
+      else inHunk = false;
+    });
+    return n;
+  }
+  function draftRowOf(kind, scope, name) {
+    return (LIVE.state.drafts || []).filter(function (d) {
+      return d.kind === kind && d.scope === scope && d.name === name;
+    })[0] || null;
+  }
+  function edHasDiff(ed) { return !!ed && ed.loaded && ed.working !== ed.base; }
+
+  // —— 屏本体：对象键解析（E2 语义保留：#/doc/:kind/:scope/:name 直链 + #/doc/:name 名字解析）——
+  function screenEditor(view, kindHint) {
+    LIVE.ensure();
+    var p = S.params;
+    var kind = kindHint || p.kind;
+    var name = p.name;
+    var scope = p.scope || '';
+    var st = LIVE.state;
+    if (st.status === 'loading' && !st.kinds.length) {
+      if (kind && scope) { renderEditorShell(view, kind, scope, name); hydrateEditor(kind, scope, name); return; }
     }
-    if (chipId === 'goal') {
-      var m = c.match(/(\w+Rate): '>= (\d+\.\d+)'/);
-      if (m) return { find: m[0], replace: m[1] + ": '>= " + (parseFloat(m[2]) + 0.02).toFixed(2) + "'   # goal: 上一轮实测已达标，可安全收紧", summary: '按 Goal 收紧 ' + m[1] + ' 目标' };
-      if (/retention: \{nas: 30d/.test(c)) return { find: 'retention: {nas: 30d', replace: 'retention: {nas: 45d   # goal: developer-system 提案（跨系统申请已合入）', summary: '按 Goal 对齐保留期 45d' };
-      var m2 = c.match(/(backlog\w*|limit\w*|Max\w*|max\w*): (\d+)/);
-      if (m2) return { find: m2[0], replace: m2[1] + ': ' + (parseInt(m2[2], 10) + 2) + '   # goal: 为收敛留出余量', summary: '按 Goal 调整 ' + m2[1] + ' 参数' };
-      return { find: c.split('\n')[0], replace: c.split('\n')[0] + '\n# goal-align ' + new Date().toISOString().slice(0, 10) + ': 与归属 Goal 的 northStars 对齐（LLM 注记）', summary: '追加 Goal 对齐注记' };
+    var ref = null;
+    if (kind) {
+      ref = LIVE.refs(kind).filter(function (o) { return o.name === name && (!scope || o.scope === scope); })[0] || null;
+      if (!ref && !scope) {
+        var cands = LIVE.refs(kind).filter(function (o) { return o.name === name; });
+        if (cands.length === 1) ref = cands[0];
+        else if (cands.length > 1) {
+          view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 scope 有歧义（' + cands.length + ' 个）——请从系统树进入', name) + '</div>';
+          return;
+        }
+      }
+    } else {
+      var all = [];
+      st.kinds.forEach(function (kd) {
+        LIVE.refs(kd.name).forEach(function (o) { if (o.name === name) all.push(o); });
+      });
+      if (all.length === 1) ref = all[0];
+      else if (all.length > 1) {
+        view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 kind/scope 有歧义（' + all.length + ' 个）——请从系统树进入', name) + '</div>';
+        return;
+      }
+    }
+    if (!ref) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
+      return;
+    }
+    renderEditorShell(view, ref.kind, ref.scope, ref.name);
+    hydrateEditor(ref.kind, ref.scope, ref.name);
+  }
+
+  function renderEditorShell(view, kind, scope, name) {
+    var key = edKey(kind, scope, name);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
+      { label: scope, go: scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + encodeURIComponent(scope) }, { label: name }]);
+    var tabs = [['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
+    var tab = S.docTab[key] || 'llm';
+    view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' +
+      '<div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
+      '<span id="ed-draft-chip"></span></div>' +
+      '<div class="doc-meta-row"><span class="chip mute small">scope</span>' +
+      '<span class="chip click mute small" data-act="go" data-go="' + (scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + esc(encodeURIComponent(scope))) + '">' + esc(scope) + '</span>' +
+      '<span class="mono small" id="ed-rev-chip">r?</span>' +
+      '<span class="chip ok small">' + esc(kind) + ' 在册</span></div>' +
+      '<div class="doc-editor-wrap"><textarea class="doc-editor" id="doc-editor" spellcheck="false" disabled></textarea></div>' +
+      '<div class="small faint">编辑即累积草稿（POST /core-console/drafts——不触文档面、不发事件）；Apply 唯一入口=右栏「草稿」tab 吸底按钮（人点为准；LLM 只在右侧提案，机制上无 Apply 权）。</div>' +
+      '</div>' +
+      '<div class="doc-collab"><div class="collab-tabs">' + tabs.map(function (t) {
+        return '<div class="collab-tab' + (tab === t[0] ? ' active' : '') + '" data-act="doc-tab" data-t="' + t[0] + '" id="ctab-' + t[0] + '">' + t[1] + '<span class="ct-badge" id="ctab-badge-' + t[0] + '" hidden></span></div>';
+      }).join('') + '</div><div class="collab-body" id="collab-body"></div></div></div></div>';
+  }
+
+  // —— 注水：面正文（乐观锁基准）+ 草稿缓存（工作副本来源）——
+  function hydrateEditor(kind, scope, name) {
+    var key = edKey(kind, scope, name);
+    var stamp = S.route + '|' + S.segs.join('/');
+    var faceP = LIVE.fetchObject(kind, scope, name);
+    var draftP = LIVE.get('v1/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
+      (scope ? '?scope=' + encodeURIComponent(scope) : '')).catch(function () { return null; }); // 404=无稿（常态）
+    Promise.all([faceP, draftP]).then(function (rs) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return; // 路由已变=丢弃（不跨屏串数据）
+      var face = rs[0], dr = rs[1];
+      var prev = S.ED[key];
+      var base = String(face.content || '');
+      var working = dr ? String(dr.content || '') : base;
+      var entries = [];
+      if (dr && working !== base) {
+        entries.push({
+          source: isConsoleFM(dr.fieldManager) ? 'manual' : 'llm',
+          summary: isConsoleFM(dr.fieldManager) ? '未落草稿（fieldManager: ' + dr.fieldManager + '）' : 'LLM 提案在稿（fieldManager: ' + dr.fieldManager + '）',
+          ts: dr.updatedAt ? new Date(dr.updatedAt) : new Date(),
+        });
+      }
+      S.ED[key] = {
+        kind: kind, scope: scope, name: name,
+        working: working, base: base,
+        faceRV: Number(face.resourceVersion),
+        baseRV: dr ? Number(dr.baseResourceVersion) : Number(face.resourceVersion), // 乐观锁期望值（不静默重基——409 走稿保留语义）
+        draftFM: dr ? String(dr.fieldManager || '') : '',
+        reasonRef: dr ? String(dr.reasonRef || '') : '',
+        entries: (prev && prev.loaded) ? prev.entries : entries,
+        loaded: true,
+        adopted: (prev && prev.loaded) ? (prev.adopted || {}) : {},
+      };
+      paintEditorBody(kind, scope, name);
+      paintEdBadges(kind, scope, name);
+      renderCollabBody(kind, scope, name);
+      bindEditorInput(kind, scope, name);
+    }).catch(function (e) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var ta = $('#doc-editor');
+      if (ta) ta.value = '';
+      var chip = $('#ed-rev-chip');
+      if (chip) chip.textContent = '读面暂不可达（' + String((e && e.message) || e) + '）——恢复后重进即现读';
+    });
+  }
+
+  function paintEditorBody(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    var ta = $('#doc-editor');
+    if (!ed || !ta) return;
+    ta.value = ed.working;
+    ta.disabled = false;
+    var rev = $('#ed-rev-chip');
+    if (rev) rev.textContent = 'r' + ed.faceRV + '（乐观锁基准）';
+  }
+
+  // —— 徽章/dock 的原位更新（编辑中不整屏重渲染——textarea 焦点保真）——
+  function paintEdBadges(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    if (!ed) return;
+    var has = edHasDiff(ed);
+    var hunks = has ? hunksOf(diffLines(ed.base, ed.working)) : 0;
+    var chip = $('#ed-draft-chip');
+    if (chip) {
+      chip.className = has ? 'chip warn small' : 'chip ok small';
+      chip.textContent = has ? '● 未 Apply（草稿 ' + hunks + ' 处变更）' : '无草稿';
+    }
+    var badge = $('#ctab-badge-draft');
+    if (badge) { badge.hidden = !has; badge.textContent = has ? String(ed.entries.length || hunks) : ''; }
+    var dock = $('#apply-dock-btn');
+    if (dock) {
+      dock.disabled = !has;
+      dock.textContent = has ? 'Apply（' + hunks + ' 处变更）' : 'Apply（无变更）';
+    }
+  }
+
+  // —— 草稿落稿（debounced；写穿 cored 草稿缓存——编辑的家）——
+  var ED_TIMERS = {};
+  function bindEditorInput(kind, scope, name) {
+    var ta = $('#doc-editor');
+    if (!ta) return;
+    ta.addEventListener('input', function () {
+      var ed = edOf(kind, scope, name);
+      if (!ed) return;
+      ed.working = ta.value;
+      var has = ed.working !== ed.base;
+      if (has && !ed.entries.filter(function (e) { return e.source === 'manual'; }).length) {
+        ed.entries.push({ source: 'manual', summary: '手动编辑（编辑器直改）', ts: new Date() });
+      }
+      if (!has) ed.entries = ed.entries.filter(function (e) { return e.source !== 'manual'; });
+      paintEdBadges(kind, scope, name);
+      clearTimeout(ED_TIMERS[edKey(kind, scope, name)]);
+      ED_TIMERS[edKey(kind, scope, name)] = setTimeout(function () { landDraft(kind, scope, name); }, 800);
+    });
+  }
+  function landDraft(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    if (!ed || !ed.loaded) return Promise.resolve(false);
+    if (ed.working === ed.base) return Promise.resolve(true); // 空稿不落（无操作）
+    var payload = {
+      kind: kind, scope: scope, name: name, content: ed.working,
+      fieldManager: edConsoleFM(kind, scope, name), reasonRef: 'console:editor',
+      baseResourceVersion: ed.baseRV, // 乐观锁期望值=编辑器基准（不静默重基；面已前移则 apply 409 稿保留）
+    };
+    return fetch('/core-console/drafts', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      // live 草稿快照原位更新（树草稿圆点/徽章数据源；不整轮 reload）
+      var row = draftRowOf(kind, scope, name);
+      var slim = { kind: kind, scope: scope, name: name, fieldManager: payload.fieldManager,
+        baseResourceVersion: ed.baseRV, updatedAt: new Date().toISOString(), bytes: ed.working.length };
+      if (row) { Object.keys(slim).forEach(function (k) { row[k] = slim[k]; }); }
+      else LIVE.state.drafts.push(slim);
+      ed.landed = true;
+      paintEdBadges(kind, scope, name);
+      return true;
+    }).catch(function (e) {
+      toast('草稿未落（' + String((e && e.message) || e) + '）', '工作副本本地保留——恢复后再编辑即重落；Apply 前会先重落一次', 'warn');
+      return false;
+    });
+  }
+
+  // —— 右栏协作面板四 tab ——
+  function renderCollabBody(kind, scope, name) {
+    var key = edKey(kind, scope, name);
+    var tab = S.docTab[key] || 'llm';
+    var el = $('#collab-body');
+    if (!el) return;
+    if (tab === 'llm') { el.innerHTML = llmTabHtml(kind, scope, name); hydrateProposals(kind, scope, name); return; }
+    if (tab === 'draft') { el.innerHTML = draftTabHtml(kind, scope, name); return; }
+    if (tab === 'hist') { el.innerHTML = '<div style="padding:8px 2px">' + liveSkeletonRows(2, 0) + '</div>'; hydrateHistory(kind, scope, name); return; }
+    el.innerHTML = metaTabHtml(kind, scope, name); // meta
+  }
+
+  // LLM 提案 tab：草稿缓存中 fieldManager 非 console: 前缀的稿=提案卡（排队等人裁）。
+  // 真实生成面=Agent 会话经草稿通道落稿（会话页提案卡深链至此=E5 接线余量，如实标注）。
+  function llmTabHtml(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    var props = (LIVE.state.drafts || []).filter(function (d) {
+      return d.kind === kind && d.scope === scope && d.name === name && !isConsoleFM(d.fieldManager);
+    });
+    var adopted = ed ? (ed.adopted || {}) : {};
+    var cards = props.map(function (d) {
+      var k = d.fieldManager;
+      var done = adopted[k];
+      return '<div class="draft-card" id="prop-card"><div class="dc-head"><svg class="ic"><use href="#cc-i-spark"/></svg>LLM 提案 · <span class="mono">' + esc(d.fieldManager) + '</span>' +
+        (d.reasonRef ? '<span class="faint mono small"> ' + esc(d.reasonRef) + '</span>' : '') + '</div>' +
+        '<div class="dc-body" id="prop-diff">' + liveSkeletonRows(2, 0) + '</div>' +
+        '<div class="dc-acts">' + (done
+          ? '<span class="chip ok small">已采纳——草稿 tab 统一 Apply</span>'
+          : '<button class="btn sm llm" data-act="prop-adopt" data-fm="' + esc(k) + '">加入草稿</button><button class="btn sm" data-act="prop-drop" data-fm="' + esc(k) + '">丢弃</button>') +
+        '<span class="faint mono small" style="margin-left:auto">' + esc(fmtAgo(new Date(d.updatedAt))) + '</span></div></div>';
+    }).join('');
+    return (cards || '<div class="empty" style="padding:22px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">暂无排队提案</div>' +
+      '<div>LLM 提案由 Agent 经草稿通道落稿（fieldManager=agent 名）；会话页提案卡深链至此（E5 接线余量）。机制上 LLM 无 Apply 权——提案止步这里。</div></div>') +
+      '<div class="small faint" style="padding:8px 2px">提案 diff 基准=文档面现值（r' + (ed ? ed.faceRV : '?') + '）；采纳后与手动编辑走同一草稿通道，Apply 仍须人点。</div>';
+  }
+
+  function hydrateProposals(kind, scope, name) {
+    var stamp = S.route + '|' + S.segs.join('/');
+    var props = (LIVE.state.drafts || []).filter(function (d) {
+      return d.kind === kind && d.scope === scope && d.name === name && !isConsoleFM(d.fieldManager);
+    });
+    if (!props.length) return;
+    LIVE.get('v1/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + '?scope=' + encodeURIComponent(scope))
+      .then(function (b) {
+        if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+        var el = $('#prop-diff');
+        if (!el) return;
+        var content = String(b.content || '');
+        if (content === edBaseOf(kind, scope, name)) {
+          el.innerHTML = '<span class="faint small">提案与文档面一致（noop 稿）</span>';
+          return;
+        }
+        el.innerHTML = renderDiff(diffLines(edBaseOf(kind, scope, name), content), 30);
+      })
+      .catch(function () {
+        var el = $('#prop-diff');
+        if (el) el.innerHTML = '<span class="faint small">提案正文暂不可读（读面退化）</span>';
+      });
+  }
+  function edBaseOf(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    return ed ? ed.base : '';
+  }
+
+  // 草稿 tab：累积 diff + 条目留痕 + 吸底 Apply dock（人点为准）。
+  function draftTabHtml(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    if (!ed || !ed.loaded) return liveSkeletonRows(3, 0);
+    var has = edHasDiff(ed);
+    var entries = has && ed.entries.length ? ed.entries.map(function (e) {
+      return '<div class="draft-item"><div class="di-head"><span class="di-src ' + e.source + '">' + (e.source === 'llm' ? 'LLM' : '手动') + '</span>' +
+        '<span>' + esc(e.summary) + '</span><span class="faint mono small" style="margin-left:auto">' + esc(fmtAgo(e.ts instanceof Date ? e.ts : new Date(e.ts))) + '</span></div></div>';
+    }).join('') : '';
+    var diffBlock = has
+      ? '<div class="hr"></div><div class="sec-title">完整草稿 diff（base r' + ed.faceRV + ' → 草稿）</div>' + renderDiff(diffLines(ed.base, ed.working), 60)
+      : '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">草稿区为空</div>' +
+        '<div>编辑左侧内容或采纳右侧 LLM 提案；改动先落草稿，Apply 才落库（Revision+1 · DocApplied）。</div></div>';
+    return '<div style="flex:1;overflow-y:auto;min-height:0">' + entries + diffBlock +
+      (has ? '<div class="lk small" style="display:inline-block;margin:6px 0" data-act="draft-discard">弃稿（清空草稿，不落库）</div>' : '') + '</div>' +
+      '<div class="apply-dock"><div class="hint">Apply = 唯一写路径：dry-run 三检查（scheme/权限/乐观锁）→ 落库 Revision+1 → DocApplied 必发 → 清稿。空草稿=无操作。</div>' +
+      '<button class="btn primary lg block" data-act="doc-apply" id="apply-dock-btn" ' + (has ? '' : 'disabled') + '>Apply（' + (has ? hunksOf(diffLines(ed.base, ed.working)) : 0) + ' 处变更）</button></div>';
+  }
+
+  // 历史 tab：apply_log 投影（rev 流水的权威=审计账；git 权威在正文）。
+  function hydrateHistory(kind, scope, name) {
+    hydrate('ed-history', 'v1/history/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''),
+      function (el, b) {
+        var rows = (b.entries || []).map(function (h) {
+          var cls = h.result === 'ok' ? 'ok' : (h.result === 'denied' || h.result === 'conflict') ? 'danger' : 'mute';
+          return '<div class="rev-item"><span class="rv-no">' + (h.result === 'ok' ? 'r' + h.rv : h.result) + '</span>' +
+            '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
+            '<span class="rv-sum">' + esc(h.result) + (h.reasonRef ? ' · ' + esc(h.reasonRef) : '') + (h.subject ? '<br><span class="mono faint">' + esc(h.subject) + '</span>' : '') + '<br><span class="mono">' + esc(fmtAgo(new Date(h.ts))) + '</span></span>' +
+            '<span class="chip ' + cls + ' small">' + esc(h.result) + '</span></div>';
+        }).join('');
+        el.innerHTML = (rows || '<div class="faint small" style="padding:8px 2px">归档窗内暂无应用流水（该对象尚未 Apply 过）</div>') +
+          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；点行 diff 上一版=rev-content 面余量（git show 面未开，如实标注）。</div>';
+      });
+  }
+
+  // 元数据 tab：对象身份键+rev+草稿态+写路径（与资源同规则）。
+  function metaTabHtml(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    var dr = draftRowOf(kind, scope, name);
+    var kv = function (k, v) { return '<div class="kv" style="margin-bottom:6px"><span class="k mono">' + esc(k) + '</span><span class="v mono">' + (v || '<span class="faint">—</span>') + '</span></div>'; };
+    var draftState = dr
+      ? '在册 · fieldManager ' + esc(dr.fieldManager) + ' · baseRV r' + dr.baseResourceVersion + ' · ' + esc(fmtAgo(new Date(dr.updatedAt)))
+      : '无（工作副本==文档面）';
+    return '<div style="flex:1;overflow-y:auto"><div class="sec-title">对象规则（与资源同构）</div>' +
+      kv('kind', esc(kind)) + kv('scope', esc(scope)) + kv('name', esc(name)) +
+      kv('resourceVersion', ed ? 'r' + ed.faceRV + '（乐观锁）' : '?') +
+      kv('草稿', draftState) +
+      kv('写路径', '草稿 → 人点 Apply（dry-run 三检查）→ Revision+1 → DocApplied') +
+      '<div class="hr"></div><div class="sec-title">正文引用标识符（全可点）</div><div style="padding:2px">' +
+      (ed ? (refChips(ed.base) || '<span class="faint small">无 scheme 引用词（system:// agent:// ops:// …）</span>') : '') + '</div></div>';
+  }
+
+  /* --- 编辑器动作 --- */
+  ACTIONS['doc-tab'] = function (el) {
+    var p = S.params;
+    var ctx = edCtx();
+    if (!ctx) return;
+    S.docTab[edKey(ctx.kind, ctx.scope, ctx.name)] = el.dataset.t;
+    render();
+  };
+  // 当前编辑器对象的键上下文（优先 ED 在册态——doc/:name 深链时 params.kind 可能缺席）
+  function edCtx() {
+    var p = S.params;
+    if (!p || !p.name) return null;
+    if (p.kind) return { kind: p.kind, scope: p.scope || '', name: p.name };
+    for (var k in S.ED) {
+      if (k.split('/')[2] === p.name) {
+        var ed = S.ED[k];
+        return { kind: ed.kind, scope: ed.scope, name: ed.name };
+      }
     }
     return null;
   }
-  function llmReplyFor(doc, chipId, userText) {
-    var patch = llmPatchFor(doc, chipId);
-    if (chipId === 'scheme') return {
-      text: '对照 core-scheme 逐项检查了这份 ' + doc.kind + '：\n\n- apiVersion/kind/metadata 结构 ✓ 符合 Scheme 注册表\n- scope 路径 ' + doc.scope + ' ✓ 归属正确\n' + (patch ? '- ⚠ 发现 1 处不一致：' + patch.summary + '\n\n我准备了一条修改提案（见下方卡片），加入草稿后由你 Apply——LLM 只提案，Apply 必须人点。' : '- 语义字段 ✓ 与 Scheme 不变量一致\n\n没有发现需要修改的地方。'),
-      patch: patch
-    };
-    if (chipId === 'goal') return {
-      text: '按归属 Goal（' + (doc.scope === 'global' ? 'core-goal' : '该系统 Goal') + '）复核了本文档：\n\n- 意图声明与 Goal 的 northStars 对齐\n' + (patch ? '- 有 1 处可以更接近目标：' + patch.summary + '\n\n提案已生成，[加入草稿] 后在「草稿」tab 统一 Apply。' : '- 当前内容已满足 Goal 约束，无需修正。'),
-      patch: patch
-    };
-    if (chipId === 'plain') {
-      var first = (doc.content.match(/intent: \|?\n?([\s\S]{0,120})/) || ['', doc.content.slice(0, 120)])[1];
-      return { text: '白话版：这份 ' + doc.kind + ' 说的是——\n\n「' + first.replace(/\n/g, ' ').trim() + '…」\n\n一句话总结：它是 ' + doc.scope + ' scope 下的一份' + ({ Goal: '目标声明', Rule: '行为规则', ImplDoc: '实现声明', VerifyDoc: '验证探针集', DriftReport: '漂移报告', Runbook: '操作手册', Scheme: '对象注册表', Workflow: '循环流程声明', ServiceDesc: '系统描述', Desc: '设计说明' }[doc.kind] || '文档') + '，改它要经 Apply（Revision ' + doc.revision + ' → ' + (doc.revision + 1) + '）。', patch: null };
-    }
-    // sum
-    var st = docState(doc.name);
-    var has = st.working !== st.base;
-    if (!has) return { text: '当前草稿区没有任何变更（working == base）。所以没有可总结的差异；想改的话直接编辑左侧内容，或让我提案。', patch: null };
-    var stats = diffStats(diffLines(st.base, st.working));
-    return { text: '草稿区变更摘要：' + stats.add + ' 行新增 / ' + stats.del + ' 行删除，来源 ' + st.entries.map(function (e) { return e.source === 'llm' ? 'LLM 提案' : '手动编辑'; }).join(' + ') + '。\n\n主要改动落在 ' + firstChangedArea(st.base, st.working) + '。确认无误就点底部「Apply」——落库后 Revision ' + doc.revision + ' → ' + (doc.revision + 1) + '，并发出 DocApplied。', patch: null };
-  }
-  function firstChangedArea(a, b) {
-    var la = a.split('\n'), lb = b.split('\n');
-    for (var i = 0; i < Math.max(la.length, lb.length); i++) if (la[i] !== lb[i]) {
-      var ln = (la[i] || lb[i] || '');
-      var key = ln.match(/^(\s*)([\w-]+):/) || ['', '', ln.slice(0, 24)];
-      return (key[2] || '正文') + ' 附近';
-    }
-    return '正文';
-  }
-  function screenDoc(view) {
-    var doc = docByName(S.params.name);
-    if (!doc) { view.innerHTML = emptyBox('文档不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    var st = docState(doc.name);
-    var tab = S.docTab[doc.name] || 'llm';
-    var has = st.working !== st.base;
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '文档', go: 'docs' }, { label: doc.scope === 'global' ? 'global' : doc.scope.replace('systems/', ''), go: doc.scope === 'global' ? 'overview' : 's/' + doc.scope.replace('systems/', '') }, { label: doc.name }]);
-    var sysName = doc.scope.replace('systems/', '');
-    var scopeLink = doc.scope === 'global' ? '<span class="chip click mute" data-act="go" data-go="overview">global</span>' : '<span class="chip click mute" data-act="go" data-go="s/' + esc(sysName) + '">' + esc(doc.scope) + '</span>';
-    var head = '<div class="doc-headbar"><span class="doc-path">' + esc(doc.scope) + '/' + esc(doc.name) + '</span>' + kindBadge(doc.kind) +
-      (doc.machineWrite ? '<span class="chip mute small">机器直写 · 不经 Apply</span>' : '') + '</div>' +
-      '<div class="doc-meta-row"><span class="chip mute small">scope ' + '</span>' + scopeLink +
-      '<span class="mono small">Revision r' + doc.revision + ' · generation ' + doc.generation + '</span>' + statusChip('InSync') +
-      '<span class="mono faint small">fieldManager: ' + esc(doc.fieldManager) + '</span>' +
-      '<span class="mono faint small">更新 ' + fmtAgo(doc.updated) + '</span>' +
-      (has ? '<span class="chip warn small" id="doc-draft-flag">● 未 Apply（草稿 ' + st.entries.length + ' 处）</span>' : '<span class="chip ok small" id="doc-draft-flag">无草稿</span>') +
-      '</div>';
-    var tags = doc.tags.length ? '<div style="margin-top:6px">' + doc.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join(' ') + '</div>' : '';
-    var collabTabs = [['llm', 'LLM'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
-    var collab = '<div class="doc-collab"><div class="collab-tabs">' + collabTabs.map(function (t) {
-      var badge = t[0] === 'draft' && has ? '<span class="ct-badge">' + st.entries.length + '</span>' : '';
-      return '<div class="collab-tab' + (tab === t[0] ? ' active' : '') + '" data-act="doc-tab" data-t="' + t[0] + '">' + t[1] + badge + '</div>';
-    }).join('') + '</div><div class="collab-body" id="collab-body">' + collabBody(doc, st, tab) + '</div></div>';
-    view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' + head + tags +
-      '<div class="doc-editor-wrap"><textarea class="doc-editor" id="doc-editor" spellcheck="false">' + esc(st.working) + '</textarea></div>' +
-      '<div class="small faint">编辑即累积草稿 diff（与 base r' + doc.revision + ' 对比）；同一 Apply 按钮统一落库。LLM 在右侧面板只提案。</div>' +
-      '</div>' + collab + '</div></div>';
-    bindDocEditor(doc);
-  }
-  ACTIONS['doc-tab'] = function (el) { S.docTab[S.params.name] = el.dataset.t; render(); };
-  function collabBody(doc, st, tab) {
-    if (tab === 'llm') {
-      var L = S.docLLM[doc.name] = S.docLLM[doc.name] || { msgs: [] };
-      var msgs = L.msgs.map(function (m, i) {
-        var cards = m.cards || '';
-        return '<div class="llm-msg ' + m.role + '">' + (m.role === 'agent' ? '<svg class="ic" style="color:var(--llm)"><use href="#cc-i-spark"/></svg> ' : '') + esc(m.text) + (m.streaming ? '<span class="typing-caret"></span>' : '') + cards + '</div>';
-      }).join('');
-      return '<div class="llm-chips">' + LLM_CHIPS.map(function (c) {
-        return '<span class="llm-chip" data-act="llm-chip" data-id="' + c.id + '">' + esc(c.label) + '</span>';
-      }).join('') + '</div>' +
-      '<div class="llm-msgs" id="llm-msgs">' + (msgs || '<div class="small faint" style="padding:6px 2px">与本文档上下文的 LLM 对话：它会读 ' + esc(doc.name) + '（r' + doc.revision + '）与其 Goal/Rule 引用；所有修改只进草稿。</div>') + '</div>' +
-      '<div class="llm-input-row"><input id="llm-input" placeholder="问点什么，或让它改…（Enter 发送）"><button class="btn llm sm" data-act="llm-send">发送</button></div>';
-    }
-    if (tab === 'draft') {
-      var has = st.working !== st.base;
-      var fullDiff = diffLines(st.base, st.working);
-      var stats = diffStats(fullDiff);
-      var entries = has && st.entries.length ? st.entries.map(function (e, i) {
-        return '<div class="draft-item"><div class="di-head"><span class="di-src ' + e.source + '">' + (e.source === 'llm' ? 'LLM' : '手动') + '</span>' +
-          '<span>' + esc(e.summary) + '</span><span class="faint mono small" style="margin-left:auto">' + fmtTime(e.ts) + '</span>' +
-          '<span class="lk small" style="margin-left:8px" data-act="draft-drop" data-i="' + i + '">弃用</span></div></div>';
-      }).join('') : '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">草稿区为空</div><div>编辑左侧内容或让 LLM 提案；改动先落草稿，Apply 才落库（Revision+1 · DocApplied）。</div></div>';
-      return '<div style="flex:1;overflow-y:auto;min-height:0">' + entries +
-        (has ? '<div class="hr"></div><div class="sec-title">完整草稿 diff（base r' + doc.revision + ' → 草稿）<span class="chip ok small" style="margin-left:6px">+' + stats.add + '</span><span class="chip danger small">-' + stats.del + '</span></div>' +
-        renderDiff(fullDiff, 60) + '<div class="lk small" style="display:inline-block;margin-top:6px" data-act="draft-full-diff">查看完整 diff →</div>' : '') + '</div>' +
-        '<div class="apply-dock"><div class="hint">Apply = 唯一写路径：乐观锁 r' + doc.revision + ' → Revision+1 → DocApplied 必发。空草稿=无操作。</div>' +
-        '<button class="btn primary lg block" data-act="doc-apply" ' + (has ? '' : 'disabled') + '>Apply（' + (has ? st.entries.length : 0) + ' 处变更）</button></div>';
-    }
-    if (tab === 'hist') {
-      var rows = doc.history.map(function (h, i) {
-        var prevRev = i + 1 < doc.history.length ? doc.history[i + 1].rev : Math.max(1, h.rev - 1);
-        return '<div class="rev-item" data-act="hist-open" data-rev="' + h.rev + '" data-prev="' + prevRev + '">' +
-          '<span class="rv-no">r' + h.rev + '</span><span class="rv-author">' + esc(h.author) + '</span>' +
-          '<span class="rv-sum">' + esc(h.summary) + '<br><span class="mono">' + fmtAgo(h.ts) + '</span></span></div>';
-      }).join('');
-      return '<div style="flex:1;overflow-y:auto">' + rows + '<div class="small faint" style="margin-top:8px">点任一 revision 看与上一版的 diff（git 历史语义；Status/记录类机器直写不出现在这里）。</div></div>';
-    }
-    // meta
-    var fm = parseFrontmatter(doc.content);
-    var kv = Object.keys(fm).map(function (k) {
-      var v = fm[k];
-      var links = '';
-      if (/ownerRefs/i.test(k) && typeof v === 'object') {
-        links = '<div style="margin-top:4px">' + v.map(function (o) {
-          var dn = String(o).replace(/-desc$/, '-desc');
-          return '<span class="lk mono small" data-act="go" data-go="doc/' + esc(o) + '">' + esc(o) + '</span>';
-        }).join(' ') + '</div>';
-        v = v.join(', ');
-      }
-      return '<div class="kv" style="margin-bottom:6px"><span class="k mono">' + esc(k) + '</span><span class="v mono">' + esc(typeof v === 'object' ? JSON.stringify(v) : v) + links + '</span></div>';
-    }).join('');
-    return '<div style="flex:1;overflow-y:auto"><div class="sec-title">frontmatter（键值表）</div>' + (kv || '<div class="faint small">无 frontmatter</div>') +
-      '<div class="hr"></div><div class="sec-title">对象规则（与资源同构）</div>' +
-      '<div class="kv"><span class="k">kind</span><span class="v mono">' + esc(doc.kind) + '</span></div>' +
-      '<div class="kv" style="margin-top:4px"><span class="k">scope</span><span class="v mono">' + esc(doc.scope) + '</span></div>' +
-      '<div class="kv" style="margin-top:4px"><span class="k">revision</span><span class="v mono">r' + doc.revision + '（乐观锁）</span></div>' +
-      '<div class="kv" style="margin-top:4px"><span class="k">写路径</span><span class="v">' + (doc.machineWrite ? '机器直写（fieldManager 白名单，不经 Apply、不发 DocApplied）' : '草稿 → 人点 Apply → DocApplied') + '</span></div></div>';
-  }
-  function parseFrontmatter(content) {
-    var out = {}, lines = content.split('\n'), curKey = null;
-    var started = /^(\w[\w-]*):/.exec(lines[0]) || (/^---/.test(lines[0]) && null);
-    var i0 = /^---/.test(lines[0]) ? 1 : 0;
-    for (var i = i0; i < Math.min(lines.length, 40); i++) {
-      var ln = lines[i];
-      if (ln === '' || ln[0] === '#' || /^spec:|intent: \|/.test(ln)) break;
-      var top = /^(\w[\w-]*):(?: (.*))?$/.exec(ln);
-      if (top && ln[0] !== ' ') {
-        curKey = top[1];
-        if (top[2] && top[2].charAt(0) !== '-') out[curKey] = top[2].replace(/^["']|["']$/g, '');
-        else out[curKey] = [];
-        continue;
-      }
-      var sub = /^\s+- (.+)$/.exec(ln);
-      if (sub && curKey) { if (!Array.isArray(out[curKey])) out[curKey] = []; out[curKey].push(sub[1].trim()); continue; }
-      var kv2 = /^\s+([\w-]+): (.+)$/.exec(ln);
-      if (kv2 && curKey && typeof out[curKey] === 'string') { /* 忽略深层，只展示顶层 */ }
-    }
-    return out;
-  }
-  function bindDocEditor(doc) {
-    var ta = $('#doc-editor');
-    if (!ta) return;
-    var deb = null;
-    ta.addEventListener('input', function () {
-      clearTimeout(deb);
-      deb = setTimeout(function () {
-        var st = docState(doc.name);
-        st.working = ta.value;
-        var has = st.working !== st.base;
-        // 更新手动条目
-        if (has) {
-          var manual = st.entries.filter(function (e) { return e.source === 'manual'; })[0];
-          if (!manual) st.entries.push({ source: 'manual', summary: '手动编辑（textarea 直改）', ts: new Date() });
-          else manual.summary = '手动编辑（textarea 直改）';
-        } else {
-          st.entries = st.entries.filter(function (e) { return e.source !== 'manual'; });
-        }
-        updateDocBadges(doc, st, has);
-      }, 200);
-    });
-    // LLM 输入 Enter
-    var inp = $('#llm-input');
-    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendLLM(doc, this.value, null); });
-  }
-  function updateDocBadges(doc, st, has) {
-    var flag = $('#doc-draft-flag');
-    if (flag) {
-      flag.className = has ? 'chip warn small' : 'chip ok small';
-      flag.id = 'doc-draft-flag';
-      flag.textContent = has ? '● 未 Apply（草稿 ' + st.entries.length + ' 处）' : '无草稿';
-    }
-    // 更新草稿 tab 若打开
-    if ((S.docTab[doc.name] || 'llm') === 'draft') render();
-  }
-  /* --- LLM 对话 --- */
-  ACTIONS['llm-chip'] = function (el) {
-    var doc = docByName(S.params.name);
-    if (doc) sendLLM(doc, null, el.dataset.id);
+
+  // 采纳提案：以提案内容替换工作副本（与手动编辑同一草稿通道——Apply 仍须人点）。
+  ACTIONS['prop-adopt'] = function (el) {
+    var ctx = edCtx();
+    if (!ctx) return;
+    var ed = edOf(ctx.kind, ctx.scope, ctx.name);
+    if (!ed) return;
+    var fm = el.dataset.fm;
+    LIVE.get('v1/drafts/' + encodeURIComponent(ctx.kind) + '/' + encodeURIComponent(ctx.name) + '?scope=' + encodeURIComponent(ctx.scope))
+      .then(function (b) {
+        ed.working = String(b.content || '');
+        ed.baseRV = Number(b.baseResourceVersion != null ? b.baseResourceVersion : ed.faceRV); // 乐观锁期望值随稿走（不静默重基）
+        ed.draftFM = String(b.fieldManager || fm);
+        ed.reasonRef = String(b.reasonRef || '');
+        ed.adopted[fm] = true;
+        ed.entries.push({ source: 'llm', summary: '采纳提案（fieldManager: ' + fm + '）', ts: new Date() });
+        var ta = $('#doc-editor');
+        if (ta) ta.value = ed.working;
+        paintEdBadges(ctx.kind, ctx.scope, ctx.name);
+        renderCollabBody(ctx.kind, ctx.scope, ctx.name);
+        toast('提案已加入草稿（未落库）', '乐观锁期望值=r' + ed.baseRV + '——面上已前移则 Apply 弹窗如实判 ✗（409 稿保留）', 'ok');
+      })
+      .catch(function (e) { toast('提案正文不可读', String((e && e.message) || e), 'danger'); });
   };
-  ACTIONS['llm-send'] = function () {
-    var doc = docByName(S.params.name);
-    var inp = $('#llm-input');
-    if (doc && inp) sendLLM(doc, inp.value, null);
+
+  // 丢弃提案：DELETE 弃稿（人裁不通过=弃；cored §2.2 弃稿=缓存行删除，零文档面零事件）。
+  ACTIONS['prop-drop'] = function (el) {
+    var ctx = edCtx();
+    if (!ctx) return;
+    var fm = el.dataset.fm;
+    fetch('/core-console/drafts/' + encodeURIComponent(ctx.kind) + '/' + encodeURIComponent(ctx.name) + '?scope=' + encodeURIComponent(ctx.scope), {
+      method: 'DELETE', credentials: 'same-origin',
+    }).then(function (r) {
+      if (!r.ok && r.status !== 404) throw new Error('HTTP ' + r.status); // 404=本来无稿（幂等清场）
+      LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
+        return !(d.kind === ctx.kind && d.scope === ctx.scope && d.name === ctx.name);
+      });
+      toast('提案已丢弃', 'fieldManager: ' + fm + '（草稿缓存清空，文档面不动）', 'warn');
+      renderCollabBody(ctx.kind, ctx.scope, ctx.name);
+      paintEdBadges(ctx.kind, ctx.scope, ctx.name);
+    }).catch(function (e) { toast('弃稿失败', String((e && e.message) || e), 'danger'); });
   };
-  ACTIONS['draft-accept'] = function (el) {
-    var doc = docByName(S.params.name);
-    var L = S.docLLM[doc.name];
-    var p = L.pending;
-    if (p && applyPatch(doc.name, p.find, p.replace, p.summary, 'llm')) {
-      L.msgs.push({ role: 'agent', text: '已加入草稿（未落库）。在「草稿」tab 可查看完整 diff，确认后点 Apply。' });
-      toast('已加入草稿', p.summary + '（未 Apply，不发事件）');
-    }
-    L.pending = null;
-    render();
-    var ta = $('#doc-editor');
-    if (ta) { var st = docState(doc.name); ta.value = st.working; }
+
+  // 弃稿（草稿 tab）：清空工作副本+删缓存稿。
+  ACTIONS['draft-discard'] = function () {
+    var ctx = edCtx();
+    if (!ctx) return;
+    var ed = edOf(ctx.kind, ctx.scope, ctx.name);
+    if (!ed) return;
+    fetch('/core-console/drafts/' + encodeURIComponent(ctx.kind) + '/' + encodeURIComponent(ctx.name) + '?scope=' + encodeURIComponent(ctx.scope), {
+      method: 'DELETE', credentials: 'same-origin',
+    }).then(function (r) {
+      if (!r.ok && r.status !== 404) throw new Error('HTTP ' + r.status); // 404=本来无稿（幂等清场）
+      LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
+        return !(d.kind === ctx.kind && d.scope === ctx.scope && d.name === ctx.name);
+      });
+      ed.working = ed.base;
+      ed.entries = [];
+      ed.adopted = {};
+      ed.landed = false;
+      var ta = $('#doc-editor');
+      if (ta) ta.value = ed.working;
+      paintEdBadges(ctx.kind, ctx.scope, ctx.name);
+      renderCollabBody(ctx.kind, ctx.scope, ctx.name);
+      toast('草稿已弃', '工作副本回到文档面 r' + ed.faceRV + '（零落库零事件）', 'warn');
+    }).catch(function (e) { toast('弃稿失败', String((e && e.message) || e), 'danger'); });
   };
-  ACTIONS['draft-reject'] = function () {
-    var doc = docByName(S.params.name);
-    var L = S.docLLM[doc.name];
-    L.pending = null;
-    L.msgs.push({ role: 'agent', text: '提案已丢弃，文档保持不变。' });
-    render();
-  };
-  function sendLLM(doc, userText, chipId) {
-    var L = S.docLLM[doc.name] = S.docLLM[doc.name] || { msgs: [] };
-    var label = chipId ? (LLM_CHIPS.filter(function (c) { return c.id === chipId; })[0] || {}).label : null;
-    L.msgs.push({ role: 'user', text: label || userText });
-    var reply = llmReplyFor(doc, chipId || 'sum', userText);
-    var streaming = { role: 'agent', text: '', streaming: true };
-    L.msgs.push(streaming);
-    render();
-    var ta = $('#doc-editor');
-    if (ta) { var stt = docState(doc.name); ta.value = stt.working; }
-    // 打字机流式
-    var full = reply.text;
-    var i = 0;
-    var t = addInterval(function () {
-      i += 3;
-      streaming.text = full.slice(0, i);
-      var el = $('#llm-msgs .llm-msg.agent:last-child');
-      if (el) {
-        el.textContent = '';
-        el.innerHTML = '<svg class="ic" style="color:var(--llm)"><use href="#cc-i-spark"/></svg> ' + esc(streaming.text) + '<span class="typing-caret"></span>';
-        var box = $('#llm-msgs');
-        if (box) box.scrollTop = box.scrollHeight;
-      }
-      if (i >= full.length) {
-        clearInterval(t);
-        streaming.text = full;
-        streaming.streaming = false;
-        if (reply.patch) {
-          L.pending = reply.patch;
-          streaming.cards = '<div class="draft-card"><div class="dc-head"><svg class="ic"><use href="#cc-i-spark"/></svg>LLM 修改提案 · ' + esc(reply.patch.summary) + '</div>' +
-            '<div class="dc-body">' + renderDiff([{ t: '-', s: reply.patch.find }, { t: '+', s: reply.patch.replace }], 20) + '</div>' +
-            '<div class="dc-acts"><button class="btn sm llm" data-act="draft-accept">加入草稿</button><button class="btn sm" data-act="draft-reject">丢弃</button></div></div>';
-        }
-        if (S.route === 'doc') render();
-      }
-    }, 16);
-  }
-  /* --- 草稿操作 --- */
-  ACTIONS['draft-drop'] = function (el) {
-    var doc = docByName(S.params.name);
-    var st = docState(doc.name);
-    var i = parseInt(el.dataset.i, 10);
-    var e = st.entries[i];
-    st.entries.splice(i, 1);
-    toast('已弃用 1 处草稿', e ? e.summary : '', 'warn');
-    if (!st.entries.length) { st.working = st.base; }
-    render();
-    var ta = $('#doc-editor');
-    if (ta) ta.value = st.working;
-  };
-  ACTIONS['draft-full-diff'] = function () {
-    var doc = docByName(S.params.name);
-    var st = docState(doc.name);
-    openModal('<div class="modal-h"><span class="m-title">完整 diff · r' + doc.revision + ' → 草稿</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
-      '<div class="modal-b">' + renderDiff(diffLines(st.base, st.working), 400) + '</div>');
-  };
-  /* --- Apply 全流程 --- */
+
+  /* --- Apply 全流程（E4：dry-run 三检查→人确认→fromDraft 落库） --- */
   ACTIONS['doc-apply'] = function () {
-    var doc = docByName(S.params.name);
-    if (!doc) return;
-    var st = docState(doc.name);
-    if (st.working === st.base) { toast('无需 Apply', '草稿与文档面无差异（不落库不发事件）'); return; }
-    var fullDiff = diffLines(st.base, st.working);
-    var stats = diffStats(fullDiff);
-    var modal = openModal(
-      '<div class="modal-h"><span class="m-title">Apply 确认 · ' + esc(doc.name) + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
-      '<div class="modal-b">' +
-      '<div class="kv" style="margin-bottom:12px"><span class="k">乐观锁</span><span class="v mono">base r' + doc.revision + ' ✓（后写者须重读）</span>' +
-      '<span class="k">变更</span><span class="v"><span class="chip ok small">+' + stats.add + '</span> <span class="chip danger small">-' + stats.del + '</span> · 来源 ' + st.entries.map(function (e) { return e.source === 'llm' ? 'LLM' : '手动'; }).join('+') + '</span></div>' +
-      '<div class="checklist" id="apply-checks">' +
-      '<div class="check-item" data-c="1"><span class="ci-ic">…</span>Scheme 校验（apiVersion/kind/scope 结构）</div>' +
-      '<div class="check-item" data-c="2"><span class="ci-ic">…</span>权限准入（fieldManager: root · approver role）</div>' +
-      '<div class="check-item" data-c="3"><span class="ci-ic">…</span>乐观锁 r' + doc.revision + ' 比对</div></div>' +
-      renderDiff(fullDiff, 26) +
-      '<div class="apply-progress" id="apply-progress" hidden><div class="progress"><i style="width:0%"></i></div><div class="small faint" style="margin-top:4px" id="apply-progress-text">落库中…</div></div>' +
-      '</div>' +
-      '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="apply-go">确认 Apply</button></div>',
-      { cls: 'wide' });
-    // 逐项检查动画
-    var checks = $all('#apply-checks .check-item');
-    checks.forEach(function (c, i) {
-      addTimer(function () {
-        c.classList.add('pass');
-        c.querySelector('.ci-ic').textContent = '✓';
-        c.querySelector('.ci-ic').style.color = 'var(--ok)';
-      }, 260 + i * 260);
-    });
-    $('#apply-go').addEventListener('click', function () {
-      var btn = this;
-      btn.disabled = true;
-      $('#apply-progress').hidden = false;
-      var bar = $('#apply-progress .progress > i');
-      var txt = $('#apply-progress-text');
-      var p = 0;
-      var t = addInterval(function () {
-        p += 18 + Math.random() * 14;
-        bar.style.width = Math.min(100, p) + '%';
-        txt.textContent = p < 45 ? '乐观锁提交（git commit）…' : p < 80 ? '写 ops DB 审计…' : '发 DocApplied 事件…';
-        if (p >= 100) {
-          clearInterval(t);
-          var res = doApplyDoc(doc.name);
-          closeModal();
-          if (res) {
-            toast('已落库 r' + res.rev + ' · DocApplied 已发出', doc.name + '（' + res.n + ' 处变更，generation → ' + doc.generation + '）', 'ok');
-            render();
+    var ctx = edCtx();
+    if (!ctx) return;
+    var ed = edOf(ctx.kind, ctx.scope, ctx.name);
+    if (!ed || !ed.loaded) return;
+    if (ed.working === ed.base) { toast('空草稿——无操作', '草稿与文档面无差异：不落库、不发事件、不清稿（提示即止）'); return; }
+    // 先落稿（缓存=差异唯一来源；落稿失败=中止 Apply——写路径必须走稿）
+    landDraft(ctx.kind, ctx.scope, ctx.name).then(function (landed) {
+      if (!landed) return;
+      var fullDiff = diffLines(ed.base, ed.working);
+      var stats = diffStats(fullDiff);
+      openModal(
+        '<div class="modal-h"><span class="m-title">Apply 确认 · ' + esc(ctx.scope) + '/' + esc(ctx.name) + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
+        '<div class="modal-b">' +
+        '<div class="kv" style="margin-bottom:12px"><span class="k">变更</span><span class="v"><span class="chip ok small">+' + stats.add + '</span> <span class="chip danger small">-' + stats.del + '</span> · 来源 ' +
+          (ed.entries.map(function (e) { return e.source === 'llm' ? 'LLM' : '手动'; }).join('+') || '手动') + '</span></div>' +
+        '<div class="checklist" id="ed-checks">' +
+        '<div class="check-item" data-c="scheme"><span class="ci-ic">…</span>Scheme 校验（kind 注册∧spec 结构）</div>' +
+        '<div class="check-item" data-c="perm"><span class="ci-ic">…</span>权限准入（主体=宿主注入 console-operator）</div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + ed.baseRV + ' ↔ 面上现值）</div></div>' +
+        renderDiff(fullDiff, 26) +
+        '<div class="small faint" id="ed-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/apply {fromDraft:true, dryRun:true}——零副作用）…</div>' +
+        '</div>' +
+        '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="ed-apply-go" disabled>确认 Apply</button></div>',
+        { cls: 'wide' });
+      // dry-run 三检查（引擎 admit ①scheme②权限 零副作用预检；③乐观锁=回执 rv 与稿 baseRV 客户端比对）
+      LIVE.apply({ kind: ctx.kind, scope: ctx.scope, name: ctx.name, fromDraft: true, dryRun: true,
+        fieldManager: edConsoleFM(ctx.kind, ctx.scope, ctx.name), reasonRef: 'console:apply-dry' }).then(function (res) {
+        var mark = function (c, ok, note) {
+          var row = $('.check-item[data-c="' + c + '"]');
+          if (!row) return;
+          row.classList.add(ok ? 'pass' : 'fail');
+          var ic = row.querySelector('.ci-ic');
+          if (ic) { ic.textContent = ok ? '✓' : '✗'; ic.style.color = ok ? 'var(--ok)' : 'var(--danger)'; }
+          if (note) {
+            var n = document.createElement('span');
+            n.className = 'ci-note';
+            n.textContent = note;
+            row.appendChild(n);
           }
+        };
+        if (res.ok && res.data && res.data.action === 'dry-run') {
+          mark('scheme', true, 'kind 在册∧spec 结构过（cored admit ①）');
+          mark('perm', true, '主体准入过（cored admit ②——Role/Group 文档面判定）');
+          var cur = Number(res.data.rv);
+          var lockOk = cur === ed.baseRV;
+          mark('lock', lockOk, lockOk ? 'r' + ed.baseRV + ' == 面上现值（可落）' : '稿基于 r' + ed.baseRV + '，面上已 r' + cur + '——落库将 409（稿保留，重读后重整）');
+          var note = $('#ed-dry-note');
+          if (note) note.textContent = 'dry-run 通过预检（rv 回执=r' + cur + '）——确认后真落库。';
+          var go = $('#ed-apply-go');
+          if (go && lockOk) {
+            go.disabled = false;
+            go.addEventListener('click', function () {
+              go.disabled = true;
+              LIVE.apply({ kind: ctx.kind, scope: ctx.scope, name: ctx.name, fromDraft: true,
+                fieldManager: edConsoleFM(ctx.kind, ctx.scope, ctx.name), reasonRef: 'console:apply' }).then(function (r2) {
+                if (r2.ok) {
+                  closeModal();
+                  toast('已落库 r' + r2.data.rv + '（' + (r2.data.action === 'noop' ? 'noop：稿与面一致，零提交' : 'Revision+1') + '）',
+                    ctx.name + ' · DocApplied 已归档 · 草稿已清（apply.md rule 6）', 'ok');
+                  delete S.ED[edKey(ctx.kind, ctx.scope, ctx.name)]; // 会话态作废——重进即现读新面
+                  LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
+                    return !(d.kind === ctx.kind && d.scope === ctx.scope && d.name === ctx.name);
+                  });
+                  LIVE.load().then(function () { render(); });
+                } else if (r2.status === 409) {
+                  closeModal();
+                  toast('乐观锁冲突（409）——稿保留', '文档面前移（' + String(r2.error || '') + '）——重读后重整草稿再落（apply.md §3 后写者语义）', 'danger');
+                  delete S.ED[edKey(ctx.kind, ctx.scope, ctx.name)];
+                  render();
+                } else {
+                  toast('Apply 失败（' + (r2.status == null ? '传输层' : 'HTTP ' + r2.status) + '）', String(r2.error || ''), 'danger');
+                }
+              });
+            });
+          }
+        } else {
+          var st = res.status;
+          var schemeFail = st === 404 || st === 400; // 野 kind=404；spec 结构未过=400
+          mark('scheme', !schemeFail, schemeFail ? String(res.error || ('HTTP ' + st)) : '—');
+          mark('perm', st !== 403, st === 403 ? String(res.error || '权限准入拒绝') : (schemeFail ? '—' : String(res.error || '')));
+          mark('lock', false, '预检未过（' + (st == null ? '传输层' : 'HTTP ' + st) + '）');
+          var note2 = $('#ed-dry-note');
+          if (note2) note2.textContent = 'dry-run 未通过（' + (res.error || 'HTTP ' + st) + '）——改正草稿或主体后再试。';
         }
-      }, 130);
+      });
     });
-  };
-  ACTIONS['hist-open'] = function (el) {
-    var doc = docByName(S.params.name);
-    var rev = parseInt(el.dataset.rev, 10), prev = parseInt(el.dataset.prev, 10);
-    var h = doc.history.filter(function (x) { return x.rev === rev; })[0];
-    var a = revContent(doc, prev), b = revContent(doc, rev);
-    openModal('<div class="modal-h"><span class="m-title">r' + prev + ' → r' + rev + ' · ' + esc(h ? h.author : '') + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
-      '<div class="modal-b"><div class="kv" style="margin-bottom:10px"><span class="k">summary</span><span class="v">' + esc(h ? h.summary : '') + '</span></div>' +
-      renderDiff(diffLines(a, b), 200) + '</div>');
   };
   /* ================= 屏 7：Agent 对话（dsh Conversation shell） ================= */
   function chatUiFor(agent) {
@@ -4612,17 +4654,17 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   route('workflows', screenWorkflows);
   route('wf/:name', screenWorkflow); // E3：运行管理详情（六 tab；列表列=L38-05 活体判据）
   route('wf/:name/r/:n', screenWfRun);
-  route('doc/:name', function (v) { screenObject(v, null); });      // 名字解析（歧义=空态引导回系统树）
-  route('doc/:kind/:scope/:name', function (v) { screenObject(v); }); // 对象键直链（kind/scope/name）
+  route('doc/:name', function (v) { screenEditor(v, null); });      // 名字解析（歧义=空态引导回系统树）
+  route('doc/:kind/:scope/:name', function (v) { screenEditor(v); }); // 对象键直链（kind/scope/name）——E4 起编辑器
   route('docs', screenDocsGlobal);
   route('chat/:agent', screenChat);
   route('connectors', screenConnectors);
-  route('connector/:name', function (v) { screenObject(v, 'ConnectorOps'); });
-  route('ws/:name', function (v) { screenObject(v, 'WorkService'); });
-  route('provider/:name', function (v) { screenObject(v, 'Provider'); });
-  route('ref/:name', function (v) { screenObject(v, 'Ref'); });
-  route('role/:name', function (v) { screenObject(v, 'Role'); });
-  route('agent/:name', function (v) { screenObject(v, 'Agent'); }); // E5 起升会话屏（运行器四选+终端 tab）
+  route('connector/:name', function (v) { screenEditor(v, 'ConnectorOps'); }); // E4 起同屏=编辑器（文档与资源同规则）
+  route('ws/:name', function (v) { screenEditor(v, 'WorkService'); });
+  route('provider/:name', function (v) { screenEditor(v, 'Provider'); });
+  route('ref/:name', function (v) { screenEditor(v, 'Ref'); });
+  route('role/:name', function (v) { screenEditor(v, 'Role'); });
+  route('agent/:name', function (v) { screenEditor(v, 'Agent'); }); // E5 起升会话屏（运行器四选+终端 tab）
   route('session/:id', screenSession);
   route('events', screenEvents);
   route('event/:id', screenEventLive);
@@ -4691,7 +4733,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     // E2 真数据层回调：装载完成即重渲染真数据屏（welcome/tree/s/doc——其余屏不受 LIVE 影响）
     __CC.live.onChange = function () {
       if (!ROOT) return;
-      if (['welcome', 'tree', 's', 'doc', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event'].indexOf(S.route) >= 0) render();
+      // 'doc'（编辑器）不在列：编辑器自注水（屏加载即现读），live 轻刷新不重渲染（编辑态/textarea 焦点保真）；
+      // Apply 成功后的重渲染走 apply 回调显式 LIVE.load().then(render)。
+      if (['welcome', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event'].indexOf(S.route) >= 0) render();
     };
     boot();
   }

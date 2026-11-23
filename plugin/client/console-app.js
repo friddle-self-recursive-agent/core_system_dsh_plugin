@@ -188,18 +188,6 @@
     lines.forEach(function (l) { if (l.t === '+') add++; else if (l.t === '-') del++; });
     return { add: add, del: del };
   }
-  // 历史版本内容（确定性扰动，演示用）
-  function revContent(doc, rev) {
-    if (rev >= doc.revision) return doc.content;
-    var lines = doc.content.split('\n');
-    var delta = doc.revision - rev;
-    for (var i = 0; i < lines.length; i++) {
-      var ln = lines[i];
-      if (/\d+\.\d+/.test(ln)) { lines[i] = ln.replace(/(\d+)\.(\d+)/, function (mm, a, b) { var v = Math.max(0, (parseFloat(mm) - delta * 0.02)).toFixed(2); return v; }); break; }
-      if (/revision|rev:/.test(ln)) { lines[i] = ln.replace(/\d+/, String(Math.max(1, parseInt(ln.match(/\d+/)[0], 10) - delta))); break; }
-    }
-    return lines.join('\n');
-  }
 
   /* ================= 草稿 / Apply 引擎 ================= */
   function docState(name) {
@@ -220,44 +208,8 @@
     var st = docState(name);
     return !!(st && st.working !== st.base);
   }
-  function applyPatch(docName, findText, replaceText, summary, source) {
-    var st = docState(docName);
-    if (st.working.indexOf(findText) < 0) return false;
-    st.working = st.working.replace(findText, replaceText);
-    st.entries.push({ source: source || 'llm', summary: summary, ts: new Date() });
-    return true;
-  }
   function addEvent(lane, kind, level, system, object, msg, link) {
     M.events.unshift({ id: 'ev-live-' + Date.now(), lane: lane, kind: kind, level: level, system: system, object: object, msg: msg, ts: new Date(), link: link || null });
-  }
-  function doApplyDoc(name) {
-    var doc = docByName(name), st = docState(name);
-    if (!doc || st.working === st.base) return null;
-    var newRev = doc.revision + 1;
-    var specChange = doc.kind === 'Workflow' || doc.kind === 'Goal' || doc.kind === 'Rule' || doc.kind === 'ImplDoc';
-    doc.revision = newRev;
-    if (specChange) doc.generation = doc.generation + 1;
-    doc.content = st.working;
-    doc.draft = null;
-    doc.draftSource = null;
-    doc.updated = new Date();
-    doc.history.unshift({ rev: newRev, author: 'root', ts: new Date(), summary: 'Apply：草稿落库（' + st.entries.length + ' 处变更，fieldManager: root）' });
-    addEvent('event', 'DocApplied', 'info', doc.scope.replace('systems/', ''), doc.kind + '/' + doc.name, newRev + ' 落库（fieldManager: root），DocApplied 回执', '#/doc/' + doc.name);
-    S.drafts[name] = { working: doc.content, base: doc.content, entries: [] };
-    return { rev: newRev, n: st.entries.length };
-  }
-  function applyWorkflowToggle(wfName) {
-    var wf = wfByName(wfName);
-    wf.enabled = !wf.enabled;
-    wf.phase = wf.enabled ? 'Idle' : 'Idle';
-    var specDoc = docByName(wf.specDoc || wfName + '-spec');
-    if (specDoc) {
-      specDoc.revision += 1;
-      specDoc.updated = new Date();
-      specDoc.content = specDoc.content.replace(/enabled: (true|false)/, 'enabled: ' + wf.enabled);
-      specDoc.history.unshift({ rev: specDoc.revision, author: 'root', ts: new Date(), summary: 'Apply：spec.enabled → ' + wf.enabled });
-    }
-    addEvent('event', 'DocApplied', 'info', wf.scope.replace('systems/', '') || 'global', 'Workflow/' + wfName, 'spec.enabled → ' + wf.enabled + '（Apply 落库）', '#/wf/' + wfName);
   }
   function resolveApproval(id, verdict) {
     var ap = byId(M.approvals, 'id', id);
@@ -1136,77 +1088,6 @@
     }
     return out;
   }
-  function objViewerHtml(kind, scope, name, ref) {
-    var path = encodeURIComponent(kind) + '/' + encodeURIComponent(scope) + '/' + encodeURIComponent(name);
-    var draft = !!treeDraftSet()[kind + '/' + scope + '/' + name];
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
-      { label: scope, go: scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + encodeURIComponent(scope) }, { label: name }]);
-    return '<div class="view-inner"><div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
-      (draft ? draftDot(true) + '<span class="chip warn small">● 未 Apply（草稿缓存）</span>' : '') + '</div>' +
-      '<div class="doc-meta-row"><span class="chip mute small">scope</span>' +
-      '<span class="chip click mute small" data-act="go" data-go="' + (scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + esc(encodeURIComponent(scope))) + '">' + esc(scope) + '</span>' +
-      '<span class="mono small">resourceVersion r' + (ref ? ref.resourceVersion : '?') + '</span>' +
-      '<span class="chip ok small">' + esc(kind) + ' 在册</span></div>' +
-      '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">对象正文（只读；编辑器=文档编辑 E4 落地，LLM 草稿→人点 Apply）</span></div>' +
-      '<div class="card-b" id="obj-content" style="padding:12px 16px">' + liveSkeletonRows(2, 0) + '</div></div>' +
-      '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">正文引用标识符（全可点）</span></div>' +
-      '<div class="card-b" id="obj-refs" style="padding:10px 16px"></div></div>' +
-      '<div class="small faint" style="margin-top:10px">对象键=(kind, scope, name) · 读面 GET /v1/objects/' + esc(kind) + '/' + esc(name) + '?scope=' + esc(scope) + '</div></div>';
-  }
-  function screenObject(view, kindHint) {
-    LIVE.ensure();
-    var p = S.params;
-    var kind = kindHint || p.kind;
-    var name = p.name;
-    var scope = p.scope || '';
-    var st = LIVE.state;
-    if (st.status === 'loading' && !st.kinds.length) {
-      // 首装未完：按路由参数先出壳，注水兜底
-      if (kind && scope) { view.innerHTML = objViewerHtml(kind, scope, name, null); hydrateObjContent(view, kind, scope, name); return; }
-    }
-    var ref = null;
-    if (kind) {
-      ref = LIVE.refs(kind).filter(function (o) { return o.name === name && (!scope || o.scope === scope); })[0] || null;
-      if (!ref && !scope) {
-        // 未带 scope 的深链：全 kind 名字解析（唯一才取，歧义=空态并提示带 scope）
-        var cands = LIVE.refs(kind).filter(function (o) { return o.name === name; });
-        if (cands.length === 1) ref = cands[0];
-        else if (cands.length > 1) {
-          view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 scope 有歧义（' + cands.length + ' 个）——请从系统树进入', name) + '</div>';
-          return;
-        }
-      }
-    } else {
-      // doc/:name 兼容深链：跨 kind 名字解析
-      var all = [];
-      st.kinds.forEach(function (kd) {
-        LIVE.refs(kd.name).forEach(function (o) { if (o.name === name) all.push(o); });
-      });
-      if (all.length === 1) ref = all[0];
-      else if (all.length > 1) {
-        view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 kind/scope 有歧义（' + all.length + ' 个）——请从系统树进入', name) + '</div>';
-        return;
-      }
-    }
-    if (!ref) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
-      return;
-    }
-    view.innerHTML = objViewerHtml(ref.kind, ref.scope, ref.name, ref);
-    hydrateObjContent(view, ref.kind, ref.scope, ref.name);
-  }
-  function hydrateObjContent(view, kind, scope, name) {
-    hydrate('obj-content', 'v1/objects/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''),
-      function (el, b) {
-        var content = String(b.content || '');
-        el.innerHTML = '<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc(content) + '</pre>';
-        var refsEl = $('#obj-refs');
-        if (refsEl) {
-          var chips = refChips(content);
-          refsEl.innerHTML = chips || '<span class="faint small">无 scheme 引用词（system:// agent:// ops:// …）</span>';
-        }
-      });
-  }
   ACTIONS['live-reload'] = function () { render(); }; // 重读=重渲染现读（读面 GET 幂等）
   /* 事件详情（E2 真数据：event_log 归档行投影，Welcome/事件流点击落点；链路=event→involved→对象） */
   function screenEventLive(view) {
@@ -1991,356 +1872,517 @@
       '<div class="card" id="job-detail">' + wfRunDrawerHtml(row, r, false) + '</div></div>';
   }
 
-  /* ================= 屏 6：文档编辑器 ================= */
-  S.docLLM = {};   // docName -> {msgs:[{role,text,cards,done}], tab:'llm'}
-  S.docTab = {};   // docName -> collab tab
-  var LLM_CHIPS = [
-    { id: 'scheme', label: '检查与 Scheme 一致性' },
-    { id: 'goal', label: '按 Goal 修正' },
-    { id: 'plain', label: '生成白话描述' },
-    { id: 'sum', label: '总结变更' }
-  ];
-  function llmPatchFor(doc, chipId) {
-    var c = doc.content;
-    if (chipId === 'scheme') {
-      if (/progress: on-track/.test(c)) return { find: 'progress: on-track', replace: 'progress: at-risk   # scheme-check: SLO 0.92 高于当前实测 0.88', summary: '标记 progress 为 at-risk（Scheme SLO 与实测差异）' };
-      if (/severity: info/.test(c)) return { find: 'severity: info', replace: 'severity: warn   # scheme-check: drift 报告缺 severity 依据，按 Scheme 默认 warn', summary: '补 severity 字段对齐 Scheme 枚举' };
-      var fm = c.match(/(metadata:\n(?:  .*\n)*?  ownerRefs:(?:\n    - .*)*\n)/);
-      if (fm) return { find: fm[1], replace: fm[1] + '  annotations:\n    scheme-check: pass   # LLM 复核 ' + new Date().toISOString().slice(0, 10) + '：结构与 core-scheme 一致\n', summary: '写入 scheme-check 注解（元数据面，语义不变）' };
-      return { find: c.split('\n')[0], replace: c.split('\n')[0] + '\n# scheme-check ' + new Date().toISOString().slice(0, 10) + ': 结构复核通过（LLM 注记，Apply 后随文档落库）', summary: '追加 scheme 复核注记' };
+  /* ================= 屏 6：文档编辑器（E4：cored 真数据，console-ui.md 屏幕 6 + console-adoption.md §1.10） ================= */
+  // 编辑与发布分离（concepts/apply.md）的 UI 化——LLM 止步提案，人独占发布：
+  //   · 手动编辑/已采纳提案走同一草稿通道：编辑=debounced 落稿（POST /core-console/drafts，
+  //     不触文档面、不发事件、零 Revision）；空草稿 Apply=无操作提示不落库。
+  //   · Apply 唯一入口=草稿 tab 吸底按钮（人点为准；LLM 通路上没有 Apply）→ 确认弹窗
+  //     （完整 diff + dry-run 三项检查=scheme 校验/权限准入/乐观锁）→ POST /core-console/apply
+  //     {fromDraft:true}（宿主注入主体）→ Revision+1 + DocApplied 必发 + 清稿。
+  //   · LLM 提案=草稿缓存中 fieldManager 非 console: 前缀的稿（agent 经 cored 草稿面落的
+  //     提案；会话页提案卡深链至此=E5 接线余量）——diff 卡排队等人裁，[加入草稿]/[丢弃]。
+  // 数据来源（无双源）：文档体/草稿/history 全部 cored 读面（live 层 + 本屏 hydrate）。
+  S.docTab = {}; // objKey -> collab tab（默认 llm——提案排队优先见人）
+  S.ED = {};     // objKey -> 编辑器会话态（working/base/baseRV/faceRV/entries/landed/fm）
+
+  function edKey(kind, scope, name) { return kind + '/' + scope + '/' + name; }
+  function edOf(kind, scope, name) { return S.ED[edKey(kind, scope, name)] || null; }
+  function edConsoleFM(kind, scope, name) { return 'console:editor:' + kind.toLowerCase() + '/' + name; }
+  function isConsoleFM(fm) { return /^console:/.test(String(fm || '')); }
+  // 变更块数（"Apply（N 处变更）"的 N=diff 变更块，非行数——诚实计数）
+  function hunksOf(lines) {
+    var n = 0, inHunk = false;
+    lines.forEach(function (l) {
+      if (l.t === '+' || l.t === '-') { if (!inHunk) { n++; inHunk = true; } }
+      else inHunk = false;
+    });
+    return n;
+  }
+  function draftRowOf(kind, scope, name) {
+    return (LIVE.state.drafts || []).filter(function (d) {
+      return d.kind === kind && d.scope === scope && d.name === name;
+    })[0] || null;
+  }
+  function edHasDiff(ed) { return !!ed && ed.loaded && ed.working !== ed.base; }
+
+  // —— 屏本体：对象键解析（E2 语义保留：#/doc/:kind/:scope/:name 直链 + #/doc/:name 名字解析）——
+  function screenEditor(view, kindHint) {
+    LIVE.ensure();
+    var p = S.params;
+    var kind = kindHint || p.kind;
+    var name = p.name;
+    var scope = p.scope || '';
+    var st = LIVE.state;
+    if (st.status === 'loading' && !st.kinds.length) {
+      if (kind && scope) { renderEditorShell(view, kind, scope, name); hydrateEditor(kind, scope, name); return; }
     }
-    if (chipId === 'goal') {
-      var m = c.match(/(\w+Rate): '>= (\d+\.\d+)'/);
-      if (m) return { find: m[0], replace: m[1] + ": '>= " + (parseFloat(m[2]) + 0.02).toFixed(2) + "'   # goal: 上一轮实测已达标，可安全收紧", summary: '按 Goal 收紧 ' + m[1] + ' 目标' };
-      if (/retention: \{nas: 30d/.test(c)) return { find: 'retention: {nas: 30d', replace: 'retention: {nas: 45d   # goal: developer-system 提案（跨系统申请已合入）', summary: '按 Goal 对齐保留期 45d' };
-      var m2 = c.match(/(backlog\w*|limit\w*|Max\w*|max\w*): (\d+)/);
-      if (m2) return { find: m2[0], replace: m2[1] + ': ' + (parseInt(m2[2], 10) + 2) + '   # goal: 为收敛留出余量', summary: '按 Goal 调整 ' + m2[1] + ' 参数' };
-      return { find: c.split('\n')[0], replace: c.split('\n')[0] + '\n# goal-align ' + new Date().toISOString().slice(0, 10) + ': 与归属 Goal 的 northStars 对齐（LLM 注记）', summary: '追加 Goal 对齐注记' };
+    var ref = null;
+    if (kind) {
+      ref = LIVE.refs(kind).filter(function (o) { return o.name === name && (!scope || o.scope === scope); })[0] || null;
+      if (!ref && !scope) {
+        var cands = LIVE.refs(kind).filter(function (o) { return o.name === name; });
+        if (cands.length === 1) ref = cands[0];
+        else if (cands.length > 1) {
+          view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 scope 有歧义（' + cands.length + ' 个）——请从系统树进入', name) + '</div>';
+          return;
+        }
+      }
+    } else {
+      var all = [];
+      st.kinds.forEach(function (kd) {
+        LIVE.refs(kd.name).forEach(function (o) { if (o.name === name) all.push(o); });
+      });
+      if (all.length === 1) ref = all[0];
+      else if (all.length > 1) {
+        view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 kind/scope 有歧义（' + all.length + ' 个）——请从系统树进入', name) + '</div>';
+        return;
+      }
+    }
+    if (!ref) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
+      return;
+    }
+    renderEditorShell(view, ref.kind, ref.scope, ref.name);
+    hydrateEditor(ref.kind, ref.scope, ref.name);
+  }
+
+  function renderEditorShell(view, kind, scope, name) {
+    var key = edKey(kind, scope, name);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
+      { label: scope, go: scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + encodeURIComponent(scope) }, { label: name }]);
+    var tabs = [['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
+    var tab = S.docTab[key] || 'llm';
+    view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' +
+      '<div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
+      '<span id="ed-draft-chip"></span></div>' +
+      '<div class="doc-meta-row"><span class="chip mute small">scope</span>' +
+      '<span class="chip click mute small" data-act="go" data-go="' + (scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + esc(encodeURIComponent(scope))) + '">' + esc(scope) + '</span>' +
+      '<span class="mono small" id="ed-rev-chip">r?</span>' +
+      '<span class="chip ok small">' + esc(kind) + ' 在册</span></div>' +
+      '<div class="doc-editor-wrap"><textarea class="doc-editor" id="doc-editor" spellcheck="false" disabled></textarea></div>' +
+      '<div class="small faint">编辑即累积草稿（POST /core-console/drafts——不触文档面、不发事件）；Apply 唯一入口=右栏「草稿」tab 吸底按钮（人点为准；LLM 只在右侧提案，机制上无 Apply 权）。</div>' +
+      '</div>' +
+      '<div class="doc-collab"><div class="collab-tabs">' + tabs.map(function (t) {
+        return '<div class="collab-tab' + (tab === t[0] ? ' active' : '') + '" data-act="doc-tab" data-t="' + t[0] + '" id="ctab-' + t[0] + '">' + t[1] + '<span class="ct-badge" id="ctab-badge-' + t[0] + '" hidden></span></div>';
+      }).join('') + '</div><div class="collab-body" id="collab-body"></div></div></div></div>';
+  }
+
+  // —— 注水：面正文（乐观锁基准）+ 草稿缓存（工作副本来源）——
+  function hydrateEditor(kind, scope, name) {
+    var key = edKey(kind, scope, name);
+    var stamp = S.route + '|' + S.segs.join('/');
+    var faceP = LIVE.fetchObject(kind, scope, name);
+    var draftP = LIVE.get('v1/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
+      (scope ? '?scope=' + encodeURIComponent(scope) : '')).catch(function () { return null; }); // 404=无稿（常态）
+    Promise.all([faceP, draftP]).then(function (rs) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return; // 路由已变=丢弃（不跨屏串数据）
+      var face = rs[0], dr = rs[1];
+      var prev = S.ED[key];
+      var base = String(face.content || '');
+      var working = dr ? String(dr.content || '') : base;
+      var entries = [];
+      if (dr && working !== base) {
+        entries.push({
+          source: isConsoleFM(dr.fieldManager) ? 'manual' : 'llm',
+          summary: isConsoleFM(dr.fieldManager) ? '未落草稿（fieldManager: ' + dr.fieldManager + '）' : 'LLM 提案在稿（fieldManager: ' + dr.fieldManager + '）',
+          ts: dr.updatedAt ? new Date(dr.updatedAt) : new Date(),
+        });
+      }
+      S.ED[key] = {
+        kind: kind, scope: scope, name: name,
+        working: working, base: base,
+        faceRV: Number(face.resourceVersion),
+        baseRV: dr ? Number(dr.baseResourceVersion) : Number(face.resourceVersion), // 乐观锁期望值（不静默重基——409 走稿保留语义）
+        draftFM: dr ? String(dr.fieldManager || '') : '',
+        reasonRef: dr ? String(dr.reasonRef || '') : '',
+        entries: (prev && prev.loaded) ? prev.entries : entries,
+        loaded: true,
+        adopted: (prev && prev.loaded) ? (prev.adopted || {}) : {},
+      };
+      paintEditorBody(kind, scope, name);
+      paintEdBadges(kind, scope, name);
+      renderCollabBody(kind, scope, name);
+      bindEditorInput(kind, scope, name);
+    }).catch(function (e) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var ta = $('#doc-editor');
+      if (ta) ta.value = '';
+      var chip = $('#ed-rev-chip');
+      if (chip) chip.textContent = '读面暂不可达（' + String((e && e.message) || e) + '）——恢复后重进即现读';
+    });
+  }
+
+  function paintEditorBody(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    var ta = $('#doc-editor');
+    if (!ed || !ta) return;
+    ta.value = ed.working;
+    ta.disabled = false;
+    var rev = $('#ed-rev-chip');
+    if (rev) rev.textContent = 'r' + ed.faceRV + '（乐观锁基准）';
+  }
+
+  // —— 徽章/dock 的原位更新（编辑中不整屏重渲染——textarea 焦点保真）——
+  function paintEdBadges(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    if (!ed) return;
+    var has = edHasDiff(ed);
+    var hunks = has ? hunksOf(diffLines(ed.base, ed.working)) : 0;
+    var chip = $('#ed-draft-chip');
+    if (chip) {
+      chip.className = has ? 'chip warn small' : 'chip ok small';
+      chip.textContent = has ? '● 未 Apply（草稿 ' + hunks + ' 处变更）' : '无草稿';
+    }
+    var badge = $('#ctab-badge-draft');
+    if (badge) { badge.hidden = !has; badge.textContent = has ? String(ed.entries.length || hunks) : ''; }
+    var dock = $('#apply-dock-btn');
+    if (dock) {
+      dock.disabled = !has;
+      dock.textContent = has ? 'Apply（' + hunks + ' 处变更）' : 'Apply（无变更）';
+    }
+  }
+
+  // —— 草稿落稿（debounced；写穿 cored 草稿缓存——编辑的家）——
+  var ED_TIMERS = {};
+  function bindEditorInput(kind, scope, name) {
+    var ta = $('#doc-editor');
+    if (!ta) return;
+    ta.addEventListener('input', function () {
+      var ed = edOf(kind, scope, name);
+      if (!ed) return;
+      ed.working = ta.value;
+      var has = ed.working !== ed.base;
+      if (has && !ed.entries.filter(function (e) { return e.source === 'manual'; }).length) {
+        ed.entries.push({ source: 'manual', summary: '手动编辑（编辑器直改）', ts: new Date() });
+      }
+      if (!has) ed.entries = ed.entries.filter(function (e) { return e.source !== 'manual'; });
+      paintEdBadges(kind, scope, name);
+      clearTimeout(ED_TIMERS[edKey(kind, scope, name)]);
+      ED_TIMERS[edKey(kind, scope, name)] = setTimeout(function () { landDraft(kind, scope, name); }, 800);
+    });
+  }
+  function landDraft(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    if (!ed || !ed.loaded) return Promise.resolve(false);
+    if (ed.working === ed.base) return Promise.resolve(true); // 空稿不落（无操作）
+    var payload = {
+      kind: kind, scope: scope, name: name, content: ed.working,
+      fieldManager: edConsoleFM(kind, scope, name), reasonRef: 'console:editor',
+      baseResourceVersion: ed.baseRV, // 乐观锁期望值=编辑器基准（不静默重基；面已前移则 apply 409 稿保留）
+    };
+    return fetch('/core-console/drafts', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      // live 草稿快照原位更新（树草稿圆点/徽章数据源；不整轮 reload）
+      var row = draftRowOf(kind, scope, name);
+      var slim = { kind: kind, scope: scope, name: name, fieldManager: payload.fieldManager,
+        baseResourceVersion: ed.baseRV, updatedAt: new Date().toISOString(), bytes: ed.working.length };
+      if (row) { Object.keys(slim).forEach(function (k) { row[k] = slim[k]; }); }
+      else LIVE.state.drafts.push(slim);
+      ed.landed = true;
+      paintEdBadges(kind, scope, name);
+      return true;
+    }).catch(function (e) {
+      toast('草稿未落（' + String((e && e.message) || e) + '）', '工作副本本地保留——恢复后再编辑即重落；Apply 前会先重落一次', 'warn');
+      return false;
+    });
+  }
+
+  // —— 右栏协作面板四 tab ——
+  function renderCollabBody(kind, scope, name) {
+    var key = edKey(kind, scope, name);
+    var tab = S.docTab[key] || 'llm';
+    var el = $('#collab-body');
+    if (!el) return;
+    if (tab === 'llm') { el.innerHTML = llmTabHtml(kind, scope, name); hydrateProposals(kind, scope, name); return; }
+    if (tab === 'draft') { el.innerHTML = draftTabHtml(kind, scope, name); return; }
+    if (tab === 'hist') { el.innerHTML = '<div style="padding:8px 2px">' + liveSkeletonRows(2, 0) + '</div>'; hydrateHistory(kind, scope, name); return; }
+    el.innerHTML = metaTabHtml(kind, scope, name); // meta
+  }
+
+  // LLM 提案 tab：草稿缓存中 fieldManager 非 console: 前缀的稿=提案卡（排队等人裁）。
+  // 真实生成面=Agent 会话经草稿通道落稿（会话页提案卡深链至此=E5 接线余量，如实标注）。
+  function llmTabHtml(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    var props = (LIVE.state.drafts || []).filter(function (d) {
+      return d.kind === kind && d.scope === scope && d.name === name && !isConsoleFM(d.fieldManager);
+    });
+    var adopted = ed ? (ed.adopted || {}) : {};
+    var cards = props.map(function (d) {
+      var k = d.fieldManager;
+      var done = adopted[k];
+      return '<div class="draft-card" id="prop-card"><div class="dc-head"><svg class="ic"><use href="#cc-i-spark"/></svg>LLM 提案 · <span class="mono">' + esc(d.fieldManager) + '</span>' +
+        (d.reasonRef ? '<span class="faint mono small"> ' + esc(d.reasonRef) + '</span>' : '') + '</div>' +
+        '<div class="dc-body" id="prop-diff">' + liveSkeletonRows(2, 0) + '</div>' +
+        '<div class="dc-acts">' + (done
+          ? '<span class="chip ok small">已采纳——草稿 tab 统一 Apply</span>'
+          : '<button class="btn sm llm" data-act="prop-adopt" data-fm="' + esc(k) + '">加入草稿</button><button class="btn sm" data-act="prop-drop" data-fm="' + esc(k) + '">丢弃</button>') +
+        '<span class="faint mono small" style="margin-left:auto">' + esc(fmtAgo(new Date(d.updatedAt))) + '</span></div></div>';
+    }).join('');
+    return (cards || '<div class="empty" style="padding:22px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">暂无排队提案</div>' +
+      '<div>LLM 提案由 Agent 经草稿通道落稿（fieldManager=agent 名）；会话页提案卡深链至此（E5 接线余量）。机制上 LLM 无 Apply 权——提案止步这里。</div></div>') +
+      '<div class="small faint" style="padding:8px 2px">提案 diff 基准=文档面现值（r' + (ed ? ed.faceRV : '?') + '）；采纳后与手动编辑走同一草稿通道，Apply 仍须人点。</div>';
+  }
+
+  function hydrateProposals(kind, scope, name) {
+    var stamp = S.route + '|' + S.segs.join('/');
+    var props = (LIVE.state.drafts || []).filter(function (d) {
+      return d.kind === kind && d.scope === scope && d.name === name && !isConsoleFM(d.fieldManager);
+    });
+    if (!props.length) return;
+    LIVE.get('v1/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + '?scope=' + encodeURIComponent(scope))
+      .then(function (b) {
+        if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+        var el = $('#prop-diff');
+        if (!el) return;
+        var content = String(b.content || '');
+        if (content === edBaseOf(kind, scope, name)) {
+          el.innerHTML = '<span class="faint small">提案与文档面一致（noop 稿）</span>';
+          return;
+        }
+        el.innerHTML = renderDiff(diffLines(edBaseOf(kind, scope, name), content), 30);
+      })
+      .catch(function () {
+        var el = $('#prop-diff');
+        if (el) el.innerHTML = '<span class="faint small">提案正文暂不可读（读面退化）</span>';
+      });
+  }
+  function edBaseOf(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    return ed ? ed.base : '';
+  }
+
+  // 草稿 tab：累积 diff + 条目留痕 + 吸底 Apply dock（人点为准）。
+  function draftTabHtml(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    if (!ed || !ed.loaded) return liveSkeletonRows(3, 0);
+    var has = edHasDiff(ed);
+    var entries = has && ed.entries.length ? ed.entries.map(function (e) {
+      return '<div class="draft-item"><div class="di-head"><span class="di-src ' + e.source + '">' + (e.source === 'llm' ? 'LLM' : '手动') + '</span>' +
+        '<span>' + esc(e.summary) + '</span><span class="faint mono small" style="margin-left:auto">' + esc(fmtAgo(e.ts instanceof Date ? e.ts : new Date(e.ts))) + '</span></div></div>';
+    }).join('') : '';
+    var diffBlock = has
+      ? '<div class="hr"></div><div class="sec-title">完整草稿 diff（base r' + ed.faceRV + ' → 草稿）</div>' + renderDiff(diffLines(ed.base, ed.working), 60)
+      : '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">草稿区为空</div>' +
+        '<div>编辑左侧内容或采纳右侧 LLM 提案；改动先落草稿，Apply 才落库（Revision+1 · DocApplied）。</div></div>';
+    return '<div style="flex:1;overflow-y:auto;min-height:0">' + entries + diffBlock +
+      (has ? '<div class="lk small" style="display:inline-block;margin:6px 0" data-act="draft-discard">弃稿（清空草稿，不落库）</div>' : '') + '</div>' +
+      '<div class="apply-dock"><div class="hint">Apply = 唯一写路径：dry-run 三检查（scheme/权限/乐观锁）→ 落库 Revision+1 → DocApplied 必发 → 清稿。空草稿=无操作。</div>' +
+      '<button class="btn primary lg block" data-act="doc-apply" id="apply-dock-btn" ' + (has ? '' : 'disabled') + '>Apply（' + (has ? hunksOf(diffLines(ed.base, ed.working)) : 0) + ' 处变更）</button></div>';
+  }
+
+  // 历史 tab：apply_log 投影（rev 流水的权威=审计账；git 权威在正文）。
+  function hydrateHistory(kind, scope, name) {
+    hydrate('ed-history', 'v1/history/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''),
+      function (el, b) {
+        var rows = (b.entries || []).map(function (h) {
+          var cls = h.result === 'ok' ? 'ok' : (h.result === 'denied' || h.result === 'conflict') ? 'danger' : 'mute';
+          return '<div class="rev-item"><span class="rv-no">' + (h.result === 'ok' ? 'r' + h.rv : h.result) + '</span>' +
+            '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
+            '<span class="rv-sum">' + esc(h.result) + (h.reasonRef ? ' · ' + esc(h.reasonRef) : '') + (h.subject ? '<br><span class="mono faint">' + esc(h.subject) + '</span>' : '') + '<br><span class="mono">' + esc(fmtAgo(new Date(h.ts))) + '</span></span>' +
+            '<span class="chip ' + cls + ' small">' + esc(h.result) + '</span></div>';
+        }).join('');
+        el.innerHTML = (rows || '<div class="faint small" style="padding:8px 2px">归档窗内暂无应用流水（该对象尚未 Apply 过）</div>') +
+          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；点行 diff 上一版=rev-content 面余量（git show 面未开，如实标注）。</div>';
+      });
+  }
+
+  // 元数据 tab：对象身份键+rev+草稿态+写路径（与资源同规则）。
+  function metaTabHtml(kind, scope, name) {
+    var ed = edOf(kind, scope, name);
+    var dr = draftRowOf(kind, scope, name);
+    var kv = function (k, v) { return '<div class="kv" style="margin-bottom:6px"><span class="k mono">' + esc(k) + '</span><span class="v mono">' + (v || '<span class="faint">—</span>') + '</span></div>'; };
+    var draftState = dr
+      ? '在册 · fieldManager ' + esc(dr.fieldManager) + ' · baseRV r' + dr.baseResourceVersion + ' · ' + esc(fmtAgo(new Date(dr.updatedAt)))
+      : '无（工作副本==文档面）';
+    return '<div style="flex:1;overflow-y:auto"><div class="sec-title">对象规则（与资源同构）</div>' +
+      kv('kind', esc(kind)) + kv('scope', esc(scope)) + kv('name', esc(name)) +
+      kv('resourceVersion', ed ? 'r' + ed.faceRV + '（乐观锁）' : '?') +
+      kv('草稿', draftState) +
+      kv('写路径', '草稿 → 人点 Apply（dry-run 三检查）→ Revision+1 → DocApplied') +
+      '<div class="hr"></div><div class="sec-title">正文引用标识符（全可点）</div><div style="padding:2px">' +
+      (ed ? (refChips(ed.base) || '<span class="faint small">无 scheme 引用词（system:// agent:// ops:// …）</span>') : '') + '</div></div>';
+  }
+
+  /* --- 编辑器动作 --- */
+  ACTIONS['doc-tab'] = function (el) {
+    var p = S.params;
+    var ctx = edCtx();
+    if (!ctx) return;
+    S.docTab[edKey(ctx.kind, ctx.scope, ctx.name)] = el.dataset.t;
+    render();
+  };
+  // 当前编辑器对象的键上下文（优先 ED 在册态——doc/:name 深链时 params.kind 可能缺席）
+  function edCtx() {
+    var p = S.params;
+    if (!p || !p.name) return null;
+    if (p.kind) return { kind: p.kind, scope: p.scope || '', name: p.name };
+    for (var k in S.ED) {
+      if (k.split('/')[2] === p.name) {
+        var ed = S.ED[k];
+        return { kind: ed.kind, scope: ed.scope, name: ed.name };
+      }
     }
     return null;
   }
-  function llmReplyFor(doc, chipId, userText) {
-    var patch = llmPatchFor(doc, chipId);
-    if (chipId === 'scheme') return {
-      text: '对照 core-scheme 逐项检查了这份 ' + doc.kind + '：\n\n- apiVersion/kind/metadata 结构 ✓ 符合 Scheme 注册表\n- scope 路径 ' + doc.scope + ' ✓ 归属正确\n' + (patch ? '- ⚠ 发现 1 处不一致：' + patch.summary + '\n\n我准备了一条修改提案（见下方卡片），加入草稿后由你 Apply——LLM 只提案，Apply 必须人点。' : '- 语义字段 ✓ 与 Scheme 不变量一致\n\n没有发现需要修改的地方。'),
-      patch: patch
-    };
-    if (chipId === 'goal') return {
-      text: '按归属 Goal（' + (doc.scope === 'global' ? 'core-goal' : '该系统 Goal') + '）复核了本文档：\n\n- 意图声明与 Goal 的 northStars 对齐\n' + (patch ? '- 有 1 处可以更接近目标：' + patch.summary + '\n\n提案已生成，[加入草稿] 后在「草稿」tab 统一 Apply。' : '- 当前内容已满足 Goal 约束，无需修正。'),
-      patch: patch
-    };
-    if (chipId === 'plain') {
-      var first = (doc.content.match(/intent: \|?\n?([\s\S]{0,120})/) || ['', doc.content.slice(0, 120)])[1];
-      return { text: '白话版：这份 ' + doc.kind + ' 说的是——\n\n「' + first.replace(/\n/g, ' ').trim() + '…」\n\n一句话总结：它是 ' + doc.scope + ' scope 下的一份' + ({ Goal: '目标声明', Rule: '行为规则', ImplDoc: '实现声明', VerifyDoc: '验证探针集', DriftReport: '漂移报告', Runbook: '操作手册', Scheme: '对象注册表', Workflow: '循环流程声明', ServiceDesc: '系统描述', Desc: '设计说明' }[doc.kind] || '文档') + '，改它要经 Apply（Revision ' + doc.revision + ' → ' + (doc.revision + 1) + '）。', patch: null };
-    }
-    // sum
-    var st = docState(doc.name);
-    var has = st.working !== st.base;
-    if (!has) return { text: '当前草稿区没有任何变更（working == base）。所以没有可总结的差异；想改的话直接编辑左侧内容，或让我提案。', patch: null };
-    var stats = diffStats(diffLines(st.base, st.working));
-    return { text: '草稿区变更摘要：' + stats.add + ' 行新增 / ' + stats.del + ' 行删除，来源 ' + st.entries.map(function (e) { return e.source === 'llm' ? 'LLM 提案' : '手动编辑'; }).join(' + ') + '。\n\n主要改动落在 ' + firstChangedArea(st.base, st.working) + '。确认无误就点底部「Apply」——落库后 Revision ' + doc.revision + ' → ' + (doc.revision + 1) + '，并发出 DocApplied。', patch: null };
-  }
-  function firstChangedArea(a, b) {
-    var la = a.split('\n'), lb = b.split('\n');
-    for (var i = 0; i < Math.max(la.length, lb.length); i++) if (la[i] !== lb[i]) {
-      var ln = (la[i] || lb[i] || '');
-      var key = ln.match(/^(\s*)([\w-]+):/) || ['', '', ln.slice(0, 24)];
-      return (key[2] || '正文') + ' 附近';
-    }
-    return '正文';
-  }
-  function screenDoc(view) {
-    var doc = docByName(S.params.name);
-    if (!doc) { view.innerHTML = emptyBox('文档不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    var st = docState(doc.name);
-    var tab = S.docTab[doc.name] || 'llm';
-    var has = st.working !== st.base;
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '文档', go: 'docs' }, { label: doc.scope === 'global' ? 'global' : doc.scope.replace('systems/', ''), go: doc.scope === 'global' ? 'overview' : 's/' + doc.scope.replace('systems/', '') }, { label: doc.name }]);
-    var sysName = doc.scope.replace('systems/', '');
-    var scopeLink = doc.scope === 'global' ? '<span class="chip click mute" data-act="go" data-go="overview">global</span>' : '<span class="chip click mute" data-act="go" data-go="s/' + esc(sysName) + '">' + esc(doc.scope) + '</span>';
-    var head = '<div class="doc-headbar"><span class="doc-path">' + esc(doc.scope) + '/' + esc(doc.name) + '</span>' + kindBadge(doc.kind) +
-      (doc.machineWrite ? '<span class="chip mute small">机器直写 · 不经 Apply</span>' : '') + '</div>' +
-      '<div class="doc-meta-row"><span class="chip mute small">scope ' + '</span>' + scopeLink +
-      '<span class="mono small">Revision r' + doc.revision + ' · generation ' + doc.generation + '</span>' + statusChip('InSync') +
-      '<span class="mono faint small">fieldManager: ' + esc(doc.fieldManager) + '</span>' +
-      '<span class="mono faint small">更新 ' + fmtAgo(doc.updated) + '</span>' +
-      (has ? '<span class="chip warn small" id="doc-draft-flag">● 未 Apply（草稿 ' + st.entries.length + ' 处）</span>' : '<span class="chip ok small" id="doc-draft-flag">无草稿</span>') +
-      '</div>';
-    var tags = doc.tags.length ? '<div style="margin-top:6px">' + doc.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join(' ') + '</div>' : '';
-    var collabTabs = [['llm', 'LLM'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
-    var collab = '<div class="doc-collab"><div class="collab-tabs">' + collabTabs.map(function (t) {
-      var badge = t[0] === 'draft' && has ? '<span class="ct-badge">' + st.entries.length + '</span>' : '';
-      return '<div class="collab-tab' + (tab === t[0] ? ' active' : '') + '" data-act="doc-tab" data-t="' + t[0] + '">' + t[1] + badge + '</div>';
-    }).join('') + '</div><div class="collab-body" id="collab-body">' + collabBody(doc, st, tab) + '</div></div>';
-    view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' + head + tags +
-      '<div class="doc-editor-wrap"><textarea class="doc-editor" id="doc-editor" spellcheck="false">' + esc(st.working) + '</textarea></div>' +
-      '<div class="small faint">编辑即累积草稿 diff（与 base r' + doc.revision + ' 对比）；同一 Apply 按钮统一落库。LLM 在右侧面板只提案。</div>' +
-      '</div>' + collab + '</div></div>';
-    bindDocEditor(doc);
-  }
-  ACTIONS['doc-tab'] = function (el) { S.docTab[S.params.name] = el.dataset.t; render(); };
-  function collabBody(doc, st, tab) {
-    if (tab === 'llm') {
-      var L = S.docLLM[doc.name] = S.docLLM[doc.name] || { msgs: [] };
-      var msgs = L.msgs.map(function (m, i) {
-        var cards = m.cards || '';
-        return '<div class="llm-msg ' + m.role + '">' + (m.role === 'agent' ? '<svg class="ic" style="color:var(--llm)"><use href="#cc-i-spark"/></svg> ' : '') + esc(m.text) + (m.streaming ? '<span class="typing-caret"></span>' : '') + cards + '</div>';
-      }).join('');
-      return '<div class="llm-chips">' + LLM_CHIPS.map(function (c) {
-        return '<span class="llm-chip" data-act="llm-chip" data-id="' + c.id + '">' + esc(c.label) + '</span>';
-      }).join('') + '</div>' +
-      '<div class="llm-msgs" id="llm-msgs">' + (msgs || '<div class="small faint" style="padding:6px 2px">与本文档上下文的 LLM 对话：它会读 ' + esc(doc.name) + '（r' + doc.revision + '）与其 Goal/Rule 引用；所有修改只进草稿。</div>') + '</div>' +
-      '<div class="llm-input-row"><input id="llm-input" placeholder="问点什么，或让它改…（Enter 发送）"><button class="btn llm sm" data-act="llm-send">发送</button></div>';
-    }
-    if (tab === 'draft') {
-      var has = st.working !== st.base;
-      var fullDiff = diffLines(st.base, st.working);
-      var stats = diffStats(fullDiff);
-      var entries = has && st.entries.length ? st.entries.map(function (e, i) {
-        return '<div class="draft-item"><div class="di-head"><span class="di-src ' + e.source + '">' + (e.source === 'llm' ? 'LLM' : '手动') + '</span>' +
-          '<span>' + esc(e.summary) + '</span><span class="faint mono small" style="margin-left:auto">' + fmtTime(e.ts) + '</span>' +
-          '<span class="lk small" style="margin-left:8px" data-act="draft-drop" data-i="' + i + '">弃用</span></div></div>';
-      }).join('') : '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">草稿区为空</div><div>编辑左侧内容或让 LLM 提案；改动先落草稿，Apply 才落库（Revision+1 · DocApplied）。</div></div>';
-      return '<div style="flex:1;overflow-y:auto;min-height:0">' + entries +
-        (has ? '<div class="hr"></div><div class="sec-title">完整草稿 diff（base r' + doc.revision + ' → 草稿）<span class="chip ok small" style="margin-left:6px">+' + stats.add + '</span><span class="chip danger small">-' + stats.del + '</span></div>' +
-        renderDiff(fullDiff, 60) + '<div class="lk small" style="display:inline-block;margin-top:6px" data-act="draft-full-diff">查看完整 diff →</div>' : '') + '</div>' +
-        '<div class="apply-dock"><div class="hint">Apply = 唯一写路径：乐观锁 r' + doc.revision + ' → Revision+1 → DocApplied 必发。空草稿=无操作。</div>' +
-        '<button class="btn primary lg block" data-act="doc-apply" ' + (has ? '' : 'disabled') + '>Apply（' + (has ? st.entries.length : 0) + ' 处变更）</button></div>';
-    }
-    if (tab === 'hist') {
-      var rows = doc.history.map(function (h, i) {
-        var prevRev = i + 1 < doc.history.length ? doc.history[i + 1].rev : Math.max(1, h.rev - 1);
-        return '<div class="rev-item" data-act="hist-open" data-rev="' + h.rev + '" data-prev="' + prevRev + '">' +
-          '<span class="rv-no">r' + h.rev + '</span><span class="rv-author">' + esc(h.author) + '</span>' +
-          '<span class="rv-sum">' + esc(h.summary) + '<br><span class="mono">' + fmtAgo(h.ts) + '</span></span></div>';
-      }).join('');
-      return '<div style="flex:1;overflow-y:auto">' + rows + '<div class="small faint" style="margin-top:8px">点任一 revision 看与上一版的 diff（git 历史语义；Status/记录类机器直写不出现在这里）。</div></div>';
-    }
-    // meta
-    var fm = parseFrontmatter(doc.content);
-    var kv = Object.keys(fm).map(function (k) {
-      var v = fm[k];
-      var links = '';
-      if (/ownerRefs/i.test(k) && typeof v === 'object') {
-        links = '<div style="margin-top:4px">' + v.map(function (o) {
-          var dn = String(o).replace(/-desc$/, '-desc');
-          return '<span class="lk mono small" data-act="go" data-go="doc/' + esc(o) + '">' + esc(o) + '</span>';
-        }).join(' ') + '</div>';
-        v = v.join(', ');
-      }
-      return '<div class="kv" style="margin-bottom:6px"><span class="k mono">' + esc(k) + '</span><span class="v mono">' + esc(typeof v === 'object' ? JSON.stringify(v) : v) + links + '</span></div>';
-    }).join('');
-    return '<div style="flex:1;overflow-y:auto"><div class="sec-title">frontmatter（键值表）</div>' + (kv || '<div class="faint small">无 frontmatter</div>') +
-      '<div class="hr"></div><div class="sec-title">对象规则（与资源同构）</div>' +
-      '<div class="kv"><span class="k">kind</span><span class="v mono">' + esc(doc.kind) + '</span></div>' +
-      '<div class="kv" style="margin-top:4px"><span class="k">scope</span><span class="v mono">' + esc(doc.scope) + '</span></div>' +
-      '<div class="kv" style="margin-top:4px"><span class="k">revision</span><span class="v mono">r' + doc.revision + '（乐观锁）</span></div>' +
-      '<div class="kv" style="margin-top:4px"><span class="k">写路径</span><span class="v">' + (doc.machineWrite ? '机器直写（fieldManager 白名单，不经 Apply、不发 DocApplied）' : '草稿 → 人点 Apply → DocApplied') + '</span></div></div>';
-  }
-  function parseFrontmatter(content) {
-    var out = {}, lines = content.split('\n'), curKey = null;
-    var started = /^(\w[\w-]*):/.exec(lines[0]) || (/^---/.test(lines[0]) && null);
-    var i0 = /^---/.test(lines[0]) ? 1 : 0;
-    for (var i = i0; i < Math.min(lines.length, 40); i++) {
-      var ln = lines[i];
-      if (ln === '' || ln[0] === '#' || /^spec:|intent: \|/.test(ln)) break;
-      var top = /^(\w[\w-]*):(?: (.*))?$/.exec(ln);
-      if (top && ln[0] !== ' ') {
-        curKey = top[1];
-        if (top[2] && top[2].charAt(0) !== '-') out[curKey] = top[2].replace(/^["']|["']$/g, '');
-        else out[curKey] = [];
-        continue;
-      }
-      var sub = /^\s+- (.+)$/.exec(ln);
-      if (sub && curKey) { if (!Array.isArray(out[curKey])) out[curKey] = []; out[curKey].push(sub[1].trim()); continue; }
-      var kv2 = /^\s+([\w-]+): (.+)$/.exec(ln);
-      if (kv2 && curKey && typeof out[curKey] === 'string') { /* 忽略深层，只展示顶层 */ }
-    }
-    return out;
-  }
-  function bindDocEditor(doc) {
-    var ta = $('#doc-editor');
-    if (!ta) return;
-    var deb = null;
-    ta.addEventListener('input', function () {
-      clearTimeout(deb);
-      deb = setTimeout(function () {
-        var st = docState(doc.name);
-        st.working = ta.value;
-        var has = st.working !== st.base;
-        // 更新手动条目
-        if (has) {
-          var manual = st.entries.filter(function (e) { return e.source === 'manual'; })[0];
-          if (!manual) st.entries.push({ source: 'manual', summary: '手动编辑（textarea 直改）', ts: new Date() });
-          else manual.summary = '手动编辑（textarea 直改）';
-        } else {
-          st.entries = st.entries.filter(function (e) { return e.source !== 'manual'; });
-        }
-        updateDocBadges(doc, st, has);
-      }, 200);
-    });
-    // LLM 输入 Enter
-    var inp = $('#llm-input');
-    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendLLM(doc, this.value, null); });
-  }
-  function updateDocBadges(doc, st, has) {
-    var flag = $('#doc-draft-flag');
-    if (flag) {
-      flag.className = has ? 'chip warn small' : 'chip ok small';
-      flag.id = 'doc-draft-flag';
-      flag.textContent = has ? '● 未 Apply（草稿 ' + st.entries.length + ' 处）' : '无草稿';
-    }
-    // 更新草稿 tab 若打开
-    if ((S.docTab[doc.name] || 'llm') === 'draft') render();
-  }
-  /* --- LLM 对话 --- */
-  ACTIONS['llm-chip'] = function (el) {
-    var doc = docByName(S.params.name);
-    if (doc) sendLLM(doc, null, el.dataset.id);
+
+  // 采纳提案：以提案内容替换工作副本（与手动编辑同一草稿通道——Apply 仍须人点）。
+  ACTIONS['prop-adopt'] = function (el) {
+    var ctx = edCtx();
+    if (!ctx) return;
+    var ed = edOf(ctx.kind, ctx.scope, ctx.name);
+    if (!ed) return;
+    var fm = el.dataset.fm;
+    LIVE.get('v1/drafts/' + encodeURIComponent(ctx.kind) + '/' + encodeURIComponent(ctx.name) + '?scope=' + encodeURIComponent(ctx.scope))
+      .then(function (b) {
+        ed.working = String(b.content || '');
+        ed.baseRV = Number(b.baseResourceVersion != null ? b.baseResourceVersion : ed.faceRV); // 乐观锁期望值随稿走（不静默重基）
+        ed.draftFM = String(b.fieldManager || fm);
+        ed.reasonRef = String(b.reasonRef || '');
+        ed.adopted[fm] = true;
+        ed.entries.push({ source: 'llm', summary: '采纳提案（fieldManager: ' + fm + '）', ts: new Date() });
+        var ta = $('#doc-editor');
+        if (ta) ta.value = ed.working;
+        paintEdBadges(ctx.kind, ctx.scope, ctx.name);
+        renderCollabBody(ctx.kind, ctx.scope, ctx.name);
+        toast('提案已加入草稿（未落库）', '乐观锁期望值=r' + ed.baseRV + '——面上已前移则 Apply 弹窗如实判 ✗（409 稿保留）', 'ok');
+      })
+      .catch(function (e) { toast('提案正文不可读', String((e && e.message) || e), 'danger'); });
   };
-  ACTIONS['llm-send'] = function () {
-    var doc = docByName(S.params.name);
-    var inp = $('#llm-input');
-    if (doc && inp) sendLLM(doc, inp.value, null);
+
+  // 丢弃提案：DELETE 弃稿（人裁不通过=弃；cored §2.2 弃稿=缓存行删除，零文档面零事件）。
+  ACTIONS['prop-drop'] = function (el) {
+    var ctx = edCtx();
+    if (!ctx) return;
+    var fm = el.dataset.fm;
+    fetch('/core-console/drafts/' + encodeURIComponent(ctx.kind) + '/' + encodeURIComponent(ctx.name) + '?scope=' + encodeURIComponent(ctx.scope), {
+      method: 'DELETE', credentials: 'same-origin',
+    }).then(function (r) {
+      if (!r.ok && r.status !== 404) throw new Error('HTTP ' + r.status); // 404=本来无稿（幂等清场）
+      LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
+        return !(d.kind === ctx.kind && d.scope === ctx.scope && d.name === ctx.name);
+      });
+      toast('提案已丢弃', 'fieldManager: ' + fm + '（草稿缓存清空，文档面不动）', 'warn');
+      renderCollabBody(ctx.kind, ctx.scope, ctx.name);
+      paintEdBadges(ctx.kind, ctx.scope, ctx.name);
+    }).catch(function (e) { toast('弃稿失败', String((e && e.message) || e), 'danger'); });
   };
-  ACTIONS['draft-accept'] = function (el) {
-    var doc = docByName(S.params.name);
-    var L = S.docLLM[doc.name];
-    var p = L.pending;
-    if (p && applyPatch(doc.name, p.find, p.replace, p.summary, 'llm')) {
-      L.msgs.push({ role: 'agent', text: '已加入草稿（未落库）。在「草稿」tab 可查看完整 diff，确认后点 Apply。' });
-      toast('已加入草稿', p.summary + '（未 Apply，不发事件）');
-    }
-    L.pending = null;
-    render();
-    var ta = $('#doc-editor');
-    if (ta) { var st = docState(doc.name); ta.value = st.working; }
+
+  // 弃稿（草稿 tab）：清空工作副本+删缓存稿。
+  ACTIONS['draft-discard'] = function () {
+    var ctx = edCtx();
+    if (!ctx) return;
+    var ed = edOf(ctx.kind, ctx.scope, ctx.name);
+    if (!ed) return;
+    fetch('/core-console/drafts/' + encodeURIComponent(ctx.kind) + '/' + encodeURIComponent(ctx.name) + '?scope=' + encodeURIComponent(ctx.scope), {
+      method: 'DELETE', credentials: 'same-origin',
+    }).then(function (r) {
+      if (!r.ok && r.status !== 404) throw new Error('HTTP ' + r.status); // 404=本来无稿（幂等清场）
+      LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
+        return !(d.kind === ctx.kind && d.scope === ctx.scope && d.name === ctx.name);
+      });
+      ed.working = ed.base;
+      ed.entries = [];
+      ed.adopted = {};
+      ed.landed = false;
+      var ta = $('#doc-editor');
+      if (ta) ta.value = ed.working;
+      paintEdBadges(ctx.kind, ctx.scope, ctx.name);
+      renderCollabBody(ctx.kind, ctx.scope, ctx.name);
+      toast('草稿已弃', '工作副本回到文档面 r' + ed.faceRV + '（零落库零事件）', 'warn');
+    }).catch(function (e) { toast('弃稿失败', String((e && e.message) || e), 'danger'); });
   };
-  ACTIONS['draft-reject'] = function () {
-    var doc = docByName(S.params.name);
-    var L = S.docLLM[doc.name];
-    L.pending = null;
-    L.msgs.push({ role: 'agent', text: '提案已丢弃，文档保持不变。' });
-    render();
-  };
-  function sendLLM(doc, userText, chipId) {
-    var L = S.docLLM[doc.name] = S.docLLM[doc.name] || { msgs: [] };
-    var label = chipId ? (LLM_CHIPS.filter(function (c) { return c.id === chipId; })[0] || {}).label : null;
-    L.msgs.push({ role: 'user', text: label || userText });
-    var reply = llmReplyFor(doc, chipId || 'sum', userText);
-    var streaming = { role: 'agent', text: '', streaming: true };
-    L.msgs.push(streaming);
-    render();
-    var ta = $('#doc-editor');
-    if (ta) { var stt = docState(doc.name); ta.value = stt.working; }
-    // 打字机流式
-    var full = reply.text;
-    var i = 0;
-    var t = addInterval(function () {
-      i += 3;
-      streaming.text = full.slice(0, i);
-      var el = $('#llm-msgs .llm-msg.agent:last-child');
-      if (el) {
-        el.textContent = '';
-        el.innerHTML = '<svg class="ic" style="color:var(--llm)"><use href="#cc-i-spark"/></svg> ' + esc(streaming.text) + '<span class="typing-caret"></span>';
-        var box = $('#llm-msgs');
-        if (box) box.scrollTop = box.scrollHeight;
-      }
-      if (i >= full.length) {
-        clearInterval(t);
-        streaming.text = full;
-        streaming.streaming = false;
-        if (reply.patch) {
-          L.pending = reply.patch;
-          streaming.cards = '<div class="draft-card"><div class="dc-head"><svg class="ic"><use href="#cc-i-spark"/></svg>LLM 修改提案 · ' + esc(reply.patch.summary) + '</div>' +
-            '<div class="dc-body">' + renderDiff([{ t: '-', s: reply.patch.find }, { t: '+', s: reply.patch.replace }], 20) + '</div>' +
-            '<div class="dc-acts"><button class="btn sm llm" data-act="draft-accept">加入草稿</button><button class="btn sm" data-act="draft-reject">丢弃</button></div></div>';
-        }
-        if (S.route === 'doc') render();
-      }
-    }, 16);
-  }
-  /* --- 草稿操作 --- */
-  ACTIONS['draft-drop'] = function (el) {
-    var doc = docByName(S.params.name);
-    var st = docState(doc.name);
-    var i = parseInt(el.dataset.i, 10);
-    var e = st.entries[i];
-    st.entries.splice(i, 1);
-    toast('已弃用 1 处草稿', e ? e.summary : '', 'warn');
-    if (!st.entries.length) { st.working = st.base; }
-    render();
-    var ta = $('#doc-editor');
-    if (ta) ta.value = st.working;
-  };
-  ACTIONS['draft-full-diff'] = function () {
-    var doc = docByName(S.params.name);
-    var st = docState(doc.name);
-    openModal('<div class="modal-h"><span class="m-title">完整 diff · r' + doc.revision + ' → 草稿</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
-      '<div class="modal-b">' + renderDiff(diffLines(st.base, st.working), 400) + '</div>');
-  };
-  /* --- Apply 全流程 --- */
+
+  /* --- Apply 全流程（E4：dry-run 三检查→人确认→fromDraft 落库） --- */
   ACTIONS['doc-apply'] = function () {
-    var doc = docByName(S.params.name);
-    if (!doc) return;
-    var st = docState(doc.name);
-    if (st.working === st.base) { toast('无需 Apply', '草稿与文档面无差异（不落库不发事件）'); return; }
-    var fullDiff = diffLines(st.base, st.working);
-    var stats = diffStats(fullDiff);
-    var modal = openModal(
-      '<div class="modal-h"><span class="m-title">Apply 确认 · ' + esc(doc.name) + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
-      '<div class="modal-b">' +
-      '<div class="kv" style="margin-bottom:12px"><span class="k">乐观锁</span><span class="v mono">base r' + doc.revision + ' ✓（后写者须重读）</span>' +
-      '<span class="k">变更</span><span class="v"><span class="chip ok small">+' + stats.add + '</span> <span class="chip danger small">-' + stats.del + '</span> · 来源 ' + st.entries.map(function (e) { return e.source === 'llm' ? 'LLM' : '手动'; }).join('+') + '</span></div>' +
-      '<div class="checklist" id="apply-checks">' +
-      '<div class="check-item" data-c="1"><span class="ci-ic">…</span>Scheme 校验（apiVersion/kind/scope 结构）</div>' +
-      '<div class="check-item" data-c="2"><span class="ci-ic">…</span>权限准入（fieldManager: root · approver role）</div>' +
-      '<div class="check-item" data-c="3"><span class="ci-ic">…</span>乐观锁 r' + doc.revision + ' 比对</div></div>' +
-      renderDiff(fullDiff, 26) +
-      '<div class="apply-progress" id="apply-progress" hidden><div class="progress"><i style="width:0%"></i></div><div class="small faint" style="margin-top:4px" id="apply-progress-text">落库中…</div></div>' +
-      '</div>' +
-      '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="apply-go">确认 Apply</button></div>',
-      { cls: 'wide' });
-    // 逐项检查动画
-    var checks = $all('#apply-checks .check-item');
-    checks.forEach(function (c, i) {
-      addTimer(function () {
-        c.classList.add('pass');
-        c.querySelector('.ci-ic').textContent = '✓';
-        c.querySelector('.ci-ic').style.color = 'var(--ok)';
-      }, 260 + i * 260);
-    });
-    $('#apply-go').addEventListener('click', function () {
-      var btn = this;
-      btn.disabled = true;
-      $('#apply-progress').hidden = false;
-      var bar = $('#apply-progress .progress > i');
-      var txt = $('#apply-progress-text');
-      var p = 0;
-      var t = addInterval(function () {
-        p += 18 + Math.random() * 14;
-        bar.style.width = Math.min(100, p) + '%';
-        txt.textContent = p < 45 ? '乐观锁提交（git commit）…' : p < 80 ? '写 ops DB 审计…' : '发 DocApplied 事件…';
-        if (p >= 100) {
-          clearInterval(t);
-          var res = doApplyDoc(doc.name);
-          closeModal();
-          if (res) {
-            toast('已落库 r' + res.rev + ' · DocApplied 已发出', doc.name + '（' + res.n + ' 处变更，generation → ' + doc.generation + '）', 'ok');
-            render();
+    var ctx = edCtx();
+    if (!ctx) return;
+    var ed = edOf(ctx.kind, ctx.scope, ctx.name);
+    if (!ed || !ed.loaded) return;
+    if (ed.working === ed.base) { toast('空草稿——无操作', '草稿与文档面无差异：不落库、不发事件、不清稿（提示即止）'); return; }
+    // 先落稿（缓存=差异唯一来源；落稿失败=中止 Apply——写路径必须走稿）
+    landDraft(ctx.kind, ctx.scope, ctx.name).then(function (landed) {
+      if (!landed) return;
+      var fullDiff = diffLines(ed.base, ed.working);
+      var stats = diffStats(fullDiff);
+      openModal(
+        '<div class="modal-h"><span class="m-title">Apply 确认 · ' + esc(ctx.scope) + '/' + esc(ctx.name) + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
+        '<div class="modal-b">' +
+        '<div class="kv" style="margin-bottom:12px"><span class="k">变更</span><span class="v"><span class="chip ok small">+' + stats.add + '</span> <span class="chip danger small">-' + stats.del + '</span> · 来源 ' +
+          (ed.entries.map(function (e) { return e.source === 'llm' ? 'LLM' : '手动'; }).join('+') || '手动') + '</span></div>' +
+        '<div class="checklist" id="ed-checks">' +
+        '<div class="check-item" data-c="scheme"><span class="ci-ic">…</span>Scheme 校验（kind 注册∧spec 结构）</div>' +
+        '<div class="check-item" data-c="perm"><span class="ci-ic">…</span>权限准入（主体=宿主注入 console-operator）</div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + ed.baseRV + ' ↔ 面上现值）</div></div>' +
+        renderDiff(fullDiff, 26) +
+        '<div class="small faint" id="ed-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/apply {fromDraft:true, dryRun:true}——零副作用）…</div>' +
+        '</div>' +
+        '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="ed-apply-go" disabled>确认 Apply</button></div>',
+        { cls: 'wide' });
+      // dry-run 三检查（引擎 admit ①scheme②权限 零副作用预检；③乐观锁=回执 rv 与稿 baseRV 客户端比对）
+      LIVE.apply({ kind: ctx.kind, scope: ctx.scope, name: ctx.name, fromDraft: true, dryRun: true,
+        fieldManager: edConsoleFM(ctx.kind, ctx.scope, ctx.name), reasonRef: 'console:apply-dry' }).then(function (res) {
+        var mark = function (c, ok, note) {
+          var row = $('.check-item[data-c="' + c + '"]');
+          if (!row) return;
+          row.classList.add(ok ? 'pass' : 'fail');
+          var ic = row.querySelector('.ci-ic');
+          if (ic) { ic.textContent = ok ? '✓' : '✗'; ic.style.color = ok ? 'var(--ok)' : 'var(--danger)'; }
+          if (note) {
+            var n = document.createElement('span');
+            n.className = 'ci-note';
+            n.textContent = note;
+            row.appendChild(n);
           }
+        };
+        if (res.ok && res.data && res.data.action === 'dry-run') {
+          mark('scheme', true, 'kind 在册∧spec 结构过（cored admit ①）');
+          mark('perm', true, '主体准入过（cored admit ②——Role/Group 文档面判定）');
+          var cur = Number(res.data.rv);
+          var lockOk = cur === ed.baseRV;
+          mark('lock', lockOk, lockOk ? 'r' + ed.baseRV + ' == 面上现值（可落）' : '稿基于 r' + ed.baseRV + '，面上已 r' + cur + '——落库将 409（稿保留，重读后重整）');
+          var note = $('#ed-dry-note');
+          if (note) note.textContent = 'dry-run 通过预检（rv 回执=r' + cur + '）——确认后真落库。';
+          var go = $('#ed-apply-go');
+          if (go && lockOk) {
+            go.disabled = false;
+            go.addEventListener('click', function () {
+              go.disabled = true;
+              LIVE.apply({ kind: ctx.kind, scope: ctx.scope, name: ctx.name, fromDraft: true,
+                fieldManager: edConsoleFM(ctx.kind, ctx.scope, ctx.name), reasonRef: 'console:apply' }).then(function (r2) {
+                if (r2.ok) {
+                  closeModal();
+                  toast('已落库 r' + r2.data.rv + '（' + (r2.data.action === 'noop' ? 'noop：稿与面一致，零提交' : 'Revision+1') + '）',
+                    ctx.name + ' · DocApplied 已归档 · 草稿已清（apply.md rule 6）', 'ok');
+                  delete S.ED[edKey(ctx.kind, ctx.scope, ctx.name)]; // 会话态作废——重进即现读新面
+                  LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
+                    return !(d.kind === ctx.kind && d.scope === ctx.scope && d.name === ctx.name);
+                  });
+                  LIVE.load().then(function () { render(); });
+                } else if (r2.status === 409) {
+                  closeModal();
+                  toast('乐观锁冲突（409）——稿保留', '文档面前移（' + String(r2.error || '') + '）——重读后重整草稿再落（apply.md §3 后写者语义）', 'danger');
+                  delete S.ED[edKey(ctx.kind, ctx.scope, ctx.name)];
+                  render();
+                } else {
+                  toast('Apply 失败（' + (r2.status == null ? '传输层' : 'HTTP ' + r2.status) + '）', String(r2.error || ''), 'danger');
+                }
+              });
+            });
+          }
+        } else {
+          var st = res.status;
+          var schemeFail = st === 404 || st === 400; // 野 kind=404；spec 结构未过=400
+          mark('scheme', !schemeFail, schemeFail ? String(res.error || ('HTTP ' + st)) : '—');
+          mark('perm', st !== 403, st === 403 ? String(res.error || '权限准入拒绝') : (schemeFail ? '—' : String(res.error || '')));
+          mark('lock', false, '预检未过（' + (st == null ? '传输层' : 'HTTP ' + st) + '）');
+          var note2 = $('#ed-dry-note');
+          if (note2) note2.textContent = 'dry-run 未通过（' + (res.error || 'HTTP ' + st) + '）——改正草稿或主体后再试。';
         }
-      }, 130);
+      });
     });
-  };
-  ACTIONS['hist-open'] = function (el) {
-    var doc = docByName(S.params.name);
-    var rev = parseInt(el.dataset.rev, 10), prev = parseInt(el.dataset.prev, 10);
-    var h = doc.history.filter(function (x) { return x.rev === rev; })[0];
-    var a = revContent(doc, prev), b = revContent(doc, rev);
-    openModal('<div class="modal-h"><span class="m-title">r' + prev + ' → r' + rev + ' · ' + esc(h ? h.author : '') + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
-      '<div class="modal-b"><div class="kv" style="margin-bottom:10px"><span class="k">summary</span><span class="v">' + esc(h ? h.summary : '') + '</span></div>' +
-      renderDiff(diffLines(a, b), 200) + '</div>');
   };
   /* ================= 屏 7：Agent 对话（dsh Conversation shell） ================= */
   function chatUiFor(agent) {
@@ -3182,17 +3224,17 @@
   route('workflows', screenWorkflows);
   route('wf/:name', screenWorkflow); // E3：运行管理详情（六 tab；列表列=L38-05 活体判据）
   route('wf/:name/r/:n', screenWfRun);
-  route('doc/:name', function (v) { screenObject(v, null); });      // 名字解析（歧义=空态引导回系统树）
-  route('doc/:kind/:scope/:name', function (v) { screenObject(v); }); // 对象键直链（kind/scope/name）
+  route('doc/:name', function (v) { screenEditor(v, null); });      // 名字解析（歧义=空态引导回系统树）
+  route('doc/:kind/:scope/:name', function (v) { screenEditor(v); }); // 对象键直链（kind/scope/name）——E4 起编辑器
   route('docs', screenDocsGlobal);
   route('chat/:agent', screenChat);
   route('connectors', screenConnectors);
-  route('connector/:name', function (v) { screenObject(v, 'ConnectorOps'); });
-  route('ws/:name', function (v) { screenObject(v, 'WorkService'); });
-  route('provider/:name', function (v) { screenObject(v, 'Provider'); });
-  route('ref/:name', function (v) { screenObject(v, 'Ref'); });
-  route('role/:name', function (v) { screenObject(v, 'Role'); });
-  route('agent/:name', function (v) { screenObject(v, 'Agent'); }); // E5 起升会话屏（运行器四选+终端 tab）
+  route('connector/:name', function (v) { screenEditor(v, 'ConnectorOps'); }); // E4 起同屏=编辑器（文档与资源同规则）
+  route('ws/:name', function (v) { screenEditor(v, 'WorkService'); });
+  route('provider/:name', function (v) { screenEditor(v, 'Provider'); });
+  route('ref/:name', function (v) { screenEditor(v, 'Ref'); });
+  route('role/:name', function (v) { screenEditor(v, 'Role'); });
+  route('agent/:name', function (v) { screenEditor(v, 'Agent'); }); // E5 起升会话屏（运行器四选+终端 tab）
   route('session/:id', screenSession);
   route('events', screenEvents);
   route('event/:id', screenEventLive);
@@ -3261,7 +3303,9 @@
     // E2 真数据层回调：装载完成即重渲染真数据屏（welcome/tree/s/doc——其余屏不受 LIVE 影响）
     __CC.live.onChange = function () {
       if (!ROOT) return;
-      if (['welcome', 'tree', 's', 'doc', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event'].indexOf(S.route) >= 0) render();
+      // 'doc'（编辑器）不在列：编辑器自注水（屏加载即现读），live 轻刷新不重渲染（编辑态/textarea 焦点保真）；
+      // Apply 成功后的重渲染走 apply 回调显式 LIVE.load().then(render)。
+      if (['welcome', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event'].indexOf(S.route) >= 0) render();
     };
     boot();
   }

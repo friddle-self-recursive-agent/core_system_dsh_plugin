@@ -108,6 +108,17 @@ export const CONSOLE_API_PREFIX = '/core-console/api'
  *  同 fail-closed 口径）。 */
 export const CONSOLE_APPLY_PATH = '/core-console/apply'
 
+/** console 草稿路由（E4 起，prefix；落稿/弃稿——cored-bridge.md §2.2 草稿缓存面）。
+ *  POST /core-console/drafts（exact 段）→ cored POST /v1/drafts 落稿 upsert；
+ *  DELETE /core-console/drafts/{kind}/{name}?scope= → cored DELETE 弃稿。
+ *  草稿不触文档面（零 Revision 零事件），但写操作随 cored --allow-apply 开关（缺省 405）；
+ *  fieldManager=客户端溯源串（溯源非授权——授权主体只在 apply 路由由宿主注入），客户端
+ *  缺主=宿主补缺省（无主稿 cored 侧 400 拒绝）。 */
+export const CONSOLE_DRAFTS_PATH = '/core-console/drafts'
+
+/** 草稿 fieldManager 缺省（客户端缺主时宿主补——无主稿 cored 拒绝 400，兜底保 UX）。 */
+export const DEFAULT_DRAFT_FIELD_MANAGER = 'console:editor'
+
 /** Apply 主体缺省（permission.DefaultAdmin 全权字面量；部署可经 config.applySubject 覆写
  *  为受限 role——cored-bridge.md §3 config.applySubject）。 */
 export const DEFAULT_APPLY_SUBJECT = { user: 'console-operator', roles: ['role/global/admin'] }
@@ -285,6 +296,105 @@ export function createApplyHandler(opts: {
   }
 }
 
+/**
+ * console 草稿路由 handler（E4 写通路，测试注入 fetch/bridge/reject 全独立）：
+ *   浏览器 POST /core-console/drafts            → cored POST /v1/drafts（落稿 upsert）
+ *   浏览器 DELETE /core-console/drafts/{k}/{n}  → cored DELETE /v1/drafts/{k}/{n}?scope=（弃稿）
+ * 栅栏缺席=fail-closed 拒全部（与 apply 路由同款 handler 内再锁一道）；方法/路径分立：
+ * exact 段只收 POST、子路径只收 DELETE（其余 405 allow: POST,DELETE）；体不可解析=400；
+ * cored 未就绪=503；上游不可达=502；状态码/载荷透传（404 无稿/400 无主或空稿照传）。
+ */
+export function createDraftsHandler(opts: {
+  bridge: { url: string }
+  reject?: (req: { headers: unknown }) => 401 | 403 | undefined
+  fetchImpl?: FetchLike
+  fieldManager?: string
+}) {
+  const fetchImpl = opts.fetchImpl ?? fetch
+  const defaultFM = opts.fieldManager ?? DEFAULT_DRAFT_FIELD_MANAGER
+  return async function draftsHandler(req: HttpReqLike, res: HttpResLike): Promise<void> {
+    if (!opts.reject) {
+      res.statusCode = 401
+      res.end()
+      return
+    }
+    const rejection = opts.reject({ headers: req.headers })
+    if (rejection !== undefined) {
+      res.statusCode = rejection
+      res.end()
+      return
+    }
+    if (!opts.bridge.url) {
+      sendJson(res, 503, { error: 'cored 未就绪（桥接未完成）' })
+      return
+    }
+    const url = new URL(String(req.url ?? '/'), 'http://localhost')
+    const rest = url.pathname.slice(CONSOLE_DRAFTS_PATH.length)
+    const base = opts.bridge.url.replace(/\/+$/, '')
+    if (rest === '' || rest === '/') {
+      // 落稿 upsert（exact 段）：{kind,scope,name,content,fieldManager,reasonRef,baseResourceVersion}
+      if ((req.method ?? 'GET') !== 'POST') {
+        res.statusCode = 405
+        res.setHeader('allow', 'POST, DELETE')
+        res.end()
+        return
+      }
+      let parsed: Record<string, unknown>
+      try {
+        parsed = JSON.parse((await readRequestBody(req)) || '{}')
+      } catch {
+        sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+        return
+      }
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+        return
+      }
+      if (!parsed.fieldManager) parsed.fieldManager = defaultFM // 客户端缺主=宿主补（无主稿 cored 400）
+      let out: Awaited<ReturnType<FetchLike>>
+      try {
+        out = await fetchImpl(base + '/v1/drafts', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(parsed),
+        })
+      } catch (e) {
+        sendJson(res, 502, { error: `cored 不可达: ${String((e as Error)?.message ?? e)}` })
+        return
+      }
+      const text = await out.text()
+      res.statusCode = out.status
+      res.setHeader('content-type', 'application/json; charset=utf-8')
+      res.setHeader('cache-control', 'no-store')
+      res.end(text)
+      return
+    }
+    // 弃稿（子路径）：DELETE /core-console/drafts/{kind}/{name}?scope=
+    if ((req.method ?? 'GET') !== 'DELETE') {
+      res.statusCode = 405
+      res.setHeader('allow', 'POST, DELETE')
+      res.end()
+      return
+    }
+    if (rest.includes('..')) {
+      sendJson(res, 404, { error: 'not found（路径穿越拒绝）' })
+      return
+    }
+    let out: Awaited<ReturnType<FetchLike>>
+    try {
+      out = await fetchImpl(base + '/v1/drafts' + rest + url.search, { method: 'DELETE' })
+    } catch (e) {
+      sendJson(res, 502, { error: `cored 不可达: ${String((e as Error)?.message ?? e)}` })
+      return
+    }
+    const text = await out.text()
+    res.statusCode = out.status
+    res.setHeader('content-type', 'application/json; charset=utf-8')
+    res.setHeader('cache-control', 'no-store')
+    res.end(text)
+  }
+}
+
 /** 宿主侧装配（软出现：web profile 才有 webServer/connection；headless 宿主零影响）。
  *  用 ctx.inject 等待依赖可用——依赖缺席的 profile 上回调永不启动，插件本体不受影响。 */
 export function mountConsoleRoutes(ctx: {
@@ -304,6 +414,10 @@ export function mountConsoleRoutes(ctx: {
       webServer.register({
         kind: 'exact', path: CONSOLE_APPLY_PATH,
         handler: createApplyHandler({ bridge, reject, subject: applySubject }),
+      }),
+      webServer.register({
+        kind: 'prefix', path: CONSOLE_DRAFTS_PATH,
+        handler: createDraftsHandler({ bridge, reject }),
       }),
     ]
     return () => unregisters.forEach((u) => u())

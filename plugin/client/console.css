@@ -137,3 +137,7 @@
 .cc-app .w-stage.bad::before{ background: var(--danger); }
 .cc-app .w-stage.bad .w-stage-dot{ background: rgba(239,68,68,.15); border-color: var(--danger); color: var(--danger); }
 .cc-app pre.mono{ font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace); color: var(--text-2); }
+/* E4 编辑器增量：确认弹窗三检查的失败态与行内判据注记（console-adoption.md §1.10） */
+.cc-app .check-item.fail .ci-ic{ color: var(--danger); }
+.cc-app .check-item.fail{ color: var(--text); border-color: rgba(239,68,68,.35); }
+.cc-app .check-item .ci-note{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }

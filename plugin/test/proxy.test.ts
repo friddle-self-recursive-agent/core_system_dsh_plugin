@@ -12,12 +12,13 @@ import {
   type FetchLike, type HttpReqLike, type HttpResLike,
 } from '../src/index.ts'
 
-function okFetch(body: unknown, status = 200): FetchLike & { calls: string[] } {
+function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
   const calls: string[] = []
-  const impl = (async (input: string) => {
+  const impl = (async (input: string, init?: { method?: string; body?: string }) => {
     calls.push(input)
+    ;(impl as any).lastBody = init?.body
     return { ok: status < 400, status, json: async () => body, text: async () => JSON.stringify(body) }
-  }) as FetchLike & { calls: string[] }
+  }) as FetchLike & { calls: string[]; lastBody?: string }
   impl.calls = calls
   return impl
 }
@@ -99,7 +100,8 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
   assert.deepEqual(registered.map((r) => [r.kind, r.path]), [
     ['prefix', CONSOLE_API_PREFIX],
     ['exact', CONSOLE_APPLY_PATH],
-  ], '读代理（prefix）与 Apply 写路由（exact）成对注册（E3）')
+    ['prefix', CONSOLE_DRAFTS_PATH],
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）三件成套注册')
   assert.equal(disposed, 0)
 
   // 依赖缺席（headless）：回调体不注册、不抛错
@@ -175,4 +177,80 @@ test('createApplyHandler：subject 宿主注入（剥客户端声明）∧ 上�
   assert.equal(sent.subject.user, 'console-probe', '主体=宿主注入')
   assert.equal(sent.subject.user !== 'spoof', true, '客户端 subject 声明被剥除')
   assert.equal(sent.kind, 'Workflow')
+})
+
+// ── E4 草稿通道（console-adoption.md §1.10 写面）：POST 落稿 / DELETE 弃稿 ──
+import { CONSOLE_DRAFTS_PATH, createDraftsHandler, DEFAULT_DRAFT_FIELD_MANAGER } from '../src/index.ts'
+
+test('草稿落稿：POST exact 段转发 cored POST /v1/drafts；缺主=宿主补缺省 fieldManager', async () => {
+  const f = okFetch({ kind: 'Rule', scope: 'global', name: 'r-1' })
+  const res = makeRes()
+  await createDraftsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, reject: () => undefined, fetchImpl: f })(
+    { method: 'POST', url: CONSOLE_DRAFTS_PATH, headers: {},
+      body: JSON.stringify({ kind: 'Rule', scope: 'global', name: 'r-1', content: 'apiVersion: core/v1\n', baseResourceVersion: 2 }) },
+    res)
+  assert.equal(res.statusCode, 200)
+  assert.equal(f.calls.length, 1)
+  assert.equal(f.calls[0], 'http://127.0.0.1:9/v1/drafts')
+  const sent = JSON.parse((f as any).lastBody ?? '{}')
+  assert.equal(sent.fieldManager, DEFAULT_DRAFT_FIELD_MANAGER, '客户端缺主=宿主补（无主稿 cored 400，宿主兜底保 UX）')
+  assert.equal(sent.baseResourceVersion, 2)
+})
+
+test('草稿落稿：客户端自带 fieldManager 不被覆盖（溯源串客户端携——授权主体与草稿无关）', async () => {
+  const f = okFetch({})
+  const res = makeRes()
+  await createDraftsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, reject: () => undefined, fetchImpl: f })(
+    { method: 'POST', url: CONSOLE_DRAFTS_PATH, headers: {},
+      body: JSON.stringify({ kind: 'Rule', scope: 'global', name: 'r-1', content: 'x', fieldManager: 'console:editor:manual' }) },
+    res)
+  assert.equal(res.statusCode, 200)
+  const sent = JSON.parse((f as any).lastBody ?? '{}')
+  assert.equal(sent.fieldManager, 'console:editor:manual')
+})
+
+test('草稿弃稿：DELETE 子路径转发 cored DELETE（kind/name+scope 查询串透传）；POST 子路径=405', async () => {
+  const f = okFetch({})
+  const h = createDraftsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, reject: () => undefined, fetchImpl: f })
+  const res = makeRes()
+  await h({ method: 'DELETE', url: CONSOLE_DRAFTS_PATH + '/Rule/r-1?scope=global', headers: {} }, res)
+  assert.equal(res.statusCode, 200)
+  assert.deepEqual(f.calls, ['http://127.0.0.1:9/v1/drafts/Rule/r-1?scope=global'])
+  const res2 = makeRes()
+  await h({ method: 'POST', url: CONSOLE_DRAFTS_PATH + '/Rule/r-1', headers: {} }, res2)
+  assert.equal(res2.statusCode, 405)
+  assert.equal(res2.headers['allow'], 'POST, DELETE')
+})
+
+test('草稿路由：栅栏缺席=401 拒全部；体不可解析=400；cored 未就绪=503；上游不可达=502', async () => {
+  const hNoReject = createDraftsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: okFetch({}) })
+  const r0 = makeRes()
+  await hNoReject({ method: 'POST', url: CONSOLE_DRAFTS_PATH, headers: {}, body: '{}' }, r0)
+  assert.equal(r0.statusCode, 401, '写面 fail-closed：reject 缺席=拒全部')
+  const h = createDraftsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, reject: () => undefined, fetchImpl: okFetch({}) })
+  const rBad = makeRes()
+  await h({ method: 'POST', url: CONSOLE_DRAFTS_PATH, headers: {}, body: 'not-json{' }, rBad)
+  assert.equal(rBad.statusCode, 400)
+  const hNoBridge = createDraftsHandler({ bridge: { url: '' }, reject: () => undefined, fetchImpl: okFetch({}) })
+  const r503 = makeRes()
+  await hNoBridge({ method: 'POST', url: CONSOLE_DRAFTS_PATH, headers: {}, body: '{}' }, r503)
+  assert.equal(r503.statusCode, 503)
+  const errFetch = (async () => { throw new Error('conn refused') }) as unknown as FetchLike
+  const hErr = createDraftsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, reject: () => undefined, fetchImpl: errFetch })
+  const r502 = makeRes()
+  await hErr({ method: 'POST', url: CONSOLE_DRAFTS_PATH, headers: {}, body: '{}' }, r502)
+  assert.equal(r502.statusCode, 502)
+})
+
+test('草稿路由：路径穿越不触上游（URL 归一化吃掉 ..→落 exact 段 405）；GET exact 段=405', async () => {
+  const f = okFetch({})
+  const h = createDraftsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, reject: () => undefined, fetchImpl: f })
+  const r1 = makeRes()
+  await h({ method: 'DELETE', url: CONSOLE_DRAFTS_PATH + '/../etc', headers: {} }, r1)
+  assert.equal(r1.statusCode, 405, '归一化后落 exact 段、DELETE 不符 → 405；穿越段永不转发上游')
+  assert.equal(f.calls.length, 0)
+  const r2 = makeRes()
+  await h({ method: 'GET', url: CONSOLE_DRAFTS_PATH, headers: {} }, r2)
+  assert.equal(r2.statusCode, 405)
+  assert.equal(r2.headers['allow'], 'POST, DELETE')
 })
