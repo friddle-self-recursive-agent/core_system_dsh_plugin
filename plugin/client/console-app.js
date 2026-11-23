@@ -1387,10 +1387,16 @@
     var jobs = baseRows.filter(function (r) { return !S.docTags[docKey(r) + '@' + r.resourceVersion]; });
     if (!jobs.length) { done(false); return; }
     Promise.all(jobs.map(function (r) {
+      if (r.kind === 'WorkService') {
+        // 读面缺口诚实守卫（L42-06 线同款）：WorkService 单对象 GET 恒 400（storage 模板无 scope
+        // 段）——不发 400 fetch，tag=空集（正文创不了的 kind 无 tag 可言——不冒充）。
+        S.docTags[docKey(r) + '@' + r.resourceVersion] = [];
+        return Promise.resolve();
+      }
       return LIVE.fetchObject(r.kind, r.scope, r.name).then(function (b) {
         S.docTags[docKey(r) + '@' + r.resourceVersion] = SCN.tagsOf(b.content);
       }).catch(function () {
-        // 单对象正文不可读（如 WorkService 单对象读面缺口——L42 挂账）=tag 空集，不放大为整轮退化
+        // 单对象正文不可读=tag 空集，不放大为整轮退化
         S.docTags[docKey(r) + '@' + r.resourceVersion] = [];
       });
     })).then(function () { if ((S.route + '|' + S.segs.join('/')) === stamp) done(true); },
