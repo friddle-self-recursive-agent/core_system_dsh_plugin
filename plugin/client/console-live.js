@@ -21,6 +21,7 @@
     runMeta: null,  // runs 面计数（started/dropped/advances/braked/capped）
     events: [],     // /v1/events 归档行（最新优先；event_log=Welcome 最近重要事件持久源）
     instanceStatus: {}, // ServiceInstance key -> {phase, observedGeneration}（status 回写在正文，逐个现读）
+    docContent: {},     // 'Kind/scope/name' -> content 原文（E5：Agent/ServiceDesc/ConnectorOps 小对象现读——声明集/归属/owner 解析）
     triggers: null, // /v1/triggers（received/dropped/records——触发留痕，进程内投影）
     wfAgg: null,    // /v1/workflows 聚合面（v0.37 console 读面第二段——E3 运行管理数据面）
     deliveries: null,
@@ -92,6 +93,22 @@
         });
       })
       .then(function () {
+        // E5 小对象现读（Agent/ServiceDesc/ConnectorOps）：agent 声明集/归属链/owner 解析数据面。
+        // 数量小（agent/connectorops 各个位数、系统数个）——全量现读不拖库（limit 口径不适用）。
+        state.docContent = {};
+        var smallKinds = ['Agent', 'ServiceDesc', 'ConnectorOps'];
+        var jobs = [];
+        smallKinds.forEach(function (k) {
+          (state.objects[k] || []).forEach(function (o) {
+            jobs.push(jget('v1/objects/' + encodeURIComponent(k) + '/' + encodeURIComponent(o.name) +
+              '?scope=' + encodeURIComponent(o.scope)).then(function (b) {
+                state.docContent[k + '/' + o.scope + '/' + o.name] = String(b.content || '');
+              }).catch(function () { /* 单对象不可读=该对象无声明投影，不放大为整轮退化 */ }));
+          });
+        });
+        return Promise.all(jobs);
+      })
+      .then(function () {
         return Promise.all([
           jget('v1/workflows/runs').then(function (r) { state.runs = r.runs || []; state.runMeta = r; }),
           jget('v1/workflows').then(function (r) { state.wfAgg = r; }),
@@ -120,8 +137,9 @@
 
   /** 进入真数据屏（Welcome/系统树）的装载入口：首装即拉，稳态超窗轻刷新，装载中不重入。 */
   function ensure() {
-    if (state.status === 'idle') { load(); return; }
-    if (state.status === 'ok' && Date.now() - state.at > REFRESH_MS) load();
+    if (state.status === 'idle') { load(); return true; }
+    if (state.status === 'ok' && Date.now() - state.at > REFRESH_MS) { load(); return true; }
+    return state.status === 'ok';
   }
 
   /** 单对象读取（get 载荷含 content 原文；对象键=(kind,scope,name)）。不缓存——渲染即现读（git 后端权威）。 */
@@ -129,6 +147,17 @@
     var p = 'v1/objects/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
       (scope ? '?scope=' + encodeURIComponent(scope) : '');
     return jget(p);
+  }
+
+  /** 小对象原文现读（E5）：key='Kind/scope/name'；缺席=空串（诚实空态）。 */
+  function docContent(kind, scope, name) {
+    return state.docContent[kind + '/' + (scope || '') + '/' + name] || '';
+  }
+  /** 按名字找对象引用行（跨 scope）：{kind,name,scope,resourceVersion}|null。 */
+  function refByName(kind, name) {
+    var list = state.objects[kind] || [];
+    for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i];
+    return null;
   }
 
   __CC.live = {
@@ -139,6 +168,8 @@
     apply: apply,
     get: jget,
     refs: refList,
+    docContent: docContent,
+    refByName: refByName,
     onChange: null
   };
 })();

@@ -1247,7 +1247,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     { id: 'events', label: '事件', route: '#/events', icon: 'pulse' },
     { id: 'approvals', label: '审批', route: '#/approvals', icon: 'check', badge: 'approvals' },
     { id: 'connectors', label: '连接', route: '#/connectors', icon: 'plug' },
-    { id: 'chat-root', label: '会话', route: '#/chat/builtinRoot', icon: 'chat' }
+    { id: 'chat-root', label: '会话', route: '#/chat/root-agent', icon: 'chat' } // root-agent=动态锚（renderNav/palItems 经 navRouteOf 解析文档面在册 agent）
   ];
 
   // ---------- 全局 docs 视图路由 #/docs 需要的分组 ----------
@@ -1306,6 +1306,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     runMeta: null,  // runs 面计数（started/dropped/advances/braked/capped）
     events: [],     // /v1/events 归档行（最新优先；event_log=Welcome 最近重要事件持久源）
     instanceStatus: {}, // ServiceInstance key -> {phase, observedGeneration}（status 回写在正文，逐个现读）
+    docContent: {},     // 'Kind/scope/name' -> content 原文（E5：Agent/ServiceDesc/ConnectorOps 小对象现读——声明集/归属/owner 解析）
     triggers: null, // /v1/triggers（received/dropped/records——触发留痕，进程内投影）
     wfAgg: null,    // /v1/workflows 聚合面（v0.37 console 读面第二段——E3 运行管理数据面）
     deliveries: null,
@@ -1377,6 +1378,22 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
         });
       })
       .then(function () {
+        // E5 小对象现读（Agent/ServiceDesc/ConnectorOps）：agent 声明集/归属链/owner 解析数据面。
+        // 数量小（agent/connectorops 各个位数、系统数个）——全量现读不拖库（limit 口径不适用）。
+        state.docContent = {};
+        var smallKinds = ['Agent', 'ServiceDesc', 'ConnectorOps'];
+        var jobs = [];
+        smallKinds.forEach(function (k) {
+          (state.objects[k] || []).forEach(function (o) {
+            jobs.push(jget('v1/objects/' + encodeURIComponent(k) + '/' + encodeURIComponent(o.name) +
+              '?scope=' + encodeURIComponent(o.scope)).then(function (b) {
+                state.docContent[k + '/' + o.scope + '/' + o.name] = String(b.content || '');
+              }).catch(function () { /* 单对象不可读=该对象无声明投影，不放大为整轮退化 */ }));
+          });
+        });
+        return Promise.all(jobs);
+      })
+      .then(function () {
         return Promise.all([
           jget('v1/workflows/runs').then(function (r) { state.runs = r.runs || []; state.runMeta = r; }),
           jget('v1/workflows').then(function (r) { state.wfAgg = r; }),
@@ -1405,8 +1422,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
 
   /** 进入真数据屏（Welcome/系统树）的装载入口：首装即拉，稳态超窗轻刷新，装载中不重入。 */
   function ensure() {
-    if (state.status === 'idle') { load(); return; }
-    if (state.status === 'ok' && Date.now() - state.at > REFRESH_MS) load();
+    if (state.status === 'idle') { load(); return true; }
+    if (state.status === 'ok' && Date.now() - state.at > REFRESH_MS) { load(); return true; }
+    return state.status === 'ok';
   }
 
   /** 单对象读取（get 载荷含 content 原文；对象键=(kind,scope,name)）。不缓存——渲染即现读（git 后端权威）。 */
@@ -1414,6 +1432,17 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     var p = 'v1/objects/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
       (scope ? '?scope=' + encodeURIComponent(scope) : '');
     return jget(p);
+  }
+
+  /** 小对象原文现读（E5）：key='Kind/scope/name'；缺席=空串（诚实空态）。 */
+  function docContent(kind, scope, name) {
+    return state.docContent[kind + '/' + (scope || '') + '/' + name] || '';
+  }
+  /** 按名字找对象引用行（跨 scope）：{kind,name,scope,resourceVersion}|null。 */
+  function refByName(kind, name) {
+    var list = state.objects[kind] || [];
+    for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i];
+    return null;
   }
 
   __CC.live = {
@@ -1424,7 +1453,281 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     apply: apply,
     get: jget,
     refs: refList,
+    docContent: docContent,
+    refByName: refByName,
     onChange: null
+  };
+})();
+
+// console-chat.js —— E5 Agent 会话适配层（console-adoption.md §1.11）。
+// 数据源裁决（§3.7）：会话=dsh session store（ctx.sessions，不复制状态）；身份=SessionId
+// （cross-agent.md §5.7 #1）；发消息=session.prompt 真通路（§5.7 #2）；转录=session 事件页读面；
+// 终端 roster=ctx.webTerminals（内置 PTY 为主，§5.7 #6）；渲染数据无双源红线不破——
+// 会话面数据源=dsh session store 是 §3.7 显式裁决，与「全部来自 cored 读面」并存（两权威各管一面：
+// 文档面/资源状态=cored；会话运行态=dsh session store）。
+// 本模块 DOM 无关：faces 全部可注入（node --test 单测确定性）。
+(function () {
+  'use strict';
+
+  /** 运行器四选（E5 内容列；cross-agent.md §5.7 映射）。
+   *  内嵌 dsh=可用主案；claude-code=现成 subagent provider（preset 接线=E5b 挂账）；
+   *  opencode/gotty=自写 SubagentProvider/跨机兜底（connector 代码 R-ENG-3——common_connector 余量）。
+   *  诚实纪律：不可用 runner 在选择面在册但 disabled+why 标注，不冒充可用。 */
+  var RUNNERS = [
+    { id: 'dsh', name: '内嵌 dsh', desc: '默认 runner：宿主内原生会话（缺省 preset），身份=SessionId', enabled: true, why: '' },
+    { id: 'claude-code', name: 'claude-code', desc: '经宿主现成 subagent provider 拉起（cross-agent.md §5.7）', enabled: false, why: 'provider/preset 接线=E5b 挂账（不冒充可用）' },
+    { id: 'opencode', name: 'opencode cli', desc: '自写 SubagentProvider——connector 代码归 common_connector（R-ENG-3）', enabled: false, why: '自写 provider 余量（E5b 后排期）' },
+    { id: 'gotty', name: 'gotty 终端', desc: '跨机兜底终端：经 piko 暴露、独立鉴权（本机主案=dsh 内置 PTY）', enabled: false, why: '跨机场景余量（§5.7 #6：内置 PTY 全面占优）' }
+  ];
+  function runnerList() {
+    return RUNNERS.map(function (r) {
+      return { id: r.id, name: r.name, desc: r.desc, enabled: r.enabled, why: r.why };
+    });
+  }
+  function runnerById(id) {
+    var hit = null;
+    RUNNERS.forEach(function (r) { if (r.id === id) hit = r; });
+    return hit;
+  }
+
+  /** ConnectorOps 卡判别（E5 转录渲染层）：op 名命中该 agent 文档面声明集→ConnectorOps 卡。
+   *  声明集=Agent.spec.connectorOps[].ops（每条 {ops: <ConnectorOps ref>, as: <alias>}——
+   *  判别输入=已解析的 op 名数组）。声明缺席=普通工具卡（不冒充协议挂载）。 */
+  function isConnectorOp(toolName, declaredOps) {
+    if (!toolName || !declaredOps || !declaredOps.length) return false;
+    return declaredOps.indexOf(toolName) >= 0;
+  }
+  /** agent 文档面 connectorOps 声明解析：spec.connectorOps=[{ops:"connector-ops/x", as:"别名"}]
+   *  × ConnectorOps 对象 spec.ops=[…] → op 名去重并集。声明/对象任一缺席=空集（诚实）。 */
+  function declaredOpsOf(agentContent, connectorOpsIndex) {
+    var out = [];
+    var mounts = agentContent && agentContent.spec && agentContent.spec.connectorOps;
+    if (!Array.isArray(mounts)) return out;
+    mounts.forEach(function (m) {
+      if (!m || !m.ops) return;
+      var ref = String(m.ops);
+      var obj = connectorOpsIndex && connectorOpsIndex[ref];
+      if (obj && Array.isArray(obj.ops)) {
+        obj.ops.forEach(function (op) { if (out.indexOf(op) < 0) out.push(op); });
+      }
+    });
+    return out;
+  }
+
+  /** 归属过滤（§3.7 会话组织=按 agent 过滤的投影，不复制状态）。
+   *  归属证据链：①Agent 文档面 status.currentSession.id 命中；②console 发起在册（本页内存 UI 态——
+   *  不落库=零持久状态）；③ServiceInstance.agentRefs 显式 sessionId 形（session://<id>——§5.7 #1）。
+   *  其余行=宿主会话（诚实标注非归属证据，不冒充归属）。 */
+  function attributedSessions(rows, evidence) {
+    var mine = [];
+    var host = [];
+    (rows || []).forEach(function (r) {
+      if (evidence.currentSessionId && r.id === evidence.currentSessionId) mine.push(r);
+      else if (evidence.ownedIds && evidence.ownedIds.indexOf(r.id) >= 0) mine.push(r);
+      else host.push(r);
+    });
+    return { mine: mine, host: host };
+  }
+  /** ServiceInstance.agentRefs 中的显式 sessionId 形解析：session://<id>（§5.7 #1 文档面落点）。
+   *  agent://<name> 形=文档面地址（经 Agent.status.currentSession 解析，不在此列）。 */
+  function sessionIdsOfRefs(refs) {
+    var out = [];
+    (refs || []).forEach(function (r) {
+      var s = String(r || '');
+      if (s.indexOf('session://') === 0) {
+        var id = s.slice('session://'.length);
+        if (id && out.indexOf(id) < 0) out.push(id);
+      }
+    });
+    return out;
+  }
+
+  /** 会话适配器：faces={sessions, remote, webTerminals}（dsh client 服务面，全部可注入假体）。
+   *  faces 可缺席（headless/未装配宿主）——ready()=false，调用面返回诚实降级不抛错。 */
+  function createAdapter(faces) {
+    faces = faces || {};
+    var sessions = faces.sessions || null;
+    var remote = faces.remote || null;
+    var webTerminals = faces.webTerminals || null;
+    var SOURCE = 'core-console'; // SessionReferenceSource 消费者标签（declaration-merge 扩展名）
+
+    function ready() { return !!(sessions && typeof sessions.create === 'function'); }
+
+    /** 会话清单快照投影（瘦身行；宿主列表顺序即权威序）。 */
+    function listSnapshot() {
+      if (!sessions || !sessions.list || typeof sessions.list.getSnapshot !== 'function') return { ready: false, rows: [] };
+      var snap = sessions.list.getSnapshot();
+      var rows = [];
+      ((snap && snap.ids) || []).forEach(function (id) {
+        var r = snap.byId && snap.byId[id];
+        if (!r) return;
+        rows.push({
+          id: String(id),
+          title: String(r.displayTitle || r.title || id),
+          cwd: r.cwd ? String(r.cwd) : '',
+          running: !!r.running,
+          blank: !!r.blank,
+          updatedAt: Number(r.updatedAt || 0)
+        });
+      });
+      return { ready: true, phase: String((snap && snap.phase) || ''), rows: rows };
+    }
+    /** 订阅清单变化（ObservableSnapshot.subscribe；返回退订函数）。 */
+    function subscribe(fn) {
+      if (!sessions || !sessions.list || typeof sessions.list.subscribe !== 'function') return function () {};
+      return sessions.list.subscribe(function () { fn(); }) || function () {};
+    }
+    /** 刷新宿主清单（refresh() 返回 Promise）。 */
+    function refresh() {
+      if (!sessions || typeof sessions.refresh !== 'function') return Promise.resolve(false);
+      return Promise.resolve(sessions.refresh()).then(function () { return true; }, function () { return false; });
+    }
+    /** 新建会话（opts={cwd?, agentPreset?, sessionId?}）→ 判别联合不抛错。 */
+    function create(opts) {
+      if (!ready()) return Promise.resolve({ ok: false, error: '宿主会话面缺席（ctx.sessions 未在册）' });
+      var p;
+      try { p = sessions.create(opts || {}); } catch (e) { return Promise.resolve({ ok: false, error: String(e) }); }
+      return Promise.resolve(p).then(
+        function (id) { return { ok: true, id: String(id) }; },
+        function (e) { return { ok: false, error: String((e && e.message) || e) }; }
+      );
+    }
+    /** 发消息真通路（§5.7 #2：session.prompt；mode=queue|steer）→ 判别联合。 */
+    function prompt(sessionId, text, mode) {
+      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话面缺席（ctx.sessions 未在册）' });
+      if (!sessionId || !text || !String(text).trim()) return Promise.resolve({ ok: false, error: '空消息或空会话身份' });
+      return sessions.using(sessionId, { source: SOURCE }, function (ref) {
+        var s = ref.binding.session;
+        var sub = s.beginSubmission({ mode: mode === 'steer' ? 'steer' : 'queue', text: String(text), attachments: [] });
+        var content = [{ type: 'text', text: String(text) }];
+        return Promise.resolve(s.prompt(content, mode === 'steer' ? 'steer' : 'queue', undefined, sub.requestId))
+          .then(function (result) {
+            if (result && result.ok) return { ok: true, accepted: true };
+            return { ok: false, error: String((result && result.error && (result.error.message || result.error.code)) || 'prompt 被拒绝') };
+          }, function (e) { return { ok: false, error: String((e && e.message) || e) }; });
+      }).then(
+        function (r) { return r && typeof r.ok === 'boolean' ? r : { ok: true, accepted: true }; },
+        function (e) { return { ok: false, error: String((e && e.message) || e) }; }
+      );
+    }
+    /** 会话改名（探针/识别锚：console 发起的会话显式命名）。 */
+    function rename(sessionId, title) {
+      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话面缺席' });
+      return sessions.using(sessionId, { source: SOURCE }, function (ref) {
+        return Promise.resolve(ref.binding.session.rename(String(title))).then(
+          function (r) { return r && r.ok ? { ok: true } : { ok: false, error: String((r && r.error && (r.error.message || r.error.code)) || 'rename 被拒绝') }; },
+          function (e) { return { ok: false, error: String((e && e.message) || e) }; }
+        );
+      }).then(function (r) { return r || { ok: false, error: 'rename 未返回' }; }, function (e) { return { ok: false, error: String((e && e.message) || e) }; });
+    }
+    /** 转录事件页读面（remote.session.page；records=[{type,event}]）→ 投影行。
+     *  faces 缺席/读面失败=诚实降级（ok:false+error），不冒充空转录。 */
+    function page(sessionId, opt) {
+      opt = opt || {};
+      if (!remote || !remote.session || typeof remote.session.page !== 'function') {
+        return Promise.resolve({ ok: false, error: '宿主转录读面缺席（ctx.remote.session 未在册）' });
+      }
+      var arg = { address: { sessionId: String(sessionId) }, maxMessages: opt.maxMessages || 200 };
+      if (opt.throughSeq !== undefined) arg.throughSeq = opt.throughSeq;
+      var p;
+      try { p = remote.session.page(arg, undefined); } catch (e) { return Promise.resolve({ ok: false, error: String(e) }); }
+      return Promise.resolve(p).then(
+        function (result) {
+          if (!result || !result.ok) return { ok: false, error: String((result && result.error && (result.error.message || result.error.code)) || 'page 读面失败') };
+          return { ok: true, records: (result.value && result.value.records) || [], hasMore: !!(result.value && result.value.hasMore) };
+        },
+        function (e) { return { ok: false, error: String((e && e.message) || e) }; }
+      );
+    }
+    /** 终端 roster（ctx.webTerminals.watch；face 缺席=null=诚实降级）。返回 {unsubscribe, get}。 */
+    function terminals(sessionId) {
+      if (!webTerminals || typeof webTerminals.watch !== 'function') return null;
+      var cur = null;
+      var off = null;
+      try {
+        off = webTerminals.watch(String(sessionId), function (list) { cur = list || []; });
+      } catch (e) { return null; }
+      return {
+        get: function () { return cur; },
+        unsubscribe: function () { try { off && off(); } catch (e) { /* 已离场 */ } }
+      };
+    }
+    return {
+      ready: ready, listSnapshot: listSnapshot, subscribe: subscribe, refresh: refresh,
+      create: create, prompt: prompt, rename: rename, page: page, terminals: terminals, SOURCE: SOURCE
+    };
+  }
+
+  /** 事件页记录投影 → 转录行（DOM 无关，渲染层直用）。
+   *  词汇表（dsh-session surface）：user/message、assistant/message、tool/call、tool/result。
+   *  tool/call 与 tool/result 按 callId 配对；declaredOps 命中=ConnectorOps 卡。 */
+  function projectTranscript(records, declaredOps) {
+    var items = [];
+    var openCalls = {};
+    (records || []).forEach(function (rec) {
+      var ev = rec && rec.event;
+      if (!ev || typeof ev.type !== 'string') return;
+      var d = ev.data || {};
+      if (ev.type === 'user/message') {
+        var text = textOfBlocks(d.message && d.message.content);
+        var kind = d.message && d.message.source && d.message.source.kind;
+        if (!text) return; // 注入上下文/空内容行不上屏（转录=对话面）
+        items.push({ kind: kind === 'user' ? 'user' : 'context', text: text, seq: ev.seq, ts: ev.time, source: kind || '' });
+      } else if (ev.type === 'assistant/message') {
+        var atext = textOfBlocks(d.message && d.message.content);
+        items.push({
+          kind: 'assistant', text: atext, seq: ev.seq, ts: ev.time,
+          interrupted: d.interrupted === true,
+          usage: d.usage || null
+        });
+      } else if (ev.type === 'tool/call') {
+        var call = { kind: 'tool', op: String(d.name || ''), argsText: String(d.arguments || ''), seq: ev.seq, ts: ev.time, callId: String(d.callId || ''), connectorOps: isConnectorOp(String(d.name || ''), declaredOps), result: null, isError: false };
+        items.push(call);
+        if (call.callId) openCalls[call.callId] = call;
+      } else if (ev.type === 'tool/result') {
+        var target = d.message && d.message.toolCallId ? (openCalls[String(d.message.toolCallId)] || null) : null;
+        var rtext = textOfBlocks(d.message && d.message.content);
+        if (target) { target.result = rtext; target.isError = d.message.isError === true || !!(d.error); }
+        else items.push({ kind: 'tool-result-orphan', op: '', text: rtext, seq: ev.seq, ts: ev.time, isError: !!(d.error) });
+      }
+    });
+    return items;
+  }
+  /** content 块 → 文本（text 块拼接；reasoning/tool-call 块不上对话面）。 */
+  function textOfBlocks(blocks) {
+    if (!Array.isArray(blocks)) return '';
+    var out = [];
+    blocks.forEach(function (b) {
+      if (b && b.type === 'text' && typeof b.text === 'string' && b.text.trim()) out.push(b.text);
+    });
+    return out.join('\n');
+  }
+
+  /** faces 绑定入口（entry.js 注入回调填充 __CC.chatFaces/__CC.termFaces 后调用）：
+   *  从全局槽取 faces 建适配器并缓存；faces 未到齐=ready()=false（诚实降级，不抛错）。 */
+  function bindFaces() {
+    var faces = {};
+    var cf = (typeof __CC !== 'undefined' && __CC.chatFaces) || null;
+    var tf = (typeof __CC !== 'undefined' && __CC.termFaces) || null;
+    if (cf && cf.sessions) faces.sessions = cf.sessions;
+    if (cf && cf.remote) faces.remote = cf.remote;
+    if (tf && tf.webTerminals) faces.webTerminals = tf.webTerminals;
+    var adapter = createAdapter(faces);
+    __CC.chatAdapter = adapter;
+    return adapter;
+  }
+
+  __CC.chat = {
+    runnerList: runnerList,
+    runnerById: runnerById,
+    isConnectorOp: isConnectorOp,
+    declaredOpsOf: declaredOpsOf,
+    attributedSessions: attributedSessions,
+    sessionIdsOfRefs: sessionIdsOfRefs,
+    createAdapter: createAdapter,
+    projectTranscript: projectTranscript,
+    textOfBlocks: textOfBlocks,
+    bindFaces: bindFaces
   };
 })();
 
@@ -1798,17 +2101,18 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     // 快捷动作
     add('动作', '手动触发一轮（core-workflow）', 'manual tick', 'act:tick', 'i-refresh');
     add('动作', '新建 Goal', 'global scope 草稿', 'act:newgoal', 'i-plus');
-    add('动作', '与 root（builtinRoot）对话', '#/chat/builtinRoot', 'chat/builtinRoot', 'i-chat');
+    var rootAgent = liveChatAgents()[0] || 'core-headless'; // 文档面在册 agent（缺省=builtin root 名）
+    add('动作', '与 root（' + rootAgent + '）对话', '#/chat/' + rootAgent, 'chat/' + rootAgent, 'i-chat');
     add('动作', '打开审批页', pendingApprovals().length + ' 条待审', 'approvals', 'i-check');
     add('动作', '打开事件流', evCount24h() + ' events/24h', 'events', 'i-pulse');
     // 导航
-    M.nav.forEach(function (n) { add('导航', n.label, n.route, n.route.replace('#/', ''), n.icon); });
+    M.nav.forEach(function (n) { add('导航', n.label, navRouteOf(n.route), navRouteOf(n.route).replace('#/', ''), n.icon); });
     // 系统
     M.systems.forEach(function (s) { add('系统', s.name, s.phase + ' · ' + s.scope, 's/' + s.name, 'i-grid'); });
     // workflows
     M.workflows.forEach(function (w) { add('Workflows', w.name, (w.enabled ? 'enabled' : 'disabled') + ' · ' + w.phase + ' · ' + w.runsTotal + ' runs', 'wf/' + w.name, 'i-flow'); });
-    // agents
-    Object.keys(M.agents).forEach(function (a) { add('Agents', a, M.agents[a].phase + ' · ' + M.agents[a].instance, 'agent/' + a, 'i-bot'); });
+    // agents（E5 起文档面真数据；M.agents mock 行摘除——对话入口=chat/<agent>）
+    liveChatAgents().forEach(function (a) { add('Agents', a, 'Agent@文档面 · 对话入口', 'chat/' + a, 'i-bot'); });
     // connectors
     M.workservices.forEach(function (w) { add('连接', 'ws/' + w.name, w.kind + ' · ' + w.status, 'ws/' + w.name, 'i-plug'); });
     M.connectorops.forEach(function (c) { add('连接', 'ops/' + c.name, c.status, 'connector/' + c.name, 'i-plug'); });
@@ -1908,7 +2212,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     { keys: ['['], label: '折叠 / 展开侧栏', when: '全局（非输入框）', handler: function () { toggleSide(); } },
     { keys: ['N'], label: '新建 Goal（草稿，Apply 后落库）', when: '全局（非输入框）', handler: function () { newGoalDraft('global'); } },
     { keys: ['T'], label: '手动触发一轮对账（=入队 toast）', when: '全局（非输入框）', handler: function () { manualTick(); } },
-    { keys: ['C'], label: '与 root 对话', when: '全局（非输入框）', handler: function () { go('chat/builtinRoot'); } },
+    { keys: ['C'], label: '与 root 对话', when: '全局（非输入框）', handler: function () { go('chat/' + (liveChatAgents()[0] || 'core-headless')); } },
     { keys: ['W'], label: '回到 Welcome 大屏', when: '全局（非输入框）', handler: function () { go('welcome'); } },
     { keys: ['E'], label: '打开事件流', when: '全局（非输入框）', handler: function () { go('events'); } },
     { keys: ['A'], label: '打开审批页', when: '全局（非输入框）', handler: function () { go('approvals'); } },
@@ -1945,7 +2249,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     if (isTypingTarget(e.target)) return;
     if (e.key === '?') { e.preventDefault(); openCheatsheet(); return; }
     var map = { '[': function () { toggleSide(); }, 'n': function () { newGoalDraft('global'); }, 'N': function () { newGoalDraft('global'); },
-      't': manualTick, 'T': manualTick, 'c': function () { go('chat/builtinRoot'); }, 'C': function () { go('chat/builtinRoot'); },
+      't': manualTick, 'T': manualTick, 'c': function () { go('chat/' + (liveChatAgents()[0] || 'core-headless')); }, 'C': function () { go('chat/' + (liveChatAgents()[0] || 'core-headless')); },
       'w': function () { go('welcome'); }, 'W': function () { go('welcome'); },
       'e': function () { go('events'); }, 'E': function () { go('events'); },
       'a': function () { go('approvals'); }, 'A': function () { go('approvals'); } };
@@ -1990,11 +2294,21 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     $('#app').classList.toggle('side-collapsed', S.sideCollapsed);
   }
   ACTIONS['toggle-side'] = function () { toggleSide(); };
+  function navRouteOf(route) {
+    // 会话导航锚动态解析：文档面在册 agent（mock 数据文件的静态锚不落真名——R-PUB 同款纪律的部署侧变体）
+    var r = String(route || '');
+    if (r === '#/chat/root-agent') {
+      var a = liveChatAgents()[0];
+      if (a) return '#/chat/' + a;
+    }
+    return r;
+  }
   function renderNav() {
     var pend = pendingApprovals().length;
     var html = '';
     M.nav.forEach(function (n) {
-      html += '<div class="nav-item' + (navActive(n) ? ' active' : '') + '" data-act="go" data-go="' + n.route.replace('#/', '') + '" title="' + esc(n.label) + '">' +
+      var nroute = navRouteOf(n.route);
+      html += '<div class="nav-item' + (navActive(n) ? ' active' : '') + '" data-act="go" data-go="' + nroute.replace('#/', '') + '" title="' + esc(n.label) + '">' +
         '<svg class="ic"><use href="#cc-i-' + n.icon + '"/></svg><span class="nav-label">' + esc(n.label) + '</span>' +
         (n.badge === 'approvals' && pend > 0 ? '<span class="nav-badge" id="nav-ap-badge">' + pend + '</span>' : '') + '</div>';
     });
@@ -2607,41 +2921,53 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
 
   /* ================= 屏 4：ServiceInstance 详情 ================= */
   function screenInstance(view) {
-    var inst = instByName(S.params.name, S.params.inst);
-    var sys = sysByName(S.params.name);
-    if (!inst || !sys) { view.innerHTML = emptyBox('实例不存在', S.params.name + '/' + S.params.inst); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    setCrumbs(sysCrumb(sys, [{ label: inst.name }]));
-    var agent = M.agents[inst.agents[0]];
-    var docLinks = [['impl', inst.docs.impl], ['verify', inst.docs.verify], ['drift', inst.docs.drift]];
-    var docHtml = docLinks.map(function (x) {
-      var d = x[1] ? docByName(x[1]) : null;
-      return '<div class="kv"><span class="k">' + x[0] + ' 文档</span><span class="v">' +
-        (d ? '<span class="lk mono" data-act="go" data-go="doc/' + esc(d.name) + '">' + esc(d.kind) + '/' + esc(d.name) + '</span>' + draftDot(docHasDraft(d.name)) + ' <span class="chip kind small">' + esc(d.kind) + '</span>' : '<span class="faint">—</span>') +
-        '</span></div>';
-    }).join('');
-    var metricRows = inst.metrics.map(function (m2) {
-      return '<tr><td class="mono">' + esc(m2.q) + '</td><td class="mono">' + esc(m2.target) + '</td><td class="mono" style="color:' + (/^[<>]/.test(m2.target) ? '#4ade80' : 'inherit') + '">' + esc(m2.current) + '</td></tr>';
-    }).join('');
-    var condRows = inst.conditions.map(function (c) {
-      return '<tr><td>' + esc(c.type) + '</td><td>' + (c.status === 'True' ? '<span class="chip ok small">True</span>' : '<span class="chip danger small">False</span>') + '</td><td class="small muted">' + esc(c.reason) + '</td><td class="mono faint">' + fmtAgo(c.ts) + '</td></tr>';
-    }).join('');
-    var agentChips = inst.agents.map(function (a) { return '<span class="chip click mute" data-act="go" data-go="agent/' + esc(a) + '"><svg class="ic"><use href="#cc-i-bot"/></svg>' + esc(a) + '</span>'; }).join('');
+    // E5 真数据换装：实例条目内嵌于 ServiceDesc 正文（scheme: Desc.spec.instances[]——
+    // agentRefs→agent 文档面地址→「在对话框调用该 Agent」=任务原文 #3 跳转链）。
+    // conditions/metrics=引擎回写面（ServiceInstance 独立对象在册才可读——对象缺席=诚实空态）。
+    LIVE.ensure();
+    var sysRef = LIVE.refByName('ServiceDesc', S.params.name);
+    var content = sysRef ? LIVE.docContent('ServiceDesc', sysRef.scope, S.params.name) : '';
+    var instEntry = null;
+    if (content) {
+      var block = /instances:[\s\S]*?(?=\n {0,4}[A-Za-z_]+:|\n*$)/.exec(content);
+      if (block) {
+        var entries = block[0].split(/- name:/).slice(1);
+        entries.forEach(function (e) {
+          var nm = /\s*["']?([A-Za-z0-9-_.]+)["']?/.exec(e);
+          if (nm && nm[1] === S.params.inst) instEntry = e;
+        });
+      }
+    }
+    if (!sysRef || instEntry === null) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('实例条目不在 ServiceDesc 声明正文', S.params.name + '/' + S.params.inst) + '</div>';
+      setCrumbs([{ label: 'Welcome', go: 'welcome' }]);
+      return;
+    }
+    var agentRefs = (instEntry.match(/agent:\/\/[A-Za-z0-9-_.]+/g) || []).map(function (x) { return x.replace('agent://', ''); })
+      .concat(CHAT().sessionIdsOfRefs(instEntry.match(/session:\/\/[A-Za-z0-9_.:-]+/g) || []).map(function (x) { return x; }));
+    var uniqRefs = agentRefs.filter(function (v, i) { return agentRefs.indexOf(v) === i; });
+    var phaseRow = LIVE.state.instanceStatus['ServiceInstance/' + sysRef.scope + '/' + S.params.inst];
+    var phaseChipHtml = phaseRow && phaseRow.phase ? phaseChip(phaseRow.phase, true) : '<span class="faint small" title="ServiceInstance 对象未在册（实例条目内嵌于 ServiceDesc 声明）——相位=引擎回写面余量">n/a</span>';
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' }, { label: S.params.name, go: 's/' + esc(S.params.name) }, { label: S.params.inst }]);
+    var agentChips = uniqRefs.map(function (a) {
+      var isSession = a.indexOf('session:') === 0;
+      return '<span class="chip click mute mono" ' + (isSession ? '' : 'data-act="go" data-go="agent/' + esc(a) + '"') + '><svg class="ic"><use href="#cc-i-bot"/></svg>' + esc(a) + '</span>';
+    }).join(' ') || '<span class="faint">—（实例条目无 agentRefs）</span>';
+    var firstAgent = uniqRefs.filter(function (a) { return a.indexOf('session:') !== 0; })[0];
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(inst.name) + '</h1>' + phaseChip(inst.phase, true) + '<span class="chip kind">ServiceInstance</span></div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(sys.scope) + '/instances/' + esc(inst.name) + '</span>' +
-      '<span class="mono">observedGeneration ' + inst.observedGeneration + ' · gen ' + inst.generation + '</span>' +
-      '<span>owner: <span class="lk mono" data-act="go" data-go="doc/' + esc(inst.owner) + '">' + esc(inst.owner) + '</span></span></div>' +
-      '<div class="dh-sub" style="margin-top:6px">agentRefs: ' + agentChips + '</div></div>' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(S.params.inst) + '</h1>' + phaseChipHtml + '<span class="chip kind">ServiceInstance</span></div>' +
+      '<div class="dh-sub"><span class="path-mono">' + esc(sysRef.scope) + '/instances/' + esc(S.params.inst) + '</span>' +
+      '<span>owner: <span class="lk mono" data-act="go" data-go="s/' + esc(S.params.name) + '">' + esc(S.params.name) + '（ServiceDesc）</span></span></div>' +
+      '<div class="dh-sub" style="margin-top:6px">agentRefs（声明正文现读）: ' + agentChips + '</div></div>' +
       '<div class="dh-actions">' +
-      (agent ? '<button class="btn primary lg" data-act="go" data-go="chat/' + esc(agent.name) + '">在对话框调用该 Agent →</button>' : '') +
-      '<button class="btn lg" data-act="open-term" data-agent="' + esc(inst.agents[0] || '') + '"><svg class="ic"><use href="#cc-i-term"/></svg>终端 (gotty)</button></div></div>' +
+      (firstAgent ? '<button class="btn primary lg" data-act="go" data-go="chat/' + esc(firstAgent) + '">在对话框调用该 Agent →</button>' : '') +
+      '</div></div>' +
       '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">文档链接</span></div><div class="card-b">' + docHtml + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">metrics 查询声明</span></div><table class="tbl"><thead><tr><th>query</th><th>target</th><th>current</th></tr></thead><tbody>' + metricRows + '</tbody></table></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">Status conditions</span></div><table class="tbl"><thead><tr><th>type</th><th>status</th><th>reason</th><th>时间</th></tr></thead><tbody>' + condRows + '</tbody></table></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">趋势 sparkline</span></div><div class="card-b" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center">' +
-      '<div>' + sparkSVG(inst.system + '/' + inst.name + ':m1', '#3b82f6', 150, 44) + '<div class="small faint">' + esc(inst.metrics[0] ? inst.metrics[0].q : 'metric') + '</div></div>' +
-      '<div>' + sparkSVG(inst.system + '/' + inst.name + ':m2', '#22c55e', 150, 44, 0.5) + '<div class="small faint">' + esc(inst.metrics[1] ? inst.metrics[1].q : 'metric') + '</div></div>' +
+      '<div class="card"><div class="card-h"><span class="h-title">实例声明条目（ServiceDesc 正文现读）</span></div><div class="card-b"><pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc('- name:' + instEntry) + '</pre>' +
+      (refChips(instEntry) ? '<div style="margin-top:8px">' + refChips(instEntry) + '</div>' : '') + '</div></div>' +
+      '<div class="card"><div class="card-h"><span class="h-title">Status conditions / metrics</span></div><div class="card-b">' +
+      (phaseRow ? '<div class="kv"><span class="k">phase</span><span class="v mono">' + esc(phaseRow.phase) + '</span><span class="k">observedGeneration</span><span class="v mono">' + esc(String(phaseRow.observedGeneration != null ? phaseRow.observedGeneration : '—')) + '</span></div>'
+        : '<div class="empty" style="padding:16px"><div class="e-title">ServiceInstance 对象未在册</div><div class="small faint">conditions/metrics=引擎回写面（对象缺席=诚实空态，不画 mock）——E7 场景面细化</div></div>') +
       '</div></div></div></div>';
   }
 
@@ -3815,370 +4141,456 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       });
     });
   };
-  /* ================= 屏 7：Agent 对话（dsh Conversation shell） ================= */
-  function chatUiFor(agent) {
-    var u = S.chatUi[agent] = S.chatUi[agent] || {};
-    var sess = M.sessions.filter(function (s) { return s.agent === agent; });
-    if (!u.sessionId || !sess.filter(function (s) { return s.id === u.sessionId; }).length) u.sessionId = sess[0] ? sess[0].id : null;
-    if (!u.view) u.view = 'chat';
-    if (!u.tab) u.tab = 'chat';
-    if (!u.filter) u.filter = 'all';
-    return u;
+  /* ================= 屏 7：Agent 对话（E5 真数据换装，console-adoption.md §1.11） =================
+   * 数据源裁决（§3.7）：左栏会话=dsh session store（ctx.sessions，不复制状态）；中栏转录=
+   * session 事件页读面（remote.session.page，user/assistant/tool 事件最小渲染）；发消息=
+   * session.prompt 真通路（cross-agent.md §5.7 #2）；右栏权限面=cored 读面 Agent 文档面
+   * （spec.connectorOps/providers/refs/roles——渲染数据无双源红线：会话运行态=dsh session store
+   * 是 §3.7 显式裁决，与文档面/资源状态=cored 各管一面）。 */
+  function CHAT() { return __CC.chat; }
+  var chatAdCached = null;
+  function chatAd() {
+    if (!chatAdCached || !chatAdCached.ready()) chatAdCached = CHAT().bindFaces();
+    return chatAdCached;
   }
-  function ensureTermSession(agent) {
-    var gs = M.sessions.filter(function (s) { return s.agent === agent && s.runner === 'gotty'; })[0];
-    if (gs) return gs;
-    var s = {
-      id: 'sess-term-' + agent + '-' + (Date.now() % 10000), agent: agent, title: 'gotty 终端会话', runner: 'gotty',
-      created: new Date(), pinned: false, archived: false, tokens: 0, messages: [
-        { id: 'm-t0', role: 'agent', text: '终端会话已建立（gotty-web，runner=gotty）。切到「终端」tab 直接敲命令：status / tick / help。', ts: new Date(), cards: [], meta: null }
-      ], traj: [{ ts: new Date(), kind: 'tool', label: 'gotty-web.open-terminal', detail: 'tty 建立成功' }]
-    };
-    M.sessions.unshift(s);
-    return s;
+  // 会话 UI 态（内存 UI 态，不落库=console 零持久状态）
+  S.chatTranscript = {};  // sessionId -> {at, ok, error, items}
+  S.chatOwned = {};       // agent -> [sessionId]（console 发起=归属证据②）
+  S.chatBusy = {};        // sessionId -> true（prompt 在途）
+  S.chatMode = {};        // agent -> 'queue'|'steer'（缺省 queue）
+
+  /** Agent 文档面引用行（cored 读面）：{kind,name,scope,resourceVersion}|null。 */
+  function liveAgentRef(name) {
+    LIVE.ensure();
+    return LIVE.refByName('Agent', name);
+  }
+  /** Agent 文档面 status.currentSession.id 解析（归属证据①：身份=SessionId，§5.7 #1）。 */
+  function agentCurrentSessionId(content) {
+    var m = /currentSession:[\s\S]{0,160}?id:\s*["']?([A-Za-z0-9_.:-]+)["']?/.exec(content || '');
+    return m ? m[1] : '';
+  }
+  /** Agent 文档面 connectorOps 挂载 refs（spec.connectorOps[].ops）。 */
+  function agentConnectorOpsRefs(content) {
+    var refs = [];
+    var m = /connectorOps:[\s\S]*?(?=\n {0,4}[A-Za-z_]+:|\n*$)/.exec(content || '');
+    if (!m) return refs;
+    var re2 = /ops:\s*["']?([A-Za-z0-9-_.\/]+)["']?/g, x;
+    while ((x = re2.exec(m[0]))) if (refs.indexOf(x[1]) < 0) refs.push(x[1]);
+    return refs;
+  }
+  /** ConnectorOps 对象 spec.ops 名集（['dispatch',…] / 行式清单同吃）。 */
+  function connectorOpsNames(content) {
+    var out = [];
+    var body = (content || '');
+    var m = /ops:\s*\[([^\]]*)\]/.exec(body);
+    if (m) {
+      m[1].split(',').forEach(function (s) {
+        var v = s.replace(/["'\s]/g, '');
+        if (v) out.push(v);
+      });
+      return out;
+    }
+    var m2 = /ops:\s*\n((?:\s*-\s*[^\n]+\n?)+)/.exec(body);
+    if (m2) {
+      m2[1].split('\n').forEach(function (line) {
+        var v = line.replace(/\s*-\s*/, '').replace(/["'\s]/g, '');
+        if (v) out.push(v);
+      });
+    }
+    return out;
+  }
+  /** 该 agent 的 ConnectorOps op 名声明集（挂载 refs × 对象 ops 并集）。 */
+  function agentDeclaredOps(agentName) {
+    var aref = liveAgentRef(agentName);
+    if (!aref) return [];
+    var content = LIVE.docContent('Agent', aref.scope, agentName);
+    var refs = agentConnectorOpsRefs(content);
+    var names = [];
+    refs.forEach(function (r) {
+      var refName = r.split('/')[r.split('/').length - 1];
+      var oref = LIVE.refByName('ConnectorOps', refName);
+      if (!oref) return;
+      connectorOpsNames(LIVE.docContent('ConnectorOps', oref.scope, refName)).forEach(function (op) {
+        if (names.indexOf(op) < 0) names.push(op);
+      });
+    });
+    return names;
+  }
+  /** 归属证据（§3.7）：①文档面 currentSession.id ②console 发起（内存态）③agentRefs 显式 sessionId 形。 */
+  function agentSessionEvidence(agentName) {
+    var aref = liveAgentRef(agentName);
+    var content = aref ? LIVE.docContent('Agent', aref.scope, agentName) : '';
+    var ids = CHAT().sessionIdsOfRefs((content.match(/session:\/\/[A-Za-z0-9_.:-]+/g) || []));
+    var cur = agentCurrentSessionId(content);
+    if (cur && ids.indexOf(cur) < 0) ids.push(cur);
+    (S.chatOwned[agentName] || []).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+    return { currentSessionId: cur, ownedIds: ids };
+  }
+  /** owner 实例解析（ServiceDesc 正文 agent://<name> 反查）：{system,instance}|null。 */
+  function agentOwnerOf(agentName) {
+    LIVE.ensure();
+    var rows = LIVE.state.objects.ServiceDesc || [];
+    for (var i = 0; i < rows.length; i++) {
+      var sd = rows[i];
+      var content = LIVE.docContent('ServiceDesc', sd.scope, sd.name);
+      if (content.indexOf('agent://' + agentName) < 0) continue;
+      var m = /- name:\s*["']?([A-Za-z0-9-_.]+)["']?[\s\S]{0,200}?agent:\/\//.exec(content);
+      if (m) return { system: sd.name, instance: m[1], scope: sd.scope };
+    }
+    return null;
+  }
+  function liveChatAgents() {
+    LIVE.ensure();
+    return (LIVE.state.objects.Agent || []).map(function (o) { return o.name; });
   }
   function screenChat(view) {
-    var agent = agentByName(S.params.agent);
-    if (!agent) { view.innerHTML = emptyBox('agent 不存在', S.params.agent); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    var u = chatUiFor(agent.name);
-    if (u.forceTerm) { u.forceTerm = false; var ts2 = ensureTermSession(agent.name); u.sessionId = ts2.id; u.tab = 'term'; }
-    var sess = M.sessions.filter(function (s) { return s.agent === agent.name; });
-    var cur = sess.filter(function (s) { return s.id === u.sessionId; })[0] || sess[0];
-    if (cur && u.sessionId !== cur.id) u.sessionId = cur.id;
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '会话', go: 'chat/builtinRoot' }, { label: agent.name }]);
-    var inst = agent.instance;
-    var instLink = '<span class="lk mono small" data-act="go" data-go="s/' + esc(inst.split('/')[0]) + '/i/' + esc(inst.split('/')[1]) + '">' + esc(inst) + '</span>';
-    /* 左栏 */
-    var filtered = sess.filter(function (s) {
-      if (u.filter === 'pinned' && !s.pinned) return false;
-      if (u.filter === 'archived' && !s.archived) return false;
-      if (u.filter === 'all' && s.archived) return false;
-      if (u.search && (s.title + ' ' + s.id).toLowerCase().indexOf(u.search.toLowerCase()) < 0) return false;
-      return true;
-    });
-    var sessRows = filtered.map(function (s) {
-      return '<div class="sess-row' + (cur && s.id === cur.id ? ' sel' : '') + (s.archived ? ' archived' : '') + '" data-act="chat-sess" data-id="' + esc(s.id) + '">' +
-        '<div class="ss-title">' + (s.pinned ? '<span style="color:var(--warn)">📌 </span>' : '') + esc(s.title) + '</div>' +
-        '<div class="ss-sub"><span class="runner-tag">' + esc(s.runner) + '</span><span class="mono">' + fmtAgo(s.created) + '</span><span>' + (s.tokens ? (s.tokens / 1000).toFixed(1) + 'k tok' : '') + '</span></div>' +
-        '<span class="ss-menu">' +
-        '<button class="icon-btn" style="width:22px;height:22px" data-act="chat-pin" data-id="' + esc(s.id) + '" title="' + (s.pinned ? '取消置顶' : '置顶') + '"><svg class="ic"><use href="#cc-i-pin"/></svg></button>' +
-        '<button class="icon-btn" style="width:22px;height:22px" data-act="chat-archive" data-id="' + esc(s.id) + '" title="' + (s.archived ? '取消归档' : '归档') + '"><svg class="ic"><use href="#cc-i-archive"/></svg></button>' +
-        '</span></div>';
-    }).join('');
-    if (!sessRows.length) sessRows = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">无会话</div><div>' + (u.filter === 'archived' ? '归档区为空' : '新建一个开始对话') + '</div></div>';
+    var agentName = S.params.agent;
+    var aref = liveAgentRef(agentName);
+    if (!aref) {
+      // 文档面未注册 agent=诚实空态（不冒充 mock agent）
+      var known = liveChatAgents();
+      view.innerHTML = '<div class="view-inner">' + emptyBox('agent 未注册（文档面 Agent 对象缺席）', agentName +
+        (known.length ? ' · 在册：' + known.join(', ') : '')) + '</div>';
+      setCrumbs([{ label: 'Welcome', go: 'welcome' }]);
+      return;
+    }
+    LIVE.ensure();
+    var ad = chatAd();
+    var u = S.chatUi[agentName] = S.chatUi[agentName] || {};
+    if (!u.view) u.view = 'chat';
+    if (!u.tab) u.tab = 'chat';
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '会话', go: 'chat/' + esc(agentName) }, { label: agentName }]);
+    var content = LIVE.docContent('Agent', aref.scope, agentName);
+    var declaredOps = agentDeclaredOps(agentName);
+    // —— 左栏：会话清单=dsh session store 投影（归属两层：本 agent / 宿主全部） ——
+    var snap = ad.listSnapshot();
+    var ev = agentSessionEvidence(agentName);
+    var groups = CHAT().attributedSessions(snap.rows, ev);
+    if (!u.sessionId || !snap.rows.some(function (r) { return r.id === u.sessionId; })) {
+      u.sessionId = (groups.mine[0] || groups.host[0] || {}).id || null;
+    }
+    var sessRow = function (r, badge) {
+      return '<div class="sess-row' + (r.id === u.sessionId ? ' sel' : '') + '" data-act="chat-sess" data-id="' + esc(r.id) + '">' +
+        '<div class="ss-title">' + (r.running ? '<span class="lamp ok" style="display:inline-block;margin-right:4px"></span>' : '') + esc(r.title) + '</div>' +
+        '<div class="ss-sub"><span class="mono">' + esc(r.id.slice(0, 12)) + '…</span><span class="faint">' + (r.updatedAt ? fmtAgo(new Date(r.updatedAt)) : '') + '</span>' +
+        (badge ? '<span class="chip acc tiny">' + badge + '</span>' : '') + '</div></div>';
+    };
+    var mineHtml = groups.mine.map(function (r) { return sessRow(r, '本 agent'); }).join('');
+    var hostHtml = groups.host.map(function (r) { return sessRow(r, ''); }).join('');
+    if (!mineHtml && !hostHtml) {
+      mineHtml = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">' +
+        (ad.ready() ? '宿主会话清单为空' : '宿主会话面缺席') + '</div><div class="small faint">' +
+        (ad.ready() ? '新建一个开始对话' : 'ctx.sessions 未在册——dsh session store 数据源缺席（诚实降级）') + '</div></div>';
+    }
+    var owner = agentOwnerOf(agentName);
+    var ownerLink = owner
+      ? '<span class="lk mono small" data-act="go" data-go="s/' + esc(owner.system) + '/i/' + esc(owner.instance) + '">' + esc(owner.system) + '/' + esc(owner.instance) + '</span>'
+      : '<span class="faint small">未解析（ServiceDesc agentRefs 无此 agent）</span>';
     var left = '<div class="chat-sub"><div class="cs-head">' +
       '<div class="cs-agent"><span class="avatar" style="background:rgba(59,130,246,.2);color:#7fb0f9"><svg class="ic"><use href="#cc-i-bot"/></svg></span>' +
-      '<div><div class="ca-name">' + esc(agent.name) + '</div><div class="ca-sub mono">' + esc(agent.phase) + ' · ' + instLink + '</div></div></div>' +
-      '<div class="cs-filter">' + [['all', '全部'], ['pinned', '置顶'], ['archived', '已归档']].map(function (f) {
-        return '<span class="cf-tab' + (u.filter === f[0] ? ' on' : '') + '" data-act="chat-filter" data-f="' + f[0] + '">' + f[1] + '</span>';
-      }).join('') + '</div>' +
-      '<div class="cs-search"><svg class="ic"><use href="#cc-i-search"/></svg><input id="chat-search" placeholder="搜索会话…" value="' + esc(u.search || '') + '"></div>' +
-      '<button class="btn primary sm" data-act="chat-new" data-agent="' + esc(agent.name) + '">+ 新建会话</button>' +
-      '</div><div class="cs-list">' + sessRows + '</div></div>';
-    /* 中栏 */
-    var isTerm = cur && (cur.runner === 'gotty' || u.tab === 'term');
-    var tabs = isTerm ? '<div class="term-tabs">' +
-      '<div class="term-tab' + (u.tab === 'chat' ? ' active' : '') + '" data-act="chat-tab" data-t="chat">对话</div>' +
-      '<div class="term-tab' + (u.tab === 'term' ? ' active' : '') + '" data-act="chat-tab" data-t="term">终端</div></div>' : '';
+      '<div><div class="ca-name">' + esc(agentName) + '</div><div class="ca-sub mono">Agent@' + esc(aref.scope) + ' · r' + aref.resourceVersion + '</div></div></div>' +
+      '<div class="cs-search mono small" style="color:var(--text-2)">owner: ' + ownerLink + '</div>' +
+      '<button class="btn primary sm" data-act="chat-new" data-agent="' + esc(agentName) + '">+ 新建会话（运行器四选）</button>' +
+      '</div><div class="cs-list">' +
+      (mineHtml ? '<div class="sec-title small">本 agent 会话（' + groups.mine.length + '）</div>' + mineHtml : '') +
+      '<div class="sec-title small faint">宿主全部会话（' + groups.host.length + '）——按 agent 归属证据过滤的投影，未归属行不冒充</div>' + hostHtml +
+      '</div></div>';
+    // —— 中栏：视图开关 + 转录/终端 ——
+    var cur = snap.rows.filter(function (r) { return r.id === u.sessionId; })[0] || null;
+    var mode = S.chatMode[agentName] || 'queue';
     var center = '<div class="chat-main">' +
       '<div class="chat-headbar">' +
       '<div class="view-switch">' +
       '<div class="vs-opt' + (u.view === 'chat' ? ' on' : '') + '" data-act="chat-view" data-v="chat">Chat</div>' +
       '<div class="vs-opt' + (u.view === 'traj' ? ' on' : '') + '" data-act="chat-view" data-v="traj">Trajectory</div></div>' +
-      '<span style="font-weight:650;font-size:13px">' + (cur ? esc(cur.title) : '无会话') + '</span>' +
-      (cur ? '<span class="runner-tag">' + esc(cur.runner) + '</span>' : '') +
-      '<span style="margin-left:auto" class="small faint">' + (cur ? cur.messages.length + ' 条消息 · ' + (cur.tokens / 1000 || 0).toFixed(1) + 'k tok' : '') + '</span></div>' +
-      tabs + chatBody(agent, cur, u) + '</div>';
-    /* 右栏 */
+      '<span style="font-weight:650;font-size:13px" class="mono">' + (cur ? esc(cur.title) : '无会话') + '</span>' +
+      (cur && cur.running ? '<span class="chip ok tiny">running</span>' : '') +
+      '<span style="margin-left:auto" class="small faint mono">' + (cur ? esc(cur.id) : '') + '</span>' +
+      '<div class="view-switch" style="margin-left:8px">' +
+      '<div class="vs-opt' + (mode === 'queue' ? ' on' : '') + '" data-act="chat-mode" data-m="queue" title="queue=追加一 turns">queue</div>' +
+      '<div class="vs-opt' + (mode === 'steer' ? ' on' : '') + '" data-act="chat-mode" data-m="steer" title="steer=打断当前 turn 插话">steer</div></div>' +
+      '</div>' +
+      (u.tab === 'term'
+        ? chatTermTab(agentName, cur, ad)
+        : '<div id="chat-body" data-sess="' + esc(u.sessionId || '') + '" data-agent="' + esc(agentName) + '">' + liveSkeletonRows(3) + '</div>') +
+      '</div>';
+    // —— 右栏：权限面=cored 读面 Agent 文档面（声明真数据；mock token 字样摘除） ——
+    var opChips = function (refs, route) {
+      return (refs || []).map(function (r) {
+        var nm = String(r).split('/')[String(r).split('/').length - 1];
+        return '<span class="chip click mute small" data-act="go" data-go="' + route + '/' + esc(nm) + '">' + esc(r) + '</span>';
+      }).join(' ') || '<span class="faint small">—</span>';
+    };
+    var specBlock = function (key, re) {
+      var m = re.exec(content || '');
+      return m ? esc(m[1]) : '<span class="faint">—</span>';
+    };
+    var opsRefs = agentConnectorOpsRefs(content);
+    var providers = (content.match(/providers?:[\s\S]{0,80}?- ?\W*([A-Za-z0-9-_.\/]+)/) || [])[1];
+    var roles = (content.match(/roles:[\s\S]{0,80}?- ?\W*([A-Za-z0-9-_.\/]+)/) || [])[1];
+    var refsList = (content.match(/\brefs:[\s\S]{0,120}?- ?\W*([A-Za-z0-9-_.\/]+)/) || [])[1];
+    var autoLevel = specBlock('autoLevel', /autoLevel:\s*["']?([a-z]+)/);
     var right = '<div class="chat-ctx">' +
-      '<div class="ctx-sec"><div class="cx-h">权限面（token: ' + esc(agent.scopeSummary.split('：')[1] || '') + '）</div><div class="cx-b">' +
-      '<div class="ctx-row"><span class="cr-k">ConnectorOps</span>' + agent.perms.connectorops.map(function (c) { return '<span class="chip click mute small" data-act="go" data-go="connector/' + esc(c) + '">' + esc(c) + '</span>'; }).join(' ') + '</div>' +
-      '<div class="ctx-row"><span class="cr-k">Ref</span>' + agent.perms.refs.map(function (r) { return '<span class="chip click mute small" data-act="go" data-go="ref/' + encodeURIComponent(r) + '">' + esc(r) + '</span>'; }).join(' ') + '</div>' +
-      '<div class="ctx-row"><span class="cr-k">Provider</span>' + agent.perms.providers.map(function (p) { return '<span class="chip click mute small" data-act="go" data-go="provider/' + esc(p) + '">' + esc(p) + '</span>'; }).join(' ') + '</div>' +
-      '<div class="ctx-row"><span class="cr-k">Role</span>' + agent.perms.roles.map(function (r) { return '<span class="chip click mute small" data-act="go" data-go="role/' + esc(r) + '">' + esc(r) + '</span>'; }).join(' ') + '</div>' +
-      '<div class="small faint" style="margin-top:4px">' + esc(agent.scopeSummary) + ' · 子 agent 权限 ⊆ 父</div>' +
+      '<div class="ctx-sec"><div class="cx-h">权限面（Agent 文档面 · cored 现读）</div><div class="cx-b">' +
+      '<div class="ctx-row"><span class="cr-k">ConnectorOps</span>' + opChips(opsRefs, 'connector') + '</div>' +
+      '<div class="ctx-row"><span class="cr-k">Provider</span>' + (providers ? '<span class="chip click mute small" data-act="go" data-go="provider/' + esc(providers.split('/').pop()) + '">' + esc(providers) + '</span>' : '<span class="faint small">—</span>') + '</div>' +
+      '<div class="ctx-row"><span class="cr-k">Ref</span>' + (refsList ? '<span class="chip mute small mono">' + esc(refsList) + '</span>' : '<span class="faint small">—</span>') + '</div>' +
+      '<div class="ctx-row"><span class="cr-k">Role</span>' + (roles ? '<span class="chip click mute small" data-act="go" data-go="role/' + esc(roles.split('/').pop()) + '">' + esc(roles) + '</span>' : '<span class="faint small">—</span>') + '</div>' +
+      '<div class="ctx-row"><span class="cr-k">autoLevel</span><span class="mono small">' + autoLevel + '</span></div>' +
+      '<div class="ctx-row"><span class="cr-k">op 声明集</span><span class="mono small">' + (declaredOps.length ? esc(declaredOps.join(' / ')) : '—（无挂载声明）') + '</span></div>' +
+      '<div class="small faint" style="margin-top:4px">ConnectorOps 卡判别=本声明集（转录工具调用 op 名命中→ConnectorOps 卡）；权限 ⊆ 父 agent</div>' +
       '</div></div>' +
-      '<div class="ctx-sec"><div class="cx-h">归属与任务</div><div class="cx-b">' +
-      '<div class="ctx-row"><span class="cr-k">owner</span>' + instLink + '</div>' +
-      '<div class="ctx-row"><span class="cr-k">父 agent</span>' + (agent.parent ? '<span class="lk mono" data-act="go" data-go="agent/' + esc(agent.parent) + '">' + esc(agent.parent) + '</span>' : '<span class="faint">—（root）</span>') + '</div>' +
-      '<div class="ctx-row"><span class="cr-k">最近任务</span><span>' + esc(agent.lastTask) + '</span></div></div></div>' +
-      '<div class="ctx-sec"><div class="cx-h">实时状态</div><div class="cx-b">' +
-      '<div class="live-status"><span class="lamp acc pulse-dot"></span>' + esc(agent.phase) + ' · 心跳正常</div>' +
-      '<div class="ctx-row"><span class="cr-k">token 用量</span></div>' +
-      '<div class="progress" title="会话累计 / 30k 上下文窗口"><i style="width:' + Math.min(100, (cur ? cur.tokens : 0) / 300) + '%"></i></div>' +
-      '<div class="small faint mono">' + (cur ? cur.tokens : 0) + ' / 30000</div></div></div>' +
-      '<div class="ctx-sec"><div class="cx-h">详情</div><div class="cx-b"><span class="lk small" data-act="go" data-go="agent/' + esc(agent.name) + '">agent 详情页 →</span>' +
-      (cur ? '<span class="lk small" data-act="go" data-go="session/' + esc(cur.id) + '">session 详情（trajectory 独立页）→</span>' : '') + '</div></div>' +
+      '<div class="ctx-sec"><div class="cx-h">身份与归属（SessionId）</div><div class="cx-b">' +
+      '<div class="ctx-row"><span class="cr-k">owner</span>' + ownerLink + '</div>' +
+      '<div class="ctx-row"><span class="cr-k">当前会话</span><span class="mono small">' + (ev.currentSessionId ? esc(ev.currentSessionId) : '—（文档面 status.currentSession 未回写）') + '</span></div>' +
+      '<div class="small faint" style="margin-top:4px">身份=SessionId（cross-agent.md §5.7 #1）：console 新建会话后 Apply 回填 status.currentSession</div>' +
+      '</div></div>' +
+      '<div class="ctx-sec"><div class="cx-h">详情</div><div class="cx-b"><span class="lk small" data-act="go" data-go="agent/' + esc(agentName) + '">agent 文档面（编辑器）→</span>' +
+      (cur ? '<span class="lk small" data-act="go" data-go="session/' + esc(cur.id) + '">session 详情（trajectory）→</span>' : '') + '</div></div>' +
       '</div>';
     view.classList.add('nopad');
     view.innerHTML = '<div class="chat-layout">' + left + center + right + '</div>';
-    bindChat(agent, cur, u);
-    if (cur && u.tab === 'term' && isTerm) initTerminal(cur);
+    if (u.tab !== 'term' && u.sessionId) loadTranscript(agentName, u.sessionId, u.view);
   }
-  function chatBody(agent, cur, u) {
-    if (!cur) return '<div class="chat-scroll"><div class="empty"><svg class="ic"><use href="#cc-i-chat"/></svg><div class="e-title">没有会话</div><div class="e-act"><button class="btn primary" data-act="chat-new" data-agent="' + esc(agent.name) + '">新建会话</button></div></div></div>' + inputBar(agent);
-    if (u.view === 'traj') {
-      var items = cur.traj || [];
-      var html = items.map(function (t, i) {
-        return '<div class="traj-item kind-' + esc(t.kind) + '"><div class="traj-rail"><div class="traj-dot"></div>' + (i < items.length - 1 ? '<div class="traj-line"></div>' : '') + '</div>' +
-          '<div><div style="display:flex;gap:8px;align-items:center"><span class="traj-kind">' + esc(t.kind) + '</span><span class="traj-label">' + esc(t.label) + '</span>' +
-          '<span class="mono faint small">' + fmtTime(t.ts) + '</span></div><div class="traj-detail">' + esc(t.detail) + '</div></div></div>';
+  /** 转录装载+注水（session 事件页读面 → projectTranscript → chat-body）。 */
+  function loadTranscript(agentName, sessionId, viewType) {
+    var ad = chatAd();
+    var declaredOps = agentDeclaredOps(agentName);
+    ad.page(sessionId, {}).then(function (res) {
+      var body = $('#chat-body');
+      if (!body || body.dataset.sess !== sessionId) return; // 路由/选择已变=丢弃
+      if (!res.ok) {
+        body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录读面暂不可达</div><div class="small faint">' +
+          esc(res.error) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
+        bindChatInput(agentName, sessionId);
+        return;
+      }
+      S.chatTranscript[sessionId] = { at: Date.now(), items: CHAT().projectTranscript(res.records, declaredOps), records: res.records.length };
+      paintTranscript(agentName, sessionId, viewType);
+    });
+  }
+  function paintTranscript(agentName, sessionId, viewType) {
+    var body = $('#chat-body');
+    var t = S.chatTranscript[sessionId];
+    if (!body || body.dataset.sess !== sessionId || !t) return;
+    var declaredOps = agentDeclaredOps(agentName);
+    var items = t.items;
+    if (viewType === 'traj') {
+      var rows = items.map(function (it) {
+        var kindCls = it.kind === 'user' ? 'user' : it.kind === 'assistant' ? 'agent' : 'tool';
+        var label = it.kind === 'tool' ? (it.op + (it.connectorOps ? ' · ConnectorOps' : '')) : it.kind;
+        return '<div class="traj-item kind-' + kindCls + '"><div class="traj-rail"><div class="traj-dot"></div><div class="traj-line"></div></div>' +
+          '<div><div style="display:flex;gap:8px;align-items:center"><span class="traj-kind">' + esc(label) + '</span>' +
+          '<span class="mono faint small">seq ' + esc(it.seq) + '</span></div>' +
+          '<div class="traj-detail">' + esc(String(it.text || it.argsText || '').slice(0, 160)) + '</div></div></div>';
       }).join('');
-      return '<div class="traj-scroll">' + (html || '<div class="empty"><div class="e-title">轨迹为空</div></div>') + '</div>';
+      body.innerHTML = '<div class="traj-scroll">' + (rows || '<div class="empty"><div class="e-title">轨迹为空</div></div>') + '</div>';
+      return;
     }
-    if (u.tab === 'term') return '<div class="term-wrap"><div class="term" id="term-box"></div></div>';
-    var msgs = cur.messages.map(function (m) {
-      var cards = (m.cards || []).map(cardHtml).join('');
-      var tail = m.role === 'agent' && m.meta ? '<div class="turn-tail"><span>⏱ ' + fmtTime(m.ts) + '</span><span>' + m.meta.steps + ' steps</span><span>' + m.meta.tokens + ' tok</span><span>model: flash-tier</span><span>fieldManager: ' + esc(agent.name) + '</span></div>' : '';
-      return '<div class="msg-row"><div class="msg-avatar ' + m.role + '">' + (m.role === 'agent' ? '◆' : '你') + '</div><div class="msg-body">' +
-        '<div class="msg-who"><span class="who-name">' + (m.role === 'agent' ? esc(agent.name) : 'root') + '</span><span class="mono">' + fmtTime(m.ts) + '</span></div>' +
-        '<div class="msg-text' + (m.streaming ? ' typing' : '') + '">' + esc(m.text) + (m.streaming ? '<span class="typing-caret"></span>' : '') + '</div>' +
-        (cards ? '<div class="msg-cards">' + cards + '</div>' : '') + tail + '</div></div>';
+    var msgs = items.map(function (it) {
+      if (it.kind === 'user' || it.kind === 'context') {
+        return '<div class="msg-row"><div class="msg-avatar user">你</div><div class="msg-body">' +
+          '<div class="msg-who"><span class="who-name">' + (it.kind === 'user' ? '你' : '上下文注入') + '</span><span class="mono">seq ' + esc(it.seq) + '</span></div>' +
+          '<div class="msg-text">' + esc(it.text) + '</div></div></div>';
+      }
+      if (it.kind === 'assistant') {
+        return '<div class="msg-row"><div class="msg-avatar agent">◆</div><div class="msg-body">' +
+          '<div class="msg-who"><span class="who-name">' + esc(agentName) + '</span><span class="mono">seq ' + esc(it.seq) + '</span></div>' +
+          '<div class="msg-text">' + esc(it.text || '') + (it.interrupted ? ' <span class="chip warn tiny">interrupted</span>' : '') + '</div>' +
+          (it.usage ? '<div class="turn-tail"><span>tokens: ' + esc(String(it.usage.totalTokens != null ? it.usage.totalTokens : JSON.stringify(it.usage).slice(0, 40))) + '</span></div>' : '') +
+          '</div></div>';
+      }
+      if (it.kind === 'tool') return toolCardHtml(it, declaredOps);
+      return '';
     }).join('');
-    return '<div class="chat-scroll" id="chat-scroll">' + (msgs || '<div class="empty"><div class="e-title">会话为空</div><div>发第一条消息</div></div>') + '</div>' + inputBar(agent);
+    var busy = S.chatBusy[sessionId];
+    body.innerHTML = '<div class="chat-scroll" id="chat-scroll">' + (msgs || '<div class="empty"><div class="e-title">会话为空</div><div>发第一条消息</div></div>') +
+      (busy ? '<div class="small faint" style="padding:8px 16px">prompt 在途（回执未返）…</div>' : '') + '</div>' + chatInputBar(agentName);
+    bindChatInput(agentName, sessionId);
+    var sc = $('#chat-scroll');
+    if (sc) sc.scrollTop = sc.scrollHeight;
   }
-  function cardHtml(c) {
-    if (c.type === 'op') {
-      var payload = typeof c.payload === 'object' ? JSON.stringify(c.payload, null, 1) : String(c.payload);
-      return '<div class="mcard op"><div class="mc-head" data-act="card-toggle"><svg class="ic"><use href="#cc-i-plug"/></svg><span class="mc-op">' + esc(c.op) + '</span>' +
-        (c.target ? '<span>→ ' + esc(c.target) + '</span>' : '') + '<span class="mc-status">' + (c.status === '运行中' ? '<span class="chip acc small">运行中</span>' : '<span class="chip ok small">' + esc(c.status || '已确认') + '</span>') + '</span>' +
-        '<svg class="ic" style="margin-left:4px"><use href="#cc-i-down"/></svg></div>' +
-        '<div class="mc-body" hidden><div class="kv"><span class="k">payload</span><span class="v"><pre class="mono" style="white-space:pre-wrap;font-size:11px">' + esc(payload) + '</pre></span>' +
-        (c.detail ? '<span class="k">detail</span><span class="v">' + esc(c.detail) + '</span>' : '') + '</div></div></div>';
+  /** 工具卡（ConnectorOps 判别=agent 文档面声明集）：op 名等宽+payload 展开+凭据脱敏（值打码）。 */
+  function toolCardHtml(it, declaredOps) {
+    var isCop = CHAT().isConnectorOp(it.op, declaredOps);
+    var payload = it.argsText || '';
+    var result = it.result || '';
+    var mask = function (s) {
+      return String(s).replace(/("(?:password|token|secret|apiKey|api_key|authorization)"\s*:\s*)"[^"]*"/gi, '$1"***"');
+    };
+    return '<div class="msg-row"><div class="msg-body" style="margin-left:44px"><div class="mcard' + (isCop ? ' op' : '') + '">' +
+      '<div class="mc-head" data-act="card-toggle"><svg class="ic"><use href="#cc-i-plug"/></svg>' +
+      '<span class="mc-op">' + esc(it.op) + '</span>' +
+      (isCop ? '<span class="chip acc tiny">ConnectorOps</span>' : '<span class="chip mute tiny">tool</span>') +
+      (it.isError ? '<span class="chip danger tiny">isError</span>' : '') +
+      '<span class="mono faint small">seq ' + esc(it.seq) + '</span>' +
+      '<svg class="ic" style="margin-left:4px"><use href="#cc-i-down"/></svg></div>' +
+      '<div class="mc-body" hidden><div class="kv"><span class="k">payload</span><span class="v"><pre class="mono" style="white-space:pre-wrap;font-size:11px">' + esc(mask(payload)) + '</pre></span>' +
+      (result ? '<span class="k">result</span><span class="v"><pre class="mono" style="white-space:pre-wrap;font-size:11px">' + esc(mask(result)) + '</pre></span>' : '') +
+      '</div></div></div></div></div>';
+  }
+  function chatInputBar(agentName) {
+    var mode = S.chatMode[agentName] || 'queue';
+    var ad = chatAd();
+    return '<div class="chat-inputbar"><div class="chat-input-wrap">' +
+      '<textarea id="chat-input" rows="1" placeholder="发送给 ' + esc(agentName) + '…（Enter 发送 · ' + mode + ' 模式；LLM 改文档只进草稿）"' + (ad.ready() ? '' : ' disabled') + '></textarea>' +
+      '<button class="btn primary sm" data-act="chat-send"' + (ad.ready() ? '' : ' disabled') + '>发送</button></div>' +
+      '<div class="chat-hints"><span>' + (ad.ready()
+        ? kbd('Enter') + ' 发送 · ' + mode + ' 语义（cross-agent.md §5.7 #2）'
+        : '宿主会话面缺席（ctx.sessions 未在册）——发送面诚实禁用') + '</span><span style="margin-left:auto">权限见右栏</span></div></div>';
+  }
+  function bindChatInput(agentName, sessionId) {
+    var ta = $('#chat-input');
+    if (!ta) return;
+    ta.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatReal(agentName, sessionId, ta.value); }
+    });
+    ta.addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(120, this.scrollHeight) + 'px'; });
+  }
+  /** 发消息真通路（§5.7 #2：session.prompt——queue|steer）；回执后转录重读。 */
+  function sendChatReal(agentName, sessionId, text) {
+    text = (text || '').trim();
+    if (!text || !sessionId) return;
+    var ad = chatAd();
+    if (!ad.ready()) { toast('会话面缺席', 'ctx.sessions 未在册——发送面诚实禁用', 'warn'); return; }
+    var mode = S.chatMode[agentName] || 'queue';
+    S.chatBusy[sessionId] = true;
+    paintTranscript(agentName, sessionId, 'chat');
+    ad.prompt(sessionId, text, mode).then(function (res) {
+      S.chatBusy[sessionId] = false;
+      if (!res.ok) {
+        toast('prompt 未接受', String(res.error || '').slice(0, 120), 'warn');
+        var t = S.chatTranscript[sessionId];
+        if (t) paintTranscript(agentName, sessionId, 'chat');
+        return;
+      }
+      // 归属证据②在册（console 发起）；转录重读（用户回声由宿主事件面权威投影）
+      var owned = S.chatOwned[agentName] = S.chatOwned[agentName] || [];
+      if (owned.indexOf(sessionId) < 0) owned.push(sessionId);
+      loadTranscript(agentName, sessionId, S.chatUi[agentName] ? S.chatUi[agentName].view : 'chat');
+    });
+  }
+  /** 终端 tab（E5：dsh 内置 PTY 为主=主案，§5.7 #6）：
+   *  roster=ctx.webTerminals.watch 真数据（face 缺席=诚实空态）；attach 渲染=xterm 依赖余量
+   *  （宿主终端侧栏承载交互面——与会话同生命周期同鉴权）；gotty=跨机兜底余量标注。 */
+  function chatTermTab(agentName, cur, ad) {
+    var head = '<div class="term-tabs">' +
+      '<div class="term-tab" data-act="chat-tab" data-t="chat">对话</div>' +
+      '<div class="term-tab active" data-act="chat-tab" data-t="term">终端</div></div>';
+    if (!cur) return head + '<div class="term-wrap"><div class="empty" style="padding:26px"><div class="e-title">无会话</div><div class="small faint">终端跟随会话（SessionId 作用域）——先选择或新建会话</div></div></div>';
+    var roster = ad.terminals ? ad.terminals(cur.id) : null;
+    var rosterHtml;
+    if (!roster) {
+      rosterHtml = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-term"/></svg><div class="e-title">宿主终端面缺席</div>' +
+        '<div class="small faint">ctx.webTerminals 未在册——roster 只读面诚实降级（不冒充终端）</div></div>';
+    } else {
+      var list = roster.get() || [];
+      rosterHtml = list.length
+        ? '<table class="tbl"><thead><tr><th>终端</th><th>壳</th><th>状态</th></tr></thead><tbody>' +
+          list.map(function (t) {
+            return '<tr><td class="mono">' + esc(String(t.title || t.id || '')) + '</td><td class="mono small">' + esc(String(t.shellPath || t.shell || '—')) + '</td>' +
+              '<td><span class="chip ' + (t.state === 'running' || t.running ? 'ok' : 'mute') + ' tiny">' + esc(String(t.state || (t.running ? 'running' : '—'))) + '</span></td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<div class="empty" style="padding:22px"><div class="e-title">该会话暂无内置终端</div><div class="small faint">在宿主终端侧栏打开即在此在册（真 PTY，scrollback 1000，每会话 ≤8 路）</div></div>';
     }
-    if (c.type === 'files') {
-      return '<div class="mcard files"><div class="mc-head" data-act="card-toggle"><svg class="ic"><use href="#cc-i-doc"/></svg><span class="mc-title">改动文件（changed-files）</span><span class="faint small">' + esc(c.note || '') + '</span><svg class="ic" style="margin-left:auto"><use href="#cc-i-down"/></svg></div>' +
-        '<div class="mc-body">' + c.files.map(function (f) {
-          return '<div class="file-row"><span class="fp grow">' + esc(f.path) + '</span><span class="fadd mono">' + f.add + '</span><span class="fdel mono">' + f.del + '</span><span class="fst"><span class="chip mute small">' + esc(f.status) + '</span></span></div>';
-        }).join('') +
-        '<div style="margin-top:8px"><span class="lk small" data-act="go" data-go="doc/quality-goal">打开相关文档编辑器（深链）→</span></div></div></div>';
-    }
-    if (c.type === 'proposal') {
-      return '<div class="mcard proposal"><div class="mc-head" data-act="card-toggle"><svg class="ic" style="color:var(--llm)"><use href="#cc-i-spark"/></svg><span class="mc-title">文档修改提案 · ' + esc(c.doc) + '</span><span class="mc-status"><span class="chip llm small">LLM 只提案</span></span><svg class="ic"><use href="#cc-i-down"/></svg></div>' +
-        '<div class="mc-body"><div class="small" style="margin-bottom:6px">' + esc(c.title) + '</div>' + renderDiff(c.diff, 20) +
-        '<div style="margin-top:8px"><span class="lk small" data-act="go" data-go="doc/' + esc(c.doc) + '">打开编辑器（深链）→</span></div></div></div>';
-    }
-    if (c.type === 'approval') {
-      var ap = byId(M.approvals, 'id', c.id);
-      var st2 = ap ? ap.status : '待审';
-      return '<div class="mcard approval"><div class="mc-head" style="cursor:default"><svg class="ic" style="color:var(--danger)"><use href="#cc-i-check"/></svg><span class="mc-title">审批请求</span>' +
-        '<span class="mc-status">' + (st2 === '待审' ? '<span class="chip warn small">待审</span>' : '<span class="chip ok small">' + esc(st2) + '</span>') + '</span></div>' +
-        '<div class="mc-body"><div class="small">' + esc(c.title) + '</div><div style="margin-top:8px"><span class="lk small" data-act="go" data-go="approvals">去审批页处理 →</span></div></div></div>';
-    }
-    if (c.type === 'diag') {
-      return '<div class="mcard diag"><div class="mc-head" data-act="card-toggle"><svg class="ic" style="color:var(--esc)"><use href="#cc-i-warn"/></svg><span class="mc-title">诊断 view</span><svg class="ic" style="margin-left:auto"><use href="#cc-i-down"/></svg></div>' +
-        '<div class="mc-body">' + (c.items || []).map(function (d) {
-          return '<div class="diag-item"><span class="d-sev ' + esc(d.sev) + '">' + esc(d.sev) + '</span><span>' + esc(d.msg) + '</span></div>';
-        }).join('') + '</div></div>';
-    }
-    return '';
+    return head + '<div class="term-wrap"><div class="card" style="margin:12px"><div class="card-h"><span class="h-title">dsh 内置终端 roster（' + esc(cur.id.slice(0, 12)) + '…）</span></div>' +
+      '<div class="card-b">' + rosterHtml +
+      '<div class="small faint" style="margin-top:10px">主案=dsh 内置 PTY（remote.terminal.*：与会话同生命周期同鉴权；交互面=宿主终端侧栏——本屏 attach 渲染=xterm 依赖余量，如实标注不冒充）。</div>' +
+      '<div class="small faint">gotty=跨机兜底（ServiceInstance 在别的机器、或终端需独立分享给无 console 权限者时经 piko 暴露）——本机不启用（§5.7 #6）。</div>' +
+      '</div></div></div>';
   }
   ACTIONS['card-toggle'] = function (el) {
     var body = el.parentElement.querySelector('.mc-body');
     if (body) body.hidden = !body.hidden;
   };
-  function inputBar(agent) {
-    return '<div class="chat-inputbar"><div class="chat-input-wrap">' +
-      '<textarea id="chat-input" rows="1" placeholder="发送给 ' + esc(agent.name) + '…（Enter 发送，LLM 改文档只进草稿）"></textarea>' +
-      '<button class="btn primary sm" data-act="chat-send">发送</button></div>' +
-      '<div class="chat-hints"><span>试问：' + esc(agent.persona) + '</span><span style="margin-left:auto">' + kbd('Enter') + ' 发送 · 权限见右栏</span></div></div>';
-  }
-  function bindChat(agent, cur, u) {
-    var search = $('#chat-search');
-    if (search) search.addEventListener('input', function () { u.search = this.value; paintSessListOnly(agent); });
-    var ta = $('#chat-input');
-    if (ta) {
-      ta.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(agent, cur, ta.value); }
-      });
-      ta.addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(120, this.scrollHeight) + 'px'; });
-    }
-    var scroll = $('#chat-scroll');
-    if (scroll) scroll.scrollTop = scroll.scrollHeight;
-  }
   function paintSessListOnly(agent) { render(); }
-  ACTIONS['chat-filter'] = function (el) { S.chatUi[S.params.agent].filter = el.dataset.f; render(); };
-  ACTIONS['chat-view'] = function (el) { S.chatUi[S.params.agent].view = el.dataset.v; render(); };
+  ACTIONS['chat-view'] = function (el) { S.chatUi[S.params.agent].view = el.dataset.v; if (S.chatUi[S.params.agent].sessionId) loadTranscript(S.params.agent, S.chatUi[S.params.agent].sessionId, el.dataset.v); else render(); };
   ACTIONS['chat-tab'] = function (el) { S.chatUi[S.params.agent].tab = el.dataset.t; render(); };
-  ACTIONS['chat-sess'] = function (el) { var u = S.chatUi[S.params.agent]; u.sessionId = el.dataset.id; u.tab = 'chat'; render(); };
-  ACTIONS['chat-pin'] = function (el, e) {
-    e.stopPropagation();
-    var s = byId(M.sessions, 'id', el.dataset.id);
-    if (s) { s.pinned = !s.pinned; toast(s.pinned ? '已置顶' : '已取消置顶', s.title); }
+  ACTIONS['chat-mode'] = function (el) { S.chatMode[S.params.agent] = el.dataset.m; render(); };
+  ACTIONS['chat-sess'] = function (el) {
+    var u = S.chatUi[S.params.agent];
+    u.sessionId = el.dataset.id; u.tab = 'chat'; u.view = 'chat';
     render();
   };
-  ACTIONS['chat-archive'] = function (el, e) {
-    e.stopPropagation();
-    var s = byId(M.sessions, 'id', el.dataset.id);
-    if (s) {
-      s.archived = !s.archived;
-      toast(s.archived ? '已归档' : '已取消归档（unarchive）', s.title + (s.archived ? ' · 归档行置灰，可通过「已归档」过滤恢复' : ''));
-      var u = S.chatUi[S.params.agent];
-      if (s.archived && u.sessionId === s.id) { u.sessionId = null; }
-    }
-    render();
-  };
+  // chat-pin/chat-archive 摘除：session store 行无置顶/归档客户端面（宿主权威态）——假动作按钮不冒充（红线 4）。
   ACTIONS['chat-new'] = function (el) {
     var agentName = el.dataset.agent || S.params.agent;
-    var runners = [
-      { id: 'dsh', name: '内嵌 dsh', desc: '默认 runner：宿主内 ctx.agents 父子机制，权限 ⊆ 父' },
-      { id: 'opencode', name: 'opencode cli', desc: '经 gotty-web 以 opencode cli 拉起，文件面操作' },
-      { id: 'claude-code', name: 'claude-code', desc: '经 gotty-web 以 claude-code 拉起' },
-      { id: 'gotty', name: 'gotty 终端', desc: '会话带终端 tab（网页终端直连）' }
-    ];
+    var runners = CHAT().runnerList();
     var sel = 'dsh';
-    openModal('<div class="modal-h"><span class="m-title">新建会话 · 运行器选择</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
+    openModal('<div class="modal-h"><span class="m-title">新建会话 · 运行器四选（cross-agent.md §5.7）</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
       '<div class="modal-b"><div class="runner-cards" id="runner-cards">' +
       runners.map(function (r) {
-        return '<div class="runner-card' + (r.id === sel ? ' sel' : '') + '" data-runner="' + r.id + '"><div class="rc-name">' + esc(r.name) + '</div><div class="rc-desc">' + esc(r.desc) + '</div></div>';
+        return '<div class="runner-card' + (r.id === sel ? ' sel' : '') + (r.enabled ? '' : ' disabled') + '" data-runner="' + r.id + '"' + (r.enabled ? '' : ' title="' + esc(r.why) + '"') + '><div class="rc-name">' + esc(r.name) +
+          (r.enabled ? '' : ' <span class="chip mute tiny">余量</span>') + '</div><div class="rc-desc">' + esc(r.desc) +
+          (r.enabled ? '' : '<div class="small faint">' + esc(r.why) + '</div>') + '</div></div>';
       }).join('') + '</div>' +
-      '<div class="small faint" style="margin-top:10px">上级委派 = 权限整包下发（token），子 agent 权限 ⊆ 父（' + esc(agentName) + ' 的 token 见右栏）。</div></div>' +
-      '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="sess-create">创建会话</button></div>');
+      '<div class="small faint" style="margin-top:10px">创建成功即 Apply 回填 Agent.status.currentSession（身份=SessionId，§5.7 #1）；不可用 runner 在册但禁用=诚实余量标注。</div></div>' +
+      '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="sess-create">创建会话（内嵌 dsh）</button></div>');
     $all('#runner-cards .runner-card').forEach(function (c) {
       c.addEventListener('click', function () {
+        var r = CHAT().runnerById(c.dataset.runner);
+        if (!r || !r.enabled) { toast('runner 余量', r ? r.why : '未知 runner', 'warn'); return; } // 诚实余量：不可用不冒充可选
         $all('#runner-cards .runner-card').forEach(function (x) { x.classList.remove('sel'); });
         c.classList.add('sel');
         sel = c.dataset.runner;
       });
     });
     $('#sess-create').addEventListener('click', function () {
-      var s = {
-        id: 'sess-' + agentName + '-' + (Date.now() % 100000), agent: agentName,
-        title: sel === 'gotty' ? '新终端会话' : '新会话', runner: sel,
-        created: new Date(), pinned: false, archived: false, tokens: 0,
-        messages: sel === 'gotty' ? [{ id: 'm-t0', role: 'agent', text: '终端会话已建立（gotty-web）。切到「终端」tab 敲命令：status / tick / help。', ts: new Date(), cards: [] }] : [{ id: 'm-t0', role: 'agent', text: '会话已建立。我的权限面与 owner instance 在右栏；文档修改我只提案进草稿。', ts: new Date(), cards: [] }],
-        traj: [{ ts: new Date(), kind: 'agent', label: '会话建立', detail: 'runner: ' + sel + '（token 整包下发）' }]
-      };
-      M.sessions.unshift(s);
-      closeModal();
-      var u = S.chatUi[agentName] = S.chatUi[agentName] || {};
-      u.sessionId = s.id;
-      u.tab = sel === 'gotty' ? 'term' : 'chat';
-      go('chat/' + agentName);
-      toast('会话已创建', s.id + ' · runner: ' + sel);
+      var ad = chatAd();
+      if (!ad.ready()) { toast('会话面缺席', 'ctx.sessions 未在册——创建面诚实禁用', 'warn'); return; }
+      var btn = this; btn.disabled = true;
+      ad.create({}).then(function (res) {
+        if (!res.ok) { btn.disabled = false; toast('创建失败', String(res.error || '').slice(0, 140), 'warn'); return; }
+        var owned = S.chatOwned[agentName] = S.chatOwned[agentName] || [];
+        if (owned.indexOf(res.id) < 0) owned.push(res.id);
+        closeModal();
+        var u = S.chatUi[agentName] = S.chatUi[agentName] || {};
+        u.sessionId = res.id; u.tab = 'chat'; u.view = 'chat';
+        go('chat/' + agentName);
+        toast('会话已创建（内嵌 dsh）', 'SessionId=' + res.id + ' · status.currentSession 回填中');
+        backfillCurrentSession(agentName, res.id);
+        // 显式命名锚：console 发起会话可识别（探针/审计双链锚）
+        ad.rename(res.id, 'console · ' + agentName);
+      });
     });
   };
+  /** Agent.status.currentSession 回填（身份=SessionId 的文档面落点，§5.7 #1/#2）：
+   *  读现文 → 追加/更新 status 块 → 既有 apply 通路（主体宿主注入，rv 乐观锁）。
+   *  已有 status 块的结构化合并=E5b 余量（诚实跳过并 toast，不盲写覆盖）。 */
+  function backfillCurrentSession(agentName, sessionId) {
+    var aref = liveAgentRef(agentName);
+    if (!aref) return;
+    LIVE.get('v1/objects/Agent/' + encodeURIComponent(agentName) + '?scope=' + encodeURIComponent(aref.scope)).then(function (b) {
+      var content = String(b.content || '');
+      if (/^status:/m.test(content)) {
+        toast('currentSession 未回填（诚实余量）', 'Agent 文档已有 status 块——结构化合并=E5b 余量，不盲写覆盖', 'warn');
+        return;
+      }
+      var startedAt = new Date().toISOString();
+      var block = '\nstatus:\n  currentSession:\n    id: ' + sessionId + '\n    startedAt: ' + startedAt + '\n    docsLoaded: []\n';
+      LIVE.apply({
+        kind: 'Agent', scope: aref.scope, name: agentName,
+        resourceVersion: b.resourceVersion,
+        content: content.replace(/\n*$/, '\n') + block,
+        fieldManager: 'console:chat-backfill',
+        reasonRef: 'console E5: chat session create'
+      }).then(function (res) {
+        if (res.ok) {
+          toast('currentSession 已回填', 'Agent/' + agentName + ' → rv' + (res.data && res.data.rv != null ? res.data.rv : '?') + '（身份=SessionId）');
+          LIVE.load().then(function () { if (S.route === 'chat') render(); });
+        } else {
+          toast('回填未落库（' + (res.status == null ? '传输层' : 'HTTP ' + res.status) + '）', String(res.error || '').slice(0, 140), 'warn');
+        }
+      });
+    }).catch(function (e) {
+      toast('回填预读失败', String((e && e.message) || e).slice(0, 140), 'warn');
+    });
+  }
   ACTIONS['chat-send'] = function () {
     var ta = $('#chat-input');
-    var agent = agentByName(S.params.agent);
-    var cur = byId(M.sessions, 'id', S.chatUi[S.params.agent].sessionId);
-    if (ta && agent && cur) sendChat(agent, cur, ta.value);
+    var u = S.chatUi[S.params.agent] || {};
+    if (ta && u.sessionId) sendChatReal(S.params.agent, u.sessionId, ta.value);
   };
-  function sendChat(agent, sess, text) {
-    text = (text || '').trim();
-    if (!text) return;
-    sess.messages.push({ id: 'm-u' + Date.now(), role: 'user', text: text, ts: new Date(), cards: [] });
-    sess.traj.push({ ts: new Date(), kind: 'user', label: '用户输入', detail: text.slice(0, 40) });
-    var reply = M.personaReply(agent.name, text);
-    var msg = { id: 'm-a' + Date.now(), role: 'agent', text: '', ts: new Date(), cards: [], streaming: true, meta: { tokens: 300 + Math.floor(Math.random() * 2200), steps: 1 } };
-    sess.messages.push(msg);
-    var u = S.chatUi[agent.name];
-    u.view = 'chat'; u.tab = 'chat';
-    render();
-    var full = reply.text;
-    var i = 0;
-    var t = addInterval(function () {
-      i += 2 + Math.floor(Math.random() * 3);
-      msg.text = full.slice(0, i);
-      var el = $all('#chat-scroll .msg-text');
-      var last = el[el.length - 1];
-      if (last && S.route === 'chat') {
-        last.textContent = msg.text;
-        last.insertAdjacentHTML('beforeend', '<span class="typing-caret"></span>');
-        var sc = $('#chat-scroll');
-        if (sc) sc.scrollTop = sc.scrollHeight;
-      }
-      if (i >= full.length) {
-        clearInterval(t);
-        msg.text = full;
-        msg.streaming = false;
-        msg.cards = reply.cards;
-        msg.meta.steps = 1 + Math.floor(Math.random() * 8);
-        sess.tokens += msg.meta.tokens;
-        sess.traj.push({ ts: new Date(), kind: 'agent', label: '回复（' + msg.meta.steps + ' 步 · ' + msg.meta.tokens + ' tok）', detail: full.slice(0, 40) });
-        reply.cards.forEach(function (c) {
-          if (c.type === 'op') sess.traj.push({ ts: new Date(), kind: 'tool', label: c.op + (c.target ? ' → ' + c.target : ''), detail: typeof c.payload === 'object' ? JSON.stringify(c.payload).slice(0, 60) : '' });
-          if (c.type === 'proposal') sess.traj.push({ ts: new Date(), kind: 'doc', label: '草稿提案 ' + c.doc, detail: c.title + '（未 Apply）' });
-          if (c.type === 'files') sess.traj.push({ ts: new Date(), kind: 'files', label: 'changed-files ×' + c.files.length, detail: c.files.map(function (f) { return f.path.split('/').pop(); }).join(', ') });
-        });
-        if (S.route === 'chat') render();
-      }
-    }, 14);
-  }
-  /* --- 仿 gotty 终端 --- */
-  function initTerminal(sess) {
-    var box = $('#term-box');
-    if (!box) return;
-    var T = S.term[sess.id] = S.term[sess.id] || { lines: [], started: false };
-    if (!T.started) {
-      T.started = true;
-      T.lines.push({ html: '<span class="t-dim">gotty-web · tty-0 · core-dsh（plugin: console，mock shell）</span>' });
-      T.lines.push({ html: '<span class="t-dim">输入 status / tick / help，或任意命令（echo 语义）。Esc 不影响终端。</span>' });
-      // 自动演示：status → tick → help
-      var script = M.termScript;
-      var k = 0;
-      function playNext() {
-        if (k >= script.length || S.route !== 'chat') return;
-        var step = script[k++];
-        T.lines.push({ html: '<span class="t-cmd">user@core:~$</span> ' + esc(step.cmd) });
-        step.out.forEach(function (o) { T.lines.push({ text: o }); });
-        paintTerm(box, T);
-        addTimer(playNext, 900);
-      }
-      paintTerm(box, T);
-      addTimer(playNext, 700);
-    } else paintTerm(box, T);
-    // 输入行
-    var input = document.createElement('div');
-    input.innerHTML = '<span class="t-cmd">user@core:~$</span> <span id="term-echo"></span><span class="caret"></span>';
-    input.style.marginTop = '6px';
-    box.appendChild(input);
-    var echo = $('#term-echo');
-    var handler = function (e) {
-      if (e.key === 'Enter') {
-        var cmd = echo.textContent;
-        echo.textContent = '';
-        runTermCmd(box, T, cmd);
-      } else if (e.key === 'Backspace') {
-        echo.textContent = echo.textContent.slice(0, -1);
-      } else if (e.key.length === 1) {
-        echo.textContent += e.key;
-      }
-    };
-    box.tabIndex = 0;
-    box.addEventListener('keydown', handler);
-    box.addEventListener('click', function () { box.focus(); });
-    addTimer(function () { box.focus(); }, 100);
-  }
-  function paintTerm(box, T) {
-    // 保留输入行（最后一个子元素）
-    var inputRow = box.lastElementChild;
-    box.innerHTML = T.lines.map(function (l) {
-      return '<div class="t-line">' + (l.html || esc(l.text)) + '</div>';
-    }).join('');
-    if (inputRow) box.appendChild(inputRow);
-    box.scrollTop = box.scrollHeight;
-  }
-  function runTermCmd(box, T, cmd) {
-    T.lines.push({ html: '<span class="t-cmd">user@core:~$</span> ' + esc(cmd) });
-    var c = cmd.trim();
-    var found = null;
-    M.termScript.forEach(function (s) { if (s.cmd === c) found = s; });
-    if (c === 'clear') { T.lines = []; }
-    else if (c === '') {}
-    else if (found) { found.out.forEach(function (o) { T.lines.push({ text: o }); }); }
-    else if (c.indexOf('doc ') === 0) {
-      var d = docByName(c.slice(4).trim());
-      T.lines.push(d ? { text: d.name + '  kind=' + d.kind + '  scope=' + d.scope + '  r' + d.revision + '  ' + (docHasDraft(d.name) ? 'DRAFT-PENDING' : 'clean') } : { text: 'doc not found: ' + c.slice(4) });
-    } else if (c.indexOf('ls') === 0) {
-      var scope = c.slice(2).trim() || 'systems';
-      var hits = scope === 'systems' ? M.systems.map(function (s) { return s.name + '/'; }) : M.docs.filter(function (d) { return d.scope.indexOf(scope) >= 0; }).slice(0, 8).map(function (d) { return d.name; });
-      T.lines.push({ text: hits.join('  ') || 'no match' });
-    } else {
-      T.lines.push({ text: 'mock-sh: ' + c.split(' ')[0] + ': command found（echo 语义，试 status / tick / help / ls / doc <name>）' });
-    }
-    paintTerm(box, T);
-  }
   /* ================= 屏 8：连接 ================= */
   function screenConnectors(view) {
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '连接' }]);
@@ -4369,60 +4781,56 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       '</div></div>';
   }
   /* ================= Agent / Session 详情页 ================= */
-  function screenAgent(view) {
-    var a = agentByName(S.params.name);
-    if (!a) { view.innerHTML = emptyBox('agent 不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '会话', go: 'chat/' + a.name }, { label: a.name + ' 详情' }]);
-    var children = Object.keys(M.agents).filter(function (n) { return M.agents[n].parent === a.name; });
-    var sess = M.sessions.filter(function (s) { return s.agent === a.name; });
-    view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(a.name) + '</h1>' + phaseChip(a.phase) + '<span class="chip kind">Agent</span></div>' +
-      '<div class="dh-sub">' + esc(a.persona) + ' · token: ' + esc(a.scopeSummary) + '</div></div>' +
-      '<div class="dh-actions"><button class="btn primary" data-act="go" data-go="chat/' + esc(a.name) + '">对话</button>' +
-      '<button class="btn" data-act="open-term" data-agent="' + esc(a.name) + '">终端</button></div></div>' +
-      '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">权限面</span></div><div class="card-b">' +
-      '<div class="kv"><span class="k">ConnectorOps</span><span class="v">' + a.perms.connectorops.map(function (c) { return '<span class="chip click mute small" data-act="go" data-go="connector/' + esc(c) + '">' + esc(c) + '</span>'; }).join(' ') + '</span>' +
-      '<span class="k">Ref</span><span class="v">' + a.perms.refs.map(function (r) { return '<span class="lk mono small" data-act="go" data-go="ref/' + encodeURIComponent(r) + '">' + esc(r) + '</span>'; }).join(' ') + '</span>' +
-      '<span class="k">Provider</span><span class="v">' + a.perms.providers.map(function (p) { return '<span class="lk mono small" data-act="go" data-go="provider/' + esc(p) + '">' + esc(p) + '</span>'; }).join(' ') + '</span>' +
-      '<span class="k">Role</span><span class="v">' + a.perms.roles.map(function (r) { return '<span class="lk mono small" data-act="go" data-go="role/' + esc(r) + '">' + esc(r) + '</span>'; }).join(' ') + '</span>' +
-      '<span class="k">owner</span><span class="v"><span class="lk mono" data-act="go" data-go="s/' + esc(a.instance.split('/')[0]) + '/i/' + esc(a.instance.split('/')[1]) + '">' + esc(a.instance) + '</span></span></div></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">父 / 子 agent</span></div><div class="mini-list">' +
-      '<div class="mini-row" data-act="go" data-go="' + (a.parent ? 'agent/' + esc(a.parent) : 'overview') + '"><svg class="ic"><use href="#cc-i-bot"/></svg><div class="mr-main"><div class="mono">' + esc(a.parent || '—（root）') + '</div><div class="mr-sub">parent（权限来源）</div></div></div>' +
-      (children.length ? children.map(function (c) { return '<div class="mini-row" data-act="go" data-go="agent/' + esc(c) + '"><svg class="ic"><use href="#cc-i-bot"/></svg><div class="mr-main"><div class="mono">' + esc(c) + '</div><div class="mr-sub">' + esc(M.agents[c].instance) + ' · 权限 ⊆ ' + esc(a.name) + '</div></div>' + phaseChip(M.agents[c].phase) + '</div>'; }).join('') : '<div class="mini-row"><span class="faint">无子 agent</span></div>') + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">sessions（' + sess.length + '）</span><span class="h-right lk small" data-act="go" data-go="chat/' + esc(a.name) + '">进对话 →</span></div><div class="mini-list">' +
-      sess.map(function (s) {
-        return '<div class="mini-row" data-act="go" data-go="session/' + esc(s.id) + '"><div class="mr-main"><div>' + esc(s.title) + (s.pinned ? ' 📌' : '') + (s.archived ? ' <span class="chip mute small">已归档</span>' : '') + '</div><div class="mr-sub mono">' + esc(s.id) + ' · ' + esc(s.runner) + ' · ' + (s.tokens / 1000).toFixed(1) + 'k tok</div></div><span class="faint mono small">' + fmtAgo(s.created) + '</span></div>';
-      }).join('') + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">最近任务</span></div><div class="card-b"><div class="kv">' +
-      '<span class="k">当前</span><span class="v">' + esc(a.lastTask) + '</span>' +
-      '<span class="k">alias</span><span class="v mono">' + esc(a.alias) + '</span>' +
-      '<span class="k">实时</span><span class="v"><span class="lamp acc pulse-dot"></span> ' + esc(a.phase) + ' · 心跳正常</span></div></div></div>' +
-      '</div></div>';
-  }
   function screenSession(view) {
-    var s = byId(M.sessions, 'id', S.params.id);
-    if (!s) { view.innerHTML = emptyBox('session 不存在', S.params.id); setCrumbs([{ label: 'Welcome', go: 'welcome' }]); return; }
-    var a = agentByName(s.agent);
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '会话', go: 'chat/' + s.agent }, { label: s.id }]);
-    var items = (s.traj || []).map(function (t, i) {
-      return '<div class="traj-item kind-' + esc(t.kind) + '"><div class="traj-rail"><div class="traj-dot"></div>' + (i < s.traj.length - 1 ? '<div class="traj-line"></div>' : '') + '</div>' +
-        '<div><div style="display:flex;gap:8px;align-items:center"><span class="traj-kind">' + esc(t.kind) + '</span><span class="traj-label">' + esc(t.label) + '</span><span class="mono faint small">' + fmtTime(t.ts) + '</span></div>' +
-        '<div class="traj-detail">' + esc(t.detail) + '</div></div></div>';
-    }).join('');
-    var msgCards = [];
-    s.messages.forEach(function (m) { (m.cards || []).forEach(function (c) { if (c.type === 'op') msgCards.push(c); }); });
-    var toolUses = (s.traj || []).filter(function (t) { return t.kind === 'tool'; }).length;
+    LIVE.ensure();
+    var ad = chatAd();
+    var sid = S.params.id;
+    var snap = ad.listSnapshot();
+    var row = snap.rows.filter(function (r) { return r.id === sid; })[0];
+    // 归属反查（哪个 agent 文档面证据命中该 session）：currentSession/agentRefs/console 发起三源
+    var owner = null;
+    liveChatAgents().forEach(function (n) {
+      if (owner) return;
+      var ev = agentSessionEvidence(n);
+      if (ev.ownedIds.indexOf(sid) >= 0) owner = n;
+    });
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '会话', go: owner ? 'chat/' + esc(owner) : 'welcome' }, { label: sid }]);
+    if (!row && !owner) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('session 不在宿主会话清单', sid) + '</div>';
+      return;
+    }
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(s.title) + '</h1><span class="runner-tag">' + esc(s.runner) + '</span>' + (s.archived ? '<span class="chip mute">已归档</span>' : '') + '</div>' +
-      '<div class="dh-sub mono">' + esc(s.id) + ' · agent: <span class="lk" data-act="go" data-go="agent/' + esc(s.agent) + '">' + esc(s.agent) + '</span> · ' + (s.tokens / 1000).toFixed(1) + 'k tok · ' + toolUses + ' 次工具调用</div></div>' +
-      '<div class="dh-actions"><button class="btn primary" data-act="chat-sess-go" data-id="' + esc(s.id) + '" data-agent="' + esc(s.agent) + '">切回 Chat 视图 →</button></div></div>' +
-      '<div class="statbar" style="grid-template-columns:repeat(4,1fr)">' +
-      '<div class="stat"><div class="st-num">' + s.messages.length + '</div><div class="st-label">消息数</div></div>' +
-      '<div class="stat"><div class="st-num">' + toolUses + '</div><div class="st-label">工具调用（trajectory）</div></div>' +
-      '<div class="stat"><div class="st-num">' + (s.tokens / 1000).toFixed(1) + 'k</div><div class="st-label">token 用量</div></div>' +
-      '<div class="stat"><div class="st-num">' + msgCards.length + '</div><div class="st-label">ConnectorOps 调用卡</div></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">Trajectory（事件时间线 · 与聊天流同源不同呈现）</span></div><div class="card-b">' + (items || '<div class="empty"><div class="e-title">轨迹为空</div></div>') + '</div></div></div>';
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1 class="mono" style="font-size:18px">' + esc(sid) + '</h1>' +
+      (row && row.running ? '<span class="chip ok tiny">running</span>' : '') + (row && row.blank ? '<span class="chip mute tiny">blank</span>' : '') + '</div>' +
+      '<div class="dh-sub mono">' + (row ? esc(row.title) + ' · cwd: ' + esc(row.cwd || '—') : '宿主清单行缺席（roster 投影范围外）') +
+      ' · agent: ' + (owner ? '<span class="lk" data-act="go" data-go="chat/' + esc(owner) + '">' + esc(owner) + '</span>' : '未归属（归属证据缺席=不冒充）') + '</div></div>' +
+      '<div class="dh-actions"><button class="btn primary" data-act="chat-sess-go" data-id="' + esc(sid) + '"' + (owner ? ' data-agent="' + esc(owner) + '"' : ' disabled') + '>切回 Chat 视图 →</button></div></div>' +
+      '<div class="card"><div class="card-h"><span class="h-title">Trajectory（session 事件页读面 · 与聊天流同源不同呈现）</span></div>' +
+      '<div class="card-b"><div id="sess-traj">' + liveSkeletonRows(3) + '</div></div></div></div>';
+    // 转录注水：归属 agent 缺席时用空声明集（全部工具卡按普通卡渲染——不冒充 ConnectorOps 判据）
+    var declaredOps = owner ? agentDeclaredOps(owner) : [];
+    ad.page(sid, {}).then(function (res) {
+      var el = $('#sess-traj');
+      if (!el) return;
+      if (!res.ok) {
+        el.innerHTML = '<div class="small faint">转录读面暂不可达（' + esc(res.error) + '）</div>';
+        return;
+      }
+      var items = CHAT().projectTranscript(res.records, declaredOps);
+      var html = items.map(function (it) {
+        var kindCls = it.kind === 'user' || it.kind === 'context' ? 'user' : it.kind === 'assistant' ? 'agent' : 'tool';
+        var label = it.kind === 'tool' ? (it.op + (it.connectorOps ? ' · ConnectorOps' : '')) : it.kind;
+        return '<div class="traj-item kind-' + kindCls + '"><div class="traj-rail"><div class="traj-dot"></div><div class="traj-line"></div></div>' +
+          '<div><div style="display:flex;gap:8px;align-items:center"><span class="traj-kind">' + esc(label) + '</span>' +
+          '<span class="mono faint small">seq ' + esc(it.seq) + '</span></div>' +
+          '<div class="traj-detail">' + esc(String(it.text || it.argsText || '').slice(0, 200)) + '</div></div></div>';
+      }).join('');
+      var toolUses = items.filter(function (it) { return it.kind === 'tool'; }).length;
+      el.innerHTML = '<div class="statbar" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px">' +
+        '<div class="stat"><div class="st-num">' + items.length + '</div><div class="st-label">转录行（事件读面）</div></div>' +
+        '<div class="stat"><div class="st-num">' + toolUses + '</div><div class="st-label">工具调用</div></div></div>' +
+        (html || '<div class="empty"><div class="e-title">轨迹为空</div></div>');
+    });
   }
   ACTIONS['chat-sess-go'] = function (el) {
     var u = S.chatUi[el.dataset.agent] = S.chatUi[el.dataset.agent] || {};
@@ -4962,6 +5370,23 @@ function ConsolePanel() {
 
 exports.inject = ['slots', 'layout']
 exports.apply = function applyClient(ctx) {
+  // E5 会话数据面（console-adoption.md §1.11；§3.7 裁决：数据源=dsh session store 不复制状态）：
+  // ctx.sessions=宿主会话清单/创建/prompt 真通路；ctx.remote.session=转录事件页读面；
+  // ctx.webTerminals=终端 roster（内置 PTY 为主）。三面都经 inject 回调软出现——
+  // 缺席宿主回调不启动，chat 屏按 __CC.chat.adapter.ready() 诚实降级（不冒充数据）。
+  try {
+    ctx.inject(['sessions', 'remote'], function (sub) {
+      __CC.chatFaces = {
+        sessions: Reflect.get(sub, 'sessions'),
+        remote: Reflect.get(sub, 'remote'),
+      }
+    })
+  } catch (e) { /* 无 inject 能力的极简宿主：chat 屏走 ready()=false 降级 */ }
+  try {
+    ctx.inject(['webTerminals'], function (sub) {
+      __CC.termFaces = { webTerminals: Reflect.get(sub, 'webTerminals') }
+    })
+  } catch (e) { /* 同上：终端 roster 降级为诚实空态 */ }
   ctx.slots.inject('main', function* () {
     yield ctx.slots.register({ name: 'main', key: PANEL_ID }, ConsolePanel)
     // 刷新可恢复：hash 是 console 路由而宿主面板选择已回到会话 → 重选本面板（不整页刷新）

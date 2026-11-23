@@ -46,6 +46,23 @@ function ConsolePanel() {
 
 exports.inject = ['slots', 'layout']
 exports.apply = function applyClient(ctx) {
+  // E5 会话数据面（console-adoption.md §1.11；§3.7 裁决：数据源=dsh session store 不复制状态）：
+  // ctx.sessions=宿主会话清单/创建/prompt 真通路；ctx.remote.session=转录事件页读面；
+  // ctx.webTerminals=终端 roster（内置 PTY 为主）。三面都经 inject 回调软出现——
+  // 缺席宿主回调不启动，chat 屏按 __CC.chat.adapter.ready() 诚实降级（不冒充数据）。
+  try {
+    ctx.inject(['sessions', 'remote'], function (sub) {
+      __CC.chatFaces = {
+        sessions: Reflect.get(sub, 'sessions'),
+        remote: Reflect.get(sub, 'remote'),
+      }
+    })
+  } catch (e) { /* 无 inject 能力的极简宿主：chat 屏走 ready()=false 降级 */ }
+  try {
+    ctx.inject(['webTerminals'], function (sub) {
+      __CC.termFaces = { webTerminals: Reflect.get(sub, 'webTerminals') }
+    })
+  } catch (e) { /* 同上：终端 roster 降级为诚实空态 */ }
   ctx.slots.inject('main', function* () {
     yield ctx.slots.register({ name: 'main', key: PANEL_ID }, ConsolePanel)
     // 刷新可恢复：hash 是 console 路由而宿主面板选择已回到会话 → 重选本面板（不整页刷新）

@@ -1238,7 +1238,7 @@
     { id: 'events', label: '事件', route: '#/events', icon: 'pulse' },
     { id: 'approvals', label: '审批', route: '#/approvals', icon: 'check', badge: 'approvals' },
     { id: 'connectors', label: '连接', route: '#/connectors', icon: 'plug' },
-    { id: 'chat-root', label: '会话', route: '#/chat/builtinRoot', icon: 'chat' }
+    { id: 'chat-root', label: '会话', route: '#/chat/root-agent', icon: 'chat' } // root-agent=动态锚（renderNav/palItems 经 navRouteOf 解析文档面在册 agent）
   ];
 
   // ---------- 全局 docs 视图路由 #/docs 需要的分组 ----------
