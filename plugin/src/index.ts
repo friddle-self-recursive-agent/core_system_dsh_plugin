@@ -431,18 +431,26 @@ export function mountAgentCommTools(ctx: any, bridge: CoreSystemBridge): void {
       const ag = Reflect.get(sub, 'agents')
       if (ag && typeof ag.get === 'function') faces.agents = ag
     })
+    // 四 op 工具注册（tools 服务就绪后；撞名=warn+跳过该 op 其余照常）
+    ctx.inject(['tools'], (sub: any) => {
+      const tools = Reflect.get(sub, 'tools')
+      if (!tools || typeof tools.register !== 'function') return // 防御面：inject 已保证，缺席即不注册
+      registerAgentCommTools(ctx, tools, (kind, args, caller) =>
+        executeAgentCommOp(kind, args, { core: bridge, ...faces, callerAgentId: caller }, mailbox))
+    })
+  } else if (ctx.tools && typeof ctx.tools.register === 'function') {
+    // 无 inject 能力宿主（测试假体/极简壳）：tools 直取容错
+    registerAgentCommTools(ctx, ctx.tools, (kind, args, caller) =>
+      executeAgentCommOp(kind, args, { core: bridge, ...faces, callerAgentId: caller }, mailbox))
   }
+}
 
-  const tools = ctx.tools
-  if (!tools || typeof tools.register !== 'function') {
-    ctx.logger?.warn?.('core-system: 宿主无 tools 服务——agent-comm 四 op 工具不注册（agent-comm 通道缺席）')
-    return
-  }
-
-  /** 共用 execute：注入 faces+bridge（cored 文档面解析）+mailbox 落账。 */
-  const run = (kind: (typeof AGENT_COMM_KINDS)[number], args: unknown, callerAgentId?: string): Promise<AgentCommResult> =>
-    executeAgentCommOp(kind, args, { core: bridge, ...faces, callerAgentId }, mailbox)
-
+/** 四 op 工具注册核（tools 面就绪后调用；run=注入 faces+bridge+mailbox 的分派闭包）。 */
+function registerAgentCommTools(
+  ctx: any,
+  tools: { register(definition: any): () => void },
+  run: (kind: (typeof AGENT_COMM_KINDS)[number], args: unknown, callerAgentId?: string) => Promise<AgentCommResult>,
+): void {
   const defs = [
     {
       name: 'dispatch',

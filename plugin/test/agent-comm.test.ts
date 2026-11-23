@@ -297,9 +297,15 @@ test('caller 缺席=拒（from 不可解析——对等面信任已注册发起�
 test('装配：四工具以协议 op 名裸注册（§5.3 agent 只见四个 op）+ 撞名防御', () => {
   assert.deepEqual(AGENT_COMM_TOOL_NAMES, ['dispatch', 'query', 'interrupt', 'inbox'])
   const registered: string[] = []
+  const fakeTools = { register: (d: any) => { registered.push(d.name); return () => {} } }
   const ctx: any = {
-    tools: { register: (d: any) => { registered.push(d.name); return () => {} } },
-    inject: (deps: string[], cb: (sub: any) => void) => cb({ sessionController: { prompt() {}, cancel() {} } }),
+    inject: (deps: string[], cb: (sub: any) => void) => {
+      const sub: any = {}
+      if (deps.includes('tools')) sub.tools = fakeTools
+      if (deps.includes('sessionController')) sub.sessionController = { prompt() {}, cancel() {} }
+      if (deps.includes('agents')) sub.agents = { get: () => undefined }
+      cb(sub)
+    },
     logger: { warn() {}, info() {} },
   }
   mountAgentCommTools(ctx, { url: 'http://x', scheme: null, kinds: null, get: async () => ({ ok: false, status: null, error: '' }), list: async () => ({ ok: false, error: '' }) })
@@ -309,10 +315,24 @@ test('装配：ctx.tools 缺席宿主=不注册不炸（headless 防御面）', 
   const ctx: any = { logger: { warn() {}, info() {} } }
   assert.doesNotThrow(() => mountAgentCommTools(ctx, { url: '', scheme: null, kinds: null, get: async () => ({ ok: false, status: null, error: '' }), list: async () => ({ ok: false, error: '' }) }))
 })
+test('装配：inject 回调不供给 tools 面（tools 服务缺席宿主）=不注册', () => {
+  const ctx: any = {
+    inject: (deps: string[], cb: (sub: any) => void) => cb({}),
+    logger: { warn() {}, info() {} },
+  }
+  mountAgentCommTools(ctx, { url: '', scheme: null, kinds: null, get: async () => ({ ok: false, status: null, error: '' }), list: async () => ({ ok: false, error: '' }) })
+  assert.ok(true, '不抛错即过')
+})
 test('装配：撞名工具=warn+跳过其余 op（防御式注册）', () => {
   const registered: string[] = []
+  const fakeTools = { register: (d: any) => { if (d.name === 'dispatch') throw new Error('duplicate tool name'); registered.push(d.name); return () => {} } }
   const ctx: any = {
-    tools: { register: (d: any) => { if (d.name === 'dispatch') throw new Error('duplicate tool name'); registered.push(d.name); return () => {} } },
+    inject: (deps: string[], cb: (sub: any) => void) => {
+      const sub: any = {}
+      if (deps.includes('tools')) sub.tools = fakeTools
+      if (deps.includes('sessionController')) sub.sessionController = { prompt() {}, cancel() {} }
+      cb(sub)
+    },
     logger: { warn() {}, info() {} },
   }
   mountAgentCommTools(ctx, { url: '', scheme: null, kinds: null, get: async () => ({ ok: false, status: null, error: '' }), list: async () => ({ ok: false, error: '' }) })
