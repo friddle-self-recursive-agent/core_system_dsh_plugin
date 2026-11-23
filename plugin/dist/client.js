@@ -4266,9 +4266,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     var snap = ad.listSnapshot();
     var ev = agentSessionEvidence(agentName);
     var groups = CHAT().attributedSessions(snap.rows, ev);
-    if (!u.sessionId || !snap.rows.some(function (r) { return r.id === u.sessionId; })) {
-      u.sessionId = (groups.mine[0] || groups.host[0] || {}).id || null;
-    }
+    // 选择=UI 态：手动/新建选中的 sessionId 保留（宿主清单可能滞后于 create 的 api-session/added）；
+    // 未选时才自动挑（本 agent 组优先）。行从清单消失且转录读面判 404 时由转录空态兜底。
+    if (!u.sessionId) u.sessionId = (groups.mine[0] || groups.host[0] || {}).id || null;
     var sessRow = function (r, badge) {
       return '<div class="sess-row' + (r.id === u.sessionId ? ' sel' : '') + '" data-act="chat-sess" data-id="' + esc(r.id) + '">' +
         '<div class="ss-title">' + (r.running ? '<span class="lamp ok" style="display:inline-block;margin-right:4px"></span>' : '') + esc(r.title) + '</div>' +
