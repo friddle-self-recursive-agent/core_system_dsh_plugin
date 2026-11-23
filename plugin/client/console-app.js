@@ -1972,8 +1972,9 @@
     var key = edKey(kind, scope, name);
     var stamp = S.route + '|' + S.segs.join('/');
     var faceP = LIVE.fetchObject(kind, scope, name);
-    var draftP = LIVE.get('v1/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
-      (scope ? '?scope=' + encodeURIComponent(scope) : '')).catch(function () { return null; }); // 404=无稿（常态）
+    var row = draftRowOf(kind, scope, name); // 草稿存在性=清单判别（无稿零请求——404 fetch 会进浏览器 console error，违 L36-06）
+    var draftP = row ? LIVE.get('v1/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
+      (scope ? '?scope=' + encodeURIComponent(scope) : '')).catch(function () { return null; }) : Promise.resolve(null);
     Promise.all([faceP, draftP]).then(function (rs) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return; // 路由已变=丢弃（不跨屏串数据）
       var face = rs[0], dr = rs[1];
@@ -2098,7 +2099,7 @@
     if (!el) return;
     if (tab === 'llm') { el.innerHTML = llmTabHtml(kind, scope, name); hydrateProposals(kind, scope, name); return; }
     if (tab === 'draft') { el.innerHTML = draftTabHtml(kind, scope, name); return; }
-    if (tab === 'hist') { el.innerHTML = '<div style="padding:8px 2px">' + liveSkeletonRows(2, 0) + '</div>'; hydrateHistory(kind, scope, name); return; }
+    if (tab === 'hist') { el.innerHTML = '<div id="ed-history" style="padding:8px 2px">' + liveSkeletonRows(2, 0) + '</div>'; hydrateHistory(kind, scope, name); return; } // 骨架带宿主 id——hydrate 注水点
     el.innerHTML = metaTabHtml(kind, scope, name); // meta
   }
 
@@ -2170,7 +2171,7 @@
     return '<div style="flex:1;overflow-y:auto;min-height:0">' + entries + diffBlock +
       (has ? '<div class="lk small" style="display:inline-block;margin:6px 0" data-act="draft-discard">弃稿（清空草稿，不落库）</div>' : '') + '</div>' +
       '<div class="apply-dock"><div class="hint">Apply = 唯一写路径：dry-run 三检查（scheme/权限/乐观锁）→ 落库 Revision+1 → DocApplied 必发 → 清稿。空草稿=无操作。</div>' +
-      '<button class="btn primary lg block" data-act="doc-apply" id="apply-dock-btn" ' + (has ? '' : 'disabled') + '>Apply（' + (has ? hunksOf(diffLines(ed.base, ed.working)) : 0) + ' 处变更）</button></div>';
+      '<button class="btn primary lg block" data-act="doc-apply" id="apply-dock-btn" ' + (has ? '' : 'disabled') + '>Apply（' + (has ? hunksOf(diffLines(ed.base, ed.working)) + ' 处变更' : '无变更') + '）</button></div>';
   }
 
   // 历史 tab：apply_log 投影（rev 流水的权威=审计账；git 权威在正文）。
