@@ -1,8 +1,11 @@
 // console-proto app.js（整体内嵌起点代码）手术注记：M←__CC.MOCK；ROOT 容器纪律（$/委托/键盘收进容器）；监听与 boot 移入 mountConsole（可卸载）；连接态灯三色 UI 更新（§1.5）；图标 id 加 cc- 前缀
+// E2 手术注记（console-adoption.md §1.8）：Welcome 大屏/系统树/系统详情/对象详情/事件详情五屏换 cored
+// 读面真数据（__CC.live，经 /core-console/api 宿主代理只读 GET）；其余屏保持 proto mock 待各自 E 轮替换。
 /* app.js — core console 原型逻辑（普通 script，无模块） */
 (function () {
   'use strict';
   var M = __CC.MOCK;
+  var LIVE = __CC.live; // E2 真数据层（console-live.js：cored 读面快照 + ensure/fetchObject）
   var ROOT = null; // 容器根（挂载时由 mountConsole 指定；$/委托/键盘一律收进容器，不触宿主全局）
 
   /* ================= 全局状态 ================= */
@@ -669,7 +672,10 @@
     renderNav(); updateCounters();
     view.scrollTop = 0;
   }
-  /* ================= 屏 0：Welcome 大屏 ================= */
+  /* ================= 屏 0：Welcome 大屏（E2：cored 读面真数据，console-ui.md 屏幕 0） =================
+   * 数据来源（无双源红线）：系统/实例=cored 对象枚举（scheme/objects）；阶段条=run 投影；
+   * 重要事件=event_log 归档（/v1/events）；草稿=草稿缓存清单。健康度合成口径写进 tooltip
+   * ——大数字不许是无出处黑盒。读面未就绪=骨架行（§1.4：不白屏不报错块）。 */
   function greeting() {
     var h = new Date().getHours();
     if (h < 5) return '夜深了，root';
@@ -678,110 +684,193 @@
     if (h < 19) return '下午好，root';
     return '晚上好，root';
   }
-  function devDeliveryStageState() {
-    var wf = wfByName('dev-delivery');
-    var run = wf.runs[0];
-    var tl = run.timeline;
-    function find(phase) { for (var i = 0; i < tl.length; i++) if (tl[i].phase === phase) return tl[i]; return null; }
-    var cur = tl.filter(function (t) { return t.state === 'current'; })[0];
-    var phaseOf = { analyze: 'Analyzing', gate: 'AwaitingApproval', plan: 'Planning', execute: 'Executing', verify: 'Verifying', deploy: 'Executing', report: 'Reporting' };
-    var curPhase = cur ? cur.phase : null;
-    return wf.stages.map(function (st) {
-      var ph = phaseOf[st.id];
-      var t = find(ph);
+  function liveSkeletonRows(n, pad) {
+    var out = '';
+    for (var i = 0; i < n; i++) {
+      out += '<div class="skel-row" style="padding:6px ' + (pad || 16) + 'px"><div class="skel" style="width:' +
+        (140 + (i % 3) * 60) + 'px"></div><div class="skel" style="width:60px"></div></div>';
+    }
+    return out;
+  }
+  function liveDegradedNote() {
+    return '<div class="small faint" style="padding:8px 16px">cored 读面暂不可达（' + esc(LIVE.state.err || '未就绪') +
+      '）——保留骨架，恢复后自动整装替换（连接态灯见右下）</div>';
+  }
+  function liveHealth() {
+    var st = LIVE.state;
+    var systems = LIVE.refs('ServiceDesc');
+    var instances = LIVE.refs('ServiceInstance');
+    var drifts = LIVE.refs('DriftReport');
+    var events24 = st.events.filter(function (e) {
+      var t = Date.parse(e.ts);
+      return !isNaN(t) && (Date.now() - t) < 86400000;
+    }).length;
+    var approvals = st.events.filter(function (e) { return e.type === 'ApprovalNeeded'; }).length;
+    var started = (st.runMeta && st.runMeta.started) || 0;
+    var failed = st.runs.filter(function (r) { return r.status === 'failed'; }).length;
+    // InSync 率=phase=InSync 实例占比（console-ui.md 屏幕 0 口径的落地投影：instance status
+    // 回写在正文，live 层逐个现读——现势 0 实例=n/a，tooltip 给构成不冒充 100%）。
+    var insyncCount = instances.filter(function (o) {
+      return (st.instanceStatus[o.kind + '/' + o.scope + '/' + o.name] || {}).phase === 'InSync';
+    }).length;
+    return {
+      systems: systems, instances: instances, insyncCount: insyncCount, drifts: drifts.length, events24: events24,
+      approvals: approvals, started: started, failed: failed,
+      failedRate: started ? Math.round(failed / started * 100) : null,
+      truncated: st.events.length >= 100
+    };
+  }
+  function welcomeStageStrip() {
+    // dev-delivery 阶段条（console-ui.md 屏幕 0）：run 投影的相位落点→阶段态。run=触发面
+    // 受理投影（status: triggered|running|suspended|failed），非终态推进不冒充执行完毕。
+    var run = LIVE.state.runs.filter(function (r) { return r.workflow === 'dev-delivery'; })[0] || null;
+    var stages = [
+      { id: 'trigger', label: '触发' }, { id: 'analyze', label: 'Analyze' }, { id: 'gate', label: 'Gate' },
+      { id: 'plan', label: 'Plan' }, { id: 'execute', label: 'Execute' }, { id: 'verify', label: 'Verify' },
+      { id: 'deploy', label: 'Deploy' }, { id: 'report', label: 'Report' }
+    ];
+    var phaseMap = { Analyzing: 'analyze', AwaitingApproval: 'gate', Planning: 'plan', Executing: 'execute',
+      Verifying: 'verify', Deploying: 'deploy', Reporting: 'report' };
+    var curId = run ? (phaseMap[run.phase] || null) : null;
+    var curIdx = stages.findIndex(function (s) { return s.id === curId; });
+    var failed = !!run && run.status === 'failed';
+    var suspended = !!run && run.status === 'suspended';
+    var shown = stages.map(function (st, i) {
       var state = 'wait';
-      if (t && t.state === 'done') state = 'done';
-      if (curPhase && ph === curPhase) state = (st.id === 'gate') ? 'wait' : 'current';
-      if (st.id === 'gate') { state = find('AwaitingApproval') ? 'wait' : (curPhase && curPhase !== 'AwaitingApproval' && t ? 'done' : 'done'); if (curPhase === 'AwaitingApproval') state = 'wait'; }
-      return {
-        id: st.id, label: st.label, note: st.note, state: state,
-        dur: t && t.dur ? t.dur + 'm' : (state === 'current' ? '进行中' : '—'),
-        detail: t ? t.note : st.note
-      };
+      if (curIdx >= 0) state = i < curIdx ? 'done' : i === curIdx ? (failed ? 'bad' : 'current') : 'wait';
+      if (st.id === 'trigger' && curIdx >= 0 && !failed) state = 'done';
+      var note = '—';
+      if (run) {
+        if (st.id === curId) note = failed ? '失败' : suspended ? '等待批准' : '进行中';
+        else if (state === 'done') note = '已过';
+      }
+      return { id: st.id, label: st.label, state: state, note: note };
     });
+    return { run: run, stages: shown, suspended: suspended };
+  }
+  function welcomeBizTitle(e) {
+    // 业务化标题=展示层生成（console-ui.md 屏幕 0：不入库为准）
+    var involved = e.involved || '';
+    switch (e.type) {
+      case 'ApprovalNeeded': return '有审批在等你：' + involved;
+      case 'Escalate': return '升级上报：' + involved;
+      case 'DocApplied': return '文档落库：' + involved;
+      case 'HeartbeatLost': return '心跳丢失：' + involved;
+      case 'MetricThreshold': return '指标越线：' + involved;
+      case 'ExternalChanged': return '外部变化：' + involved;
+      case 'ReconcileTick': return '定时巡检一轮';
+      default: return e.type + (involved ? '：' + involved : '');
+    }
   }
   function screenWelcome(view) {
-    var h = healthScore();
-    var cls = h.score >= 90 ? 'good' : h.score >= 70 ? 'mid' : 'bad';
-    var stages = devDeliveryStageState();
-    var wfs = wfByName('dev-delivery');
+    LIVE.ensure();
+    var st = LIVE.state;
     setCrumbs([{ label: 'Welcome' }]);
-    var cells = M.systems.map(function (s) {
-      var lit = s.phase === 'InSync' ? 'lit-ok' : s.phase === 'Drifting' ? 'lit-warn' : s.phase === 'Remediating' ? 'lit-acc' : 'lit-esc';
-      return '<div class="w-insync-cell ' + lit + '" data-act="go" data-go="s/' + s.name + '" title="' + esc(s.name + ' · ' + s.phase) + '"><span class="cell-tip">' + esc(s.name) + '</span></div>';
+    var h = liveHealth();
+    var cells = h.systems.map(function (s) {
+      return '<div class="w-insync-cell lit-ok" data-act="go" data-go="s/' + esc(s.name) +
+        '" title="' + esc(s.name + ' · ServiceDesc r' + s.resourceVersion) + '"><span class="cell-tip">' + esc(s.name) + '</span></div>';
     }).join('');
-    var stagesHtml = stages.map(function (st, i) {
-      var dot = st.state === 'done' ? '✓' : (i + 1);
-      return '<div class="w-stage ' + st.state + '" data-act="go" data-go="wf/dev-delivery" title="跳转 dev-delivery 运行详情">' +
-        '<div class="w-stage-dot">' + dot + '</div><div class="ws-name">' + esc(st.label) + '</div>' +
-        '<div class="ws-sub">' + esc(st.dur) + '</div><div class="ws-note">' + esc(st.note) + '</div></div>';
+    var insyncPct = h.instances.length
+      ? Math.round(h.insyncCount / h.instances.length * 100) + '%'
+      : '—';
+    var strip = welcomeStageStrip();
+    var stagesHtml = strip.stages.map(function (sg) {
+      var dot = sg.state === 'done' ? '✓' : (sg.state === 'bad' ? '!' : sg.label.charAt(0));
+      return '<div class="w-stage ' + sg.state + '" data-act="go" data-go="wf/dev-delivery" title="跳转 dev-delivery（对象详情；运行管理 E3 落地）">' +
+        '<div class="w-stage-dot">' + dot + '</div><div class="ws-name">' + esc(sg.label) + '</div>' +
+        '<div class="ws-sub">' + esc(sg.note) + '</div></div>';
     }).join('');
-    var svcHtml = M.systems.map(function (s) {
-      var dN = openDrifts().filter(function (d) { return d.scope === 'systems/' + s.name; }).length;
-      var desc = s.phase === 'Drifting' ? '漂移未解决 ' + dN + ' 条，修复循环进行中'
-        : s.phase === 'Remediating' ? 'gotty-web 挂载重建 attempt 1/3'
-        : s.phase === 'Escalated' ? 'prod 门禁无人在环，等待 root'
-        : '对账正常，observedGeneration 已追平';
-      return '<div class="w-svc" data-act="go" data-go="s/' + s.name + '">' +
-        '<span class="lamp ' + (PHASE_CLS[s.phase] || 'mute') + ' ' + (PHASE_PULSE[s.phase] || '') + '" style="width:10px;height:10px"></span>' +
-        '<div class="ws-main"><div class="ws-title">' + esc(s.name) + '</div><div class="ws-desc">' + esc(desc) + '</div></div>' +
-        '<span class="ws-chip">' + phaseChip(s.phase) + '</span></div>';
+    var svcHtml = h.systems.map(function (s) {
+      var inScope = function (k) { return LIVE.refs(k).filter(function (o) { return o.scope === s.name || o.scope === 'systems/' + s.name; }); };
+      var wfs = inScope('Workflow').length;
+      var docs = 0;
+      LIVE.state.kinds.forEach(function (kd) {
+        if (kd.name === 'ServiceDesc') return;
+        docs += inScope(kd.name).length;
+      });
+      return '<div class="w-svc" data-act="go" data-go="s/' + esc(s.name) + '">' +
+        '<span class="lamp ok" style="width:10px;height:10px"></span>' +
+        '<div class="ws-main"><div class="ws-title">' + esc(s.name) + '</div><div class="ws-desc">ServiceDesc r' + s.resourceVersion +
+        ' · workflow ' + wfs + ' · 对象 ' + docs + '</div></div>' +
+        '<span class="ws-chip">' + phaseChip('InSync') + '</span></div>';
     }).join('');
-    // 重要事件（业务化标题）
-    var bizEvents = M.events.filter(function (e) { return e.lane === 'event'; }).slice(0, 60).map(function (e) {
-      var lvl = e.level === 'fatal' ? 'critical' : e.level === 'warn' ? 'high' : 'info';
-      var title = e.msg;
-      if (e.kind === 'Escalated') title = '部署 prod 待审批：' + e.msg;
-      else if (e.kind === 'ApprovalNeeded') title = '有审批在等你：' + e.msg;
-      else if (e.kind === 'MetricThreshold') title = '指标越线：' + e.msg;
-      else if (e.kind === 'DocApplied') title = '文档落库：' + e.msg;
-      else if (e.kind === 'ExternalChanged' && e.level === 'warn') title = '外部变化需关注：' + e.msg;
-      return { e: e, lvl: lvl, title: title };
-    });
+    if (!svcHtml) svcHtml = liveSkeletonRows(2);
     var lvlFilter = S.wImpLevel;
-    var shown = bizEvents.filter(function (x) { return lvlFilter === 'all' || x.lvl === lvlFilter; }).slice(0, 10);
-    var evHtml = shown.map(function (x) {
+    var lvlMap = { fatal: 'critical', error: 'critical', warn: 'high', info: 'info' };
+    var bizEvents = LIVE.state.events.map(function (e) {
+      return { e: e, lvl: lvlMap[e.level] || 'info', title: welcomeBizTitle(e) };
+    }).filter(function (x) { return lvlFilter === 'all' || x.lvl === lvlFilter; }).slice(0, 10);
+    var evHtml = bizEvents.map(function (x) {
       var dotc = x.lvl === 'critical' ? 'var(--danger)' : x.lvl === 'high' ? 'var(--warn)' : 'var(--accent)';
-      var lnk = x.e.link || '#/event/' + x.e.id;
+      var obj = x.e.involved || '';
+      var objLink = '';
+      if (obj) {
+        var segs = obj.split('/');
+        objLink = '<span class="w-ev-obj"><span class="lk mono small" data-act="go" data-go="doc/' +
+          esc(segs.slice(0, -1).map(encodeURIComponent).join('/')) + '/' + esc(encodeURIComponent(segs[segs.length - 1])) + '">' + esc(obj) + '</span></span>';
+      }
       return '<div class="w-ev-item"><span class="w-ev-dot" style="background:' + dotc + '"></span>' +
-        '<span class="w-ev-title">' + esc(x.title) + '</span>' +
-        '<span class="w-ev-obj"><span class="lk mono small" data-act="go" data-go="' + esc(lnk.replace('#/', '')) + '">' + esc(x.e.object) + '</span></span>' +
-        '<span class="w-ev-time mono">' + fmtTime(x.e.ts) + '</span></div>';
+        '<span class="w-ev-title">' + esc(x.title) + '</span>' + objLink +
+        '<span class="w-ev-time mono">' + esc(String(x.e.ts).replace('T', ' ').slice(5, 16)) + '</span></div>';
     }).join('');
-    if (!evHtml) evHtml = '<div class="empty" style="padding:24px"><div class="e-title">该级别暂无事件</div></div>';
+    if (!evHtml) {
+      evHtml = st.status === 'loading' ? liveSkeletonRows(3)
+        : '<div class="empty" style="padding:22px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">归档窗内暂无事件</div><div>event_log 为空：文档库 bootstrap 阶段尚无 Apply/触发流水（事件经 Apply 与注入产生）</div></div>';
+    }
+    if (st.status === 'degraded') evHtml = liveSkeletonRows(2) + liveDegradedNote();
+    var healthTip = '健康度构成（console-ui.md 屏幕 0 口径）：InSync 率=status.phase=InSync 实例/全部实例' +
+      '（现势 ServiceInstance 在册 ' + h.instances.length + ' → ' + (h.instances.length ? insyncPct : 'n/a——无实例在册不冒充 100%') + '）；' +
+      'drift=DriftReport 在册 ' + h.drifts + '；审批积压=ApprovalNeeded 归档 ' + h.approvals + '；' +
+      '24h 失败率=run 终态 failed ' + h.failed + '/' + h.started + (h.failedRate == null ? '（暂无 run）' : '=' + h.failedRate + '%');
+    var stageNote = strip.run
+      ? '最近一轮 ' + esc(strip.run.workflow) + ' · phase ' + esc(strip.run.phase) + ' · ' + esc(strip.run.status) +
+        (strip.suspended ? '（闸锚挂起——等待批准信号）' : '')
+      : '暂无 run：等待触发（DocApplied/ExternalChanged 事件或 timer resync）';
+    var loading = st.status === 'loading';
     view.innerHTML = '<div class="welcome">' +
-      '<div class="w-hello"><h1>' + esc(greeting()) + '</h1><span class="w-date">' + fmtDate(new Date()) + ' · core console proto · 全部为 mock 数据</span></div>' +
+      '<div class="w-hello"><h1>' + esc(greeting()) + '</h1><span class="w-date">' + fmtDate(new Date()) +
+      ' · 数据源=cored 读面（/core-console/api 代理 · 只读 GET）</span></div>' +
       '<div class="w-health-row">' +
-        '<div class="w-health ' + cls + '" title="健康度构成：100 − Escalated×' + 4 + '（' + h.esc + '） − 未解决drift×2（' + h.drift + '） − 待审批×1（' + h.pend + '） − 非InSync系统×2（' + (6 - h.insync) + '）' +
-          ' = ' + h.score + '">' +
-          '<div class="w-health-num">' + h.score + '<span class="unit">/100</span></div>' +
-          '<div class="w-health-meta"><b>业务健康度</b><br>构成见 tooltip · 悬停查看</div>' +
+        '<div class="w-health ' + (h.failedRate == null ? 'mid' : h.failedRate >= 90 ? 'good' : h.failedRate >= 70 ? 'mid' : 'bad') + '" title="' + esc(healthTip) + '">' +
+          '<div class="w-health-num">' + (h.failedRate == null ? '—' : h.failedRate) + '<span class="unit">' + (h.failedRate == null ? '' : '%') + '</span></div>' +
+          '<div class="w-health-meta"><b>24h 失败率</b><br>构成见 tooltip · 悬停查看</div>' +
         '</div>' +
         '<div class="w-insync">' +
-          '<div class="w-insync-num">' + h.insync + '<span class="dim">/6</span> <span class="small muted">系统 InSync</span></div>' +
-          '<div class="w-insync-bar">' + cells + '</div>' +
-          '<div class="small faint">漂移 ' + h.drift + ' · 待审批 ' + h.pend + ' · Escalated ' + h.esc + '</div>' +
+          '<div class="w-insync-num">' + h.systems.length + '<span class="dim"> 系统</span> <span class="small muted">' +
+            h.instances.length + ' 实例</span></div>' +
+          '<div class="w-insync-bar">' + (cells || '<span class="small faint">系统树见左侧导航</span>') + '</div>' +
+          '<div class="small faint">InSync 率 ' + esc(insyncPct) + ' · drift ' + h.drifts + ' · 待审批 ' + h.approvals +
+            ' · run 受理 ' + h.started + '</div>' +
         '</div>' +
         '<div class="w-quick">' +
           '<button class="btn" data-act="manual-tick"><svg class="ic"><use href="#cc-i-refresh"/></svg>手动触发一轮</button>' +
           '<button class="btn" data-act="new-goal"><svg class="ic"><use href="#cc-i-plus"/></svg>新建 Goal</button>' +
-          '<button class="btn primary" data-act="go" data-go="chat/builtinRoot"><svg class="ic"><use href="#cc-i-chat"/></svg>与 root 对话</button>' +
+          '<button class="btn primary" data-act="go" data-go="agent/core-headless"><svg class="ic"><use href="#cc-i-chat"/></svg>与 root 对话</button>' +
         '</div>' +
       '</div>' +
-      '<div class="w-stagebar"><div class="sec-title">默认流转 · dev-delivery（最近一轮 #' + wfs.runs[0].no + '，点击阶段进入运行管理）</div>' +
-        '<div class="w-stages">' + stagesHtml + '</div></div>' +
+      '<div class="w-stagebar"><div class="sec-title">默认流转 · dev-delivery（点击阶段进运行详情）</div>' +
+        '<div class="small faint" style="margin:2px 0 6px">' + esc(stageNote) + '</div>' +
+        '<div class="w-stages">' + (loading ? liveSkeletonRows(1, 0) : stagesHtml) + '</div></div>' +
       '<div class="sec-title">服务状态（Service 关注行）</div>' +
       '<div class="w-services">' + svcHtml + '</div>' +
-      '<div class="sec-title">最近重要事件</div>' +
+      '<div class="sec-title">最近重要事件（event_log 归档' + (h.truncated ? ' · 显示最近 100 条' : '') + '）</div>' +
       '<div class="w-ev-filter">' +
         [['all', '全部'], ['critical', 'critical'], ['high', 'high'], ['info', 'info']].map(function (f) {
-          return '<span class="fchip' + (f[0] === 'crit' ? ' crit' : '') + (S.wImpLevel === f[0] ? ' on' : '') + '" data-act="w-ev-level" data-lv="' + f[0] + '">' + f[1] + '</span>';
+          return '<span class="fchip' + (S.wImpLevel === f[0] ? ' on' : '') + '" data-act="w-ev-level" data-lv="' + f[0] + '">' + f[1] + '</span>';
         }).join('') +
       '</div>' +
       '<div class="card"><div class="card-b" style="padding:6px 16px">' + evHtml + '</div></div>' +
       '</div>';
   }
   ACTIONS['w-ev-level'] = function (el) { S.wImpLevel = el.dataset.lv; render(); };
+  // 快捷动作（E2 诚实投影：写路径=Apply，未开启写面的装配不下发假回执）
+  ACTIONS['manual-tick'] = function () {
+    toast('只读装配不下发手动触发', '写路径唯一入口=POST /v1/apply（--allow-apply；E3 运行管理接 Apply override 闭环）', 'warn');
+  };
+  ACTIONS['new-goal'] = function () {
+    toast('新建 Goal 由文档编辑器落地（E4）', 'LLM 草稿 → 人点 Apply → Revision+1 全链路（apply.md §1/§6）', 'warn');
+  };
 
   /* ================= 屏 1：总览（服务关注区） ================= */
   function screenOverview(view) {
@@ -840,98 +929,80 @@
       '</div></div>';
   }
 
-  /* ================= 屏 2：系统树 ================= */
-  function treeDocNode(d, depth) {
-    return '<div class="tree-node"><div class="tree-row" style="padding-left:' + (12 + depth * 22) + 'px" data-act="go" data-go="doc/' + d.name + '">' +
-      '<span class="t-caret"></span><svg class="ic" style="color:#5b6378"><use href="#cc-i-doc"/></svg>' +
-      '<span class="t-name">' + esc(d.name) + '</span>' + kindBadge(d.kind) + draftDot(docHasDraft(d.name)) +
-      '<span class="t-meta"><span class="t-rev">r' + d.revision + '</span>' + statusChip(d.status === 'Closed' ? 'Idle' : (d.status === 'Open' || d.status === 'Escalated' || d.status === 'Remediating' ? d.status : 'InSync')) + '</span></div></div>';
+  /* ================= 屏 2：系统树（E2：cored 读面真数据，console-ui.md 屏幕 2） =================
+   * 第一层树全屏化 + docs 一等子树：Global（builtin/global）→ 系统（ServiceDesc）→
+   * instances / workflows / workservices / docs 全展开。文档节点与资源节点完全同构渲染
+   * （kind 徽章 / rev / 草稿圆点）；树上任何标识符可点 → 对象详情（只读 viewer，E4 起升编辑器）。
+   * 数据=cored 读面（scheme kinds + 逐 kind 对象枚举 + 草稿缓存清单）——子层懒展开=前端分组
+   * （数据已全量在册，树上过滤为前端过滤）。 */
+  function treeDraftSet() {
+    var set = {};
+    LIVE.state.drafts.forEach(function (d) { set[d.kind + '/' + d.scope + '/' + d.name] = true; });
+    return set;
   }
-  function treeSystemChildren(sysName) {
-    var sys = sysByName(sysName);
+  function treeObjRow(o, depth, set) {
+    var path = encodeURIComponent(o.kind) + '/' + encodeURIComponent(o.scope) + '/' + encodeURIComponent(o.name);
+    return '<div class="tree-row" style="padding-left:' + depth + 'px" data-act="go" data-go="doc/' + path + '">' +
+      '<span class="t-caret"></span><svg class="ic" style="color:#5b6378"><use href="#cc-i-doc"/></svg>' +
+      '<span class="t-name">' + esc(o.name) + '</span>' + kindBadge(o.kind) + draftDot(set[o.kind + '/' + o.scope + '/' + o.name]) +
+      '<span class="t-meta"><span class="t-rev">r' + o.resourceVersion + '</span></span></div>';
+  }
+  function treeGroup(key, label, count, depth, icon, kidsHtml) {
+    var open = S.treeOpen[key];
+    return '<div class="tree-node"><div class="tree-row" style="padding-left:' + depth + 'px" data-act="tree-toggle" data-key="' + esc(key) + '">' +
+      '<span class="t-caret' + (open ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#' + icon + '"/></svg>' +
+      '<span class="t-name" style="font-family:var(--sans);font-weight:600">' + esc(label) + '</span>' +
+      '<span class="t-meta"><span>' + count + '</span></span></div>' +
+      (open ? '<div class="tree-children">' + kidsHtml + '</div>' : '') + '</div>';
+  }
+  function inScopeObjects(sysName) {
+    // scope 匹配：现势文档库 scope=系统名裸名（layout.md 物化）；兼容 'systems/<name>' 前缀形。
+    var hit = {};
+    var rows = [];
+    LIVE.state.kinds.forEach(function (kd) {
+      var objs = LIVE.refs(kd.name).filter(function (o) { return o.scope === sysName || o.scope === 'systems/' + sysName; });
+      if (objs.length) { hit[kd.name] = objs; rows = rows.concat(objs); }
+    });
+    return { byKind: hit, rows: rows };
+  }
+  function treeSystemChildren(sysName, set, ql) {
     var kids = '';
-    // 文档（与资源完全同构的行）
-    var sdocs = sysDocs(sysName);
-    kids += '<div class="tree-node"><div class="tree-row" style="padding-left:34px" data-act="tree-toggle" data-key="docs:' + sysName + '">' +
-      '<span class="t-caret' + (S.treeOpen['docs:' + sysName] ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-folder"/></svg>' +
-      '<span class="t-name" style="font-family:var(--sans);font-weight:600">docs</span>' + kindBadge(DOC_GROUP) +
-      '<span class="t-meta"><span>' + sdocs.length + ' 对象</span></span></div>';
-    if (S.treeOpen['docs:' + sysName]) {
-      kids += '<div class="tree-children' + (S.treeLoaded['docs:' + sysName] ? '' : ' skeletonizing') + '" id="tc-docs-' + esc(sysName) + '">' +
-        (S.treeLoaded['docs:' + sysName] ? sdocs.map(function (d) { return treeDocNode(d, 2); }).join('') :
-          '<div class="skel-row" style="padding-left:56px"><div class="skel" style="width:180px"></div><div class="skel" style="width:60px"></div></div><div class="skel-row" style="padding-left:56px"><div class="skel" style="width:220px"></div><div class="skel" style="width:60px"></div></div><div class="skel-row" style="padding-left:56px"><div class="skel" style="width:150px"></div><div class="skel" style="width:60px"></div></div>') +
-        '</div>';
-    }
-    kids += '</div>';
+    var sc = inScopeObjects(sysName);
+    var match = function (o) { return !ql || (o.name + ' ' + o.kind + ' ' + o.scope).toLowerCase().indexOf(ql) >= 0; };
     // instances
-    var insts = sysInstances(sysName);
-    kids += '<div class="tree-node"><div class="tree-row" style="padding-left:34px" data-act="tree-toggle" data-key="inst:' + sysName + '">' +
-      '<span class="t-caret' + (S.treeOpen['inst:' + sysName] ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-db"/></svg>' +
-      '<span class="t-name" style="font-family:var(--sans);font-weight:600">instances</span><span class="t-meta"><span>' + insts.length + '</span></span></div>';
-    if (S.treeOpen['inst:' + sysName]) {
-      kids += '<div class="tree-children">' + insts.map(function (i) {
-        var chips = i.agents.map(function (a) { return '<span class="chip click mute" data-act="go" data-go="agent/' + a + '"><svg class="ic"><use href="#cc-i-bot"/></svg>' + esc(a) + '</span>'; }).join('');
-        return '<div class="tree-node"><div class="tree-row" style="padding-left:56px" data-act="go" data-go="s/' + sysName + '/i/' + i.name + '">' +
-          '<span class="t-caret"></span><span class="t-name">' + esc(i.name) + '</span><span class="chip kind">ServiceInstance</span>' +
-          '<span class="t-meta">' + chips + phaseChip(i.phase) + '</span></div></div>';
-      }).join('') + '</div>';
-    }
-    kids += '</div>';
-    // workflows
-    var wfs = M.workflows.filter(function (w) { return w.scope === 'systems/' + sysName; });
-    if (!wfs.length) wfs = M.workflows.filter(function (w) { return w.scope === 'global'; });
-    kids += '<div class="tree-node"><div class="tree-row" style="padding-left:34px" data-act="tree-toggle" data-key="wf:' + sysName + '">' +
-      '<span class="t-caret' + (S.treeOpen['wf:' + sysName] ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-flow"/></svg>' +
-      '<span class="t-name" style="font-family:var(--sans);font-weight:600">workflows</span><span class="t-meta"><span>' + wfs.length + '</span></span></div>';
-    if (S.treeOpen['wf:' + sysName]) {
-      kids += '<div class="tree-children">' + wfs.map(function (w) {
-        return '<div class="tree-row" style="padding-left:56px" data-act="go" data-go="wf/' + w.name + '">' +
-          '<span class="t-caret"></span><span class="t-name">' + esc(w.name) + '</span>' + (w.builtin ? '<span class="chip mute small">builtin</span>' : '') +
-          '<span class="t-meta"><span class="mono">' + w.runsTotal + ' runs</span>' + phaseChip(w.phase) + (w.enabled ? '' : '<span class="chip mute">disabled</span>') + '</span></div>';
-      }).join('') + '</div>';
-    }
-    kids += '</div>';
-    // workservices → connectorops / providers / refs
-    var wss = M.workservices.filter(function (w) { return w.scope.indexOf(sysName) >= 0; });
-    var cops = M.connectorops.filter(function (c) { return sysName === 'connector' || sysName === 'storage-system' || sysName === 'developer-system' && (c.name === 'onedev-ci' || c.name === 'agent-comm'); });
-    var provs = M.providers.filter(function (p) { return p.scope.indexOf(sysName) >= 0; });
-    var rfs = M.refs.filter(function (r) { return r.to === sysName; });
-    var wssAll = wss.length ? wss : (sysName === 'connector' ? M.workservices : []);
-    var resKids = wssAll.map(function (w) {
-      var copKids = M.connectorops.filter(function (c) { return c.workService === w.name; }).map(function (c) {
-        return '<div class="tree-row" style="padding-left:100px" data-act="go" data-go="connector/' + c.name + '">' +
-          '<span class="t-caret"></span><span class="t-name">' + esc(c.name) + '</span><span class="chip kind">ConnectorOps</span>' +
-          '<span class="t-meta">' + statusChip(c.status) + '</span></div>';
-      }).join('');
-      return '<div class="tree-node"><div class="tree-row" style="padding-left:56px" data-act="go" data-go="ws/' + w.name + '">' +
-        '<span class="t-caret"></span><span class="t-name">' + esc(w.name) + '</span><span class="chip kind">WorkService</span>' +
-        '<span class="t-meta">' + statusChip(w.status) + '</span></div>' + copKids + '</div>';
-    }).join('');
-    resKids += provs.map(function (p) {
-      return '<div class="tree-row" style="padding-left:56px" data-act="go" data-go="provider/' + p.name + '">' +
-        '<span class="t-caret"></span><span class="t-name">' + esc(p.name) + '</span><span class="chip kind">Provider</span>' +
-        '<span class="t-meta">' + statusChip(p.status) + '</span></div>';
-    }).join('');
-    resKids += rfs.map(function (r) {
-      return '<div class="tree-row" style="padding-left:56px" data-act="go" data-go="ref/' + encodeURIComponent(r.name) + '">' +
-        '<span class="t-caret"></span><span class="t-name">' + esc(r.name) + '</span><span class="chip kind">Ref</span>' +
-        '<span class="t-meta"><span class="chip ok small">' + esc(r.status) + '</span></span></div>';
-    }).join('');
-    kids += '<div class="tree-node"><div class="tree-row" style="padding-left:34px" data-act="tree-toggle" data-key="res:' + sysName + '">' +
-      '<span class="t-caret' + (S.treeOpen['res:' + sysName] ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-plug"/></svg>' +
-      '<span class="t-name" style="font-family:var(--sans);font-weight:600">workservices</span><span class="t-meta"><span>' + (wssAll.length + provs.length + rfs.length) + '</span></span></div>' +
-      (S.treeOpen['res:' + sysName] ? '<div class="tree-children">' + resKids + '</div>' : '') + '</div>';
+    var insts = (sc.byKind.ServiceInstance || []).filter(match);
+    kids += treeGroup('inst:' + sysName, 'instances', insts.length, 34, 'cc-i-db',
+      insts.map(function (o) { return treeObjRow(o, 56, set); }).join(''));
+    // workflows（builtin 全局同名 override 在此与系统层同名对象并排可见）
+    var wfs = (sc.byKind.Workflow || []).filter(match);
+    kids += treeGroup('wf:' + sysName, 'workflows', wfs.length, 34, 'cc-i-flow',
+      wfs.map(function (o) { return treeObjRow(o, 56, set); }).join(''));
+    // workservices（WorkService/ConnectorOps/Provider 并组——资源节点与文档节点同构）
+    var resRows = []
+      .concat(sc.byKind.WorkService || []).concat(sc.byKind.ConnectorOps || []).concat(sc.byKind.Provider || []).filter(match);
+    kids += treeGroup('res:' + sysName, 'workservices', resRows.length, 34, 'cc-i-plug',
+      resRows.map(function (o) { return treeObjRow(o, 56, set); }).join(''));
+    // docs（一等子树全展开：除上述资源/实例/workflow 外的全部 kind，按 kind 分组行）
+    var docRows = [];
+    LIVE.state.kinds.forEach(function (kd) {
+      if (kd.name === 'ServiceInstance' || kd.name === 'Workflow' || kd.name === 'WorkService' ||
+          kd.name === 'ConnectorOps' || kd.name === 'Provider' || kd.name === 'ServiceDesc') return;
+      docRows = docRows.concat((sc.byKind[kd.name] || []).filter(match));
+    });
+    docRows.sort(function (a, b) { return (a.kind + a.name) < (b.kind + b.name) ? -1 : 1; });
+    kids += treeGroup('docs:' + sysName, 'docs', docRows.length, 34, 'cc-i-folder',
+      docRows.map(function (o) { return treeObjRow(o, 56, set); }).join(''));
     return kids;
   }
-  var DOC_GROUP = 'docs·同规则';
+  var TREE_KEYS = [];
   function screenTree(view) {
+    LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树' }]);
-    var totalDocs = M.docs.length;
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>系统树</h1><span class="chip kind">Global → ServiceDesc → …</span></div>' +
-      '<div class="dh-sub">文档节点与资源节点完全同构：同样的行样式 / kind 徽章 / revision / 草稿圆点 / 状态灯。树上出现的任何标识符都可点。<span class="mono faint">' + totalDocs + ' 文档对象 · ' + M.workflows.length + ' workflow · ' + M.instances.length + ' instance</span></div></div></div>' +
+      '<div class="dh-sub">文档节点与资源节点完全同构：同样的行样式 / kind 徽章 / revision / 草稿圆点。树上出现的任何标识符都可点（对象详情只读 viewer）。<span class="mono faint">数据源=cored 读面（scheme kinds + 对象枚举 + 草稿缓存）</span></div></div></div>' +
       '<div class="tree-toolbar">' +
-        '<input type="search" id="tree-q" placeholder="按 kind / 名称 / 状态过滤…" style="flex:1;max-width:360px;background:var(--bg);border:1px solid var(--border-2);border-radius:7px;padding:6px 11px;color:var(--text);outline:none;font-size:12.5px">' +
+        '<input type="search" id="tree-q" placeholder="按 kind / 名称 / scope 过滤…" style="flex:1;max-width:360px;background:var(--bg);border:1px solid var(--border-2);border-radius:7px;padding:6px 11px;color:var(--text);outline:none;font-size:12.5px">' +
         '<button class="btn sm" data-act="tree-expand">展开全部</button>' +
         '<button class="btn sm" data-act="tree-collapse">收起</button>' +
         '<span class="count-note" id="tree-count"></span>' +
@@ -942,248 +1013,282 @@
   }
   function paintTree(q) {
     var box = $('#tree-box');
+    var st = LIVE.state;
+    var set = treeDraftSet();
     var ql = (q || '').toLowerCase().trim();
-    var systems = M.systems;
-    if (ql) systems = systems.filter(function (s) { return (s.name + ' ' + s.phase).toLowerCase().indexOf(ql) >= 0; });
-    var html = '<div class="tree-node"><div class="tree-row" style="padding-left:10px" data-act="go" data-go="overview">' +
+    var note = $('#tree-count');
+    TREE_KEYS = [];
+    if (st.status === 'loading') {
+      box.innerHTML = '<div class="tree-node">' + liveSkeletonRows(6, 10) + '</div>';
+      if (note) note.textContent = '装载 cored 读面…';
+      return;
+    }
+    if (st.status === 'degraded') {
+      box.innerHTML = '<div class="tree-node">' + liveSkeletonRows(3, 10) + liveDegradedNote() + '</div>';
+      if (note) note.textContent = '读面不可达（保留骨架）';
+      return;
+    }
+    var match = function (o) { return !ql || (o.name + ' ' + o.kind + ' ' + o.scope).toLowerCase().indexOf(ql) >= 0; };
+    var totalRows = 0;
+    var html = '<div class="tree-node"><div class="tree-row" style="padding-left:10px">' +
       '<span class="t-caret"></span><svg class="ic" style="color:#a78bfa"><use href="#cc-i-home"/></svg>' +
-      '<span class="t-name">Global</span><span class="tree-root-badge">root scope</span>' +
-      '<span class="t-meta"><span class="mono">' + M.docs.filter(function (d) { return d.scope === 'global'; }).length + ' global docs</span>' + phaseChip('InSync') + '</span></div>';
+      '<span class="t-name">Global</span><span class="tree-root-badge">builtin/global 根 scope</span>' +
+      '<span class="t-meta"><span class="mono">' + st.kinds.length + ' kinds 在册</span></span></div>';
     html += '<div class="tree-children">';
+    // 系统子树（ServiceDesc 逐系统）
+    var systems = LIVE.refs('ServiceDesc').filter(match);
     systems.forEach(function (s) {
-      var matchKids = ql && ql.length > 2;
-      html += '<div class="tree-node"><div class="tree-row" style="padding-left:30px" data-act="go" data-go="s/' + s.name + '">' +
-        '<span class="t-caret' + ((matchKids || S.treeOpen['sys:' + s.name]) ? ' open' : '') + '" data-act="tree-sys-toggle" data-key="sys:' + esc(s.name) + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-grid"/></svg>' +
+      var sysKey = 'sys:' + s.name;
+      TREE_KEYS.push(sysKey);
+      var sc = inScopeObjects(s.name);
+      var anyQ = ql ? sc.rows.some(match) : true;
+      var open = ql ? anyQ : S.treeOpen[sysKey];
+      html += '<div class="tree-node"><div class="tree-row" style="padding-left:30px" data-act="go" data-go="s/' + encodeURIComponent(s.name) + '">' +
+        '<span class="t-caret' + (open ? ' open' : '') + '" data-act="tree-toggle" data-key="' + esc(sysKey) + '">▶</span>' +
+        '<svg class="ic" style="color:#5b6378"><use href="#cc-i-grid"/></svg>' +
         '<span class="t-name">' + esc(s.name) + '</span><span class="chip kind">ServiceDesc</span>' +
-        '<span class="t-meta"><span class="t-rev">gen ' + s.observedGeneration + '/' + s.generation + '</span>' + phaseChip(s.phase) + '</span></div>';
-      if (matchKids || S.treeOpen['sys:' + s.name]) html += '<div class="tree-children" data-sys="' + esc(s.name) + '">' + treeSystemChildren(s.name) + '</div>';
+        '<span class="t-meta"><span class="t-rev">r' + s.resourceVersion + '</span>' + draftDot(set[s.kind + '/' + s.scope + '/' + s.name]) + '</span></div>';
+      if (open) html += '<div class="tree-children" data-sys="' + esc(s.name) + '">' + treeSystemChildren(s.name, set, ql) + '</div>';
       html += '</div>';
+      totalRows += sc.rows.length;
+    });
+    // Global/builtin kind 分组（树的第一层“Global → …”其余对象）
+    var gRows = 0;
+    st.kinds.forEach(function (kd) {
+      var rows = LIVE.refs(kd.name).filter(function (o) {
+        return (o.scope === 'global' || o.scope === 'builtin') && match(o);
+      });
+      if (!rows.length) return;
+      gRows += rows.length;
+      var key = 'g:' + kd.name;
+      TREE_KEYS.push(key);
+      html += treeGroup(key, kd.name, rows.length, 30, 'cc-i-folder',
+        rows.map(function (o) { return treeObjRow(o, 52, set); }).join(''));
     });
     html += '</div></div>';
     box.innerHTML = html;
-    var total = systems.length;
-    $('#tree-count').textContent = ql ? systems.length + '/' + M.systems.length + ' 系统匹配' : M.systems.length + ' 系统 · 全部子层点击展开（模拟异步 300ms）';
-    if (ql) expandMatched(ql);
-  }
-  function expandMatched(ql) {
-    // 搜索时自动展开有匹配子节点的组
-    M.systems.forEach(function (s) {
-      var docs = sysDocs(s.name).filter(function (d) { return (d.name + ' ' + d.kind).toLowerCase().indexOf(ql) >= 0; });
-      var insts = sysInstances(s.name).filter(function (i) { return i.name.toLowerCase().indexOf(ql) >= 0; });
-      var wfs = M.workflows.filter(function (w) { return w.name.toLowerCase().indexOf(ql) >= 0; });
-      if (docs.length) { S.treeOpen['docs:' + s.name] = true; S.treeLoaded['docs:' + s.name] = true; }
-      if (insts.length || wfs.length || docs.length) { S.treeOpen['inst:' + s.name] = true; S.treeOpen['wf:' + s.name] = true; }
-    });
+    totalRows += gRows;
+    if (note) {
+      note.textContent = ql
+        ? systems.length + '/' + LIVE.refs('ServiceDesc').length + ' 系统匹配 · 命中对象 ' + totalRows
+        : LIVE.refs('ServiceDesc').length + ' 系统 · ' + totalRows + ' 对象在册 · 全部来自 cored 读面';
+    }
+    if (!LIVE.refs('ServiceDesc').length && !gRows) {
+      box.innerHTML = '<div class="empty" style="padding:28px"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
+        '<div class="e-title">读面无对象在册</div><div>cored 读面 200 但零对象——检查文档库挂载（--docs）</div></div>';
+    }
   }
   ACTIONS['tree-sys-toggle'] = function (el) {
-    var key = el.dataset.key;               // sys:<name>
-    var sys = key.slice(4);
+    var key = el.dataset.key;
     S.treeOpen[key] = !S.treeOpen[key];
-    if (S.treeOpen[key]) {
-      // 展开系统子层：docs 组自动打开并模拟异步 300ms 加载（skeleton）
-      if (!S.treeOpen['docs:' + sys]) S.treeOpen['docs:' + sys] = true;
-      if (!S.treeLoaded['docs:' + sys]) {
-        S.treeLoaded['docs:' + sys] = false;
-        render();
-        setTimeout(function () {
-          if (S.route !== 'tree') return;
-          S.treeLoaded['docs:' + sys] = true;
-          render();
-        }, 300);
-        return;
-      }
-    }
     render();
   };
   ACTIONS['tree-toggle'] = function (el) {
     var key = el.dataset.key;
-    if (S.treeOpen[key]) { S.treeOpen[key] = false; render(); return; }
-    S.treeOpen[key] = true;
-    S.treeLoaded[key] = false;
+    S.treeOpen[key] = !S.treeOpen[key];
     render();
-    // 模拟异步 300ms 加载
-    setTimeout(function () {
-      if (!parseHash().length || S.route !== 'tree') return;
-      S.treeLoaded[key] = true;
-      if (S.route === 'tree') render();
-    }, 300);
   };
   ACTIONS['tree-expand'] = function () {
-    M.systems.forEach(function (s) {
-      ['sys:', 'docs:', 'inst:', 'wf:', 'res:'].forEach(function (p) { S.treeOpen[p + s.name] = true; });
-      S.treeLoaded['docs:' + s.name] = true;
-    });
+    TREE_KEYS.forEach(function (k) { S.treeOpen[k] = true; });
+    LIVE.refs('ServiceDesc').forEach(function (s) { S.treeOpen['sys:' + s.name] = true; });
     render();
   };
   ACTIONS['tree-collapse'] = function () { S.treeOpen = {}; render(); };
-  /* ================= 屏 3：系统详情 ================= */
-  var SYS_TABS = [
-    { id: 'docs', label: '文档' }, { id: 'res', label: '资源' }, { id: 'status', label: '状态' },
-    { id: 'agents', label: 'Agent' }, { id: 'cross', label: '跨系统申请' }, { id: 'events', label: '事件' }
-  ];
-  function sysHeaderActions(sys) {
-    return '<div class="dh-actions">' +
-      '<button class="btn primary" data-act="go" data-go="chat/' + esc(sys.agent) + '"><svg class="ic"><use href="#cc-i-chat"/></svg>与该系统 Agent 对话</button>' +
-      '<button class="btn" data-act="edit-desc" data-sys="' + esc(sys.name) + '">编辑声明</button>' +
-      '<button class="btn" data-act="reconcile" data-sys="' + esc(sys.name) + '"><svg class="ic"><use href="#cc-i-refresh"/></svg>触发对账</button>' +
-      '</div>';
-  }
-  ACTIONS['reconcile'] = function (el) { toast('已入队', esc(el.dataset.sys) + ' 对账请求已提交（reason: manual:console）', 'ok'); };
-  ACTIONS['edit-desc'] = function (el) {
-    var sd = M.docs.filter(function (d) { return d.kind === 'ServiceDesc' && d.scope === 'systems/' + el.dataset.sys; })[0];
-    if (sd) go('doc/' + sd.name);
-    else toast('未找到 ServiceDesc', el.dataset.sys, 'warn');
-  };
+  /* ================= 屏 3：系统详情（E2：cored 读面真数据最小面，console-ui.md 屏幕 3） =================
+   * 声明/清单全部来自读面（ServiceDesc 正文 + scope 对象枚举）；六 tab 与场景面四页=E7 落地
+   * （此处只留场景面入口占位，不渲染 mock——宁可空态不可假数据，console-adoption §5 规则 2）。
+   * 「与该系统 Agent 对话」入口=agent 详情（E2 为对象 viewer；E5 换会话屏）。 */
   function sysCrumb(sys, extra) {
     var c = [{ label: 'Welcome', go: 'welcome' }, { label: sys.name, go: 's/' + sys.name }];
     return extra ? c.concat(extra) : c;
   }
-  function screenSystem(view) {
-    var sys = sysByName(S.params.name);
-    if (!sys) { view.innerHTML = emptyBox('系统不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '404' }]); return; }
-    var tab = S.sysTab[sys.name] || 'docs';
-    setCrumbs(sysCrumb(sys, tab === 'docs' ? null : [{ label: SYS_TABS.filter(function (t) { return t.id === tab; })[0].label }]));
-    var drifts = openDrifts().filter(function (d) { return d.scope === 'systems/' + sys.name; });
-    var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(sys.name) + '</h1>' + phaseChip(sys.phase) +
-      '<span class="chip kind">ServiceDesc</span>' + draftDot(sysDocs(sys.name).some(function (d) { return docHasDraft(d.name); })) + '</div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(sys.scope) + '</span><span class="mono">gen ' + sys.observedGeneration + '/' + sys.generation + '</span>' +
-      '<span>' + esc(sys.desc) + '</span></div>' +
-      '<div class="dh-sub" style="margin-top:8px">场景面：<span class="chip click acc" data-act="go" data-go="s/' + esc(sys.name) + '/docs">文档面（tag 过滤）</span>' +
-      '<span class="chip click acc" data-act="go" data-go="s/' + esc(sys.name) + '/metrics">指标面</span>' +
-      '<span class="chip click acc" data-act="go" data-go="s/' + esc(sys.name) + '/permissions">权限面</span>' +
-      '<span class="chip click acc" data-act="go" data-go="s/' + esc(sys.name) + '/events">事件面</span></div>' +
-      '</div>' + sysHeaderActions(sys) + '</div>';
-    var tabs = '<div class="tabs">' + SYS_TABS.map(function (t) {
-      return '<div class="tab' + (t.id === tab ? ' active' : '') + '" data-act="sys-tab" data-t="' + t.id + '">' + t.label + '</div>';
-    }).join('') + '</div>';
-    var body = '';
-    if (tab === 'docs') body = sysTabDocs(sys);
-    else if (tab === 'res') body = sysTabRes(sys);
-    else if (tab === 'status') body = sysTabStatus(sys, drifts);
-    else if (tab === 'agents') body = sysTabAgents(sys);
-    else if (tab === 'cross') body = sysTabCross(sys);
-    else if (tab === 'events') body = sysTabEvents(sys);
-    view.innerHTML = '<div class="view-inner">' + head + tabs + body + '</div>';
+  function hydrate(elId, path, paint) {
+    // 异步内容注水：现渲染骨架行，读面返回后原位替换（路由已变=丢弃，不跨屏串数据）。
+    var el = $('#' + elId);
+    if (!el) return;
+    var stamp = S.route + '|' + S.segs.join('/');
+    el.innerHTML = liveSkeletonRows(1, 0);
+    LIVE.get(path).then(function (b) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      paint(el, b);
+    }).catch(function (e) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      el.innerHTML = '<div class="small faint" style="padding:6px 0">读面暂不可达（' + esc(String((e && e.message) || e)) + '）——恢复后重进即现读</div>';
+    });
   }
-  ACTIONS['sys-tab'] = function (el) { S.sysTab[S.params.name] = el.dataset.t; render(); };
-  function docRowsHtml(docs) {
-    return docs.map(function (d) {
-      return '<tr class="row-click" data-act="go" data-go="doc/' + esc(d.name) + '">' +
-        '<td class="mono">' + esc(d.name) + draftDot(docHasDraft(d.name)) + '</td>' +
-        '<td>' + kindBadge(d.kind) + '</td>' +
-        '<td>' + d.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join(' ') + '</td>' +
-        '<td class="mono num">r' + d.revision + '</td>' +
-        '<td>' + (docHasDraft(d.name) ? '<span class="chip warn small">● 未 Apply</span>' : '<span class="faint">—</span>') + '</td>' +
-        '<td>' + statusChip(d.kind === 'DriftReport' ? (d.status === 'Closed' ? 'InSync' : d.status) : 'InSync') + '</td>' +
-        '<td class="mono faint">' + fmtAgo(d.updated) + '</td></tr>';
-    }).join('');
+  // scheme 引用词 → 路由（内容里出现的标识符全可点：硬性验收 console-adoption §5 规则 6）
+  function refRoute(prefix, rest) {
+    if (prefix === 'system' || prefix === 'systems') return 's/' + encodeURIComponent(rest.split('/')[0]);
+    if (prefix === 'agent') return 'agent/' + encodeURIComponent(rest.split('/')[0]);
+    if (prefix === 'ops') return 'connector/' + encodeURIComponent(rest.split('/')[0]);
+    if (prefix === 'provider') return 'provider/' + encodeURIComponent(rest.split('/')[0]);
+    if (prefix === 'ws') return 'ws/' + encodeURIComponent(rest.split('/')[0]);
+    return null;
   }
-  function sysTabDocs(sys) {
-    var docs = sysDocs(sys.name);
-    var th = '<div class="card"><div class="card-h"><span class="h-title">文档（' + docs.length + '）· 该 scope 全部对象</span>' +
-      '<span class="h-right lk small" data-act="go" data-go="s/' + esc(sys.name) + '/docs">展开完整视图（tag 过滤）→</span>' +
-      '<button class="btn sm primary" data-act="new-goal" data-sys="' + esc(sys.name) + '">+ 新建文档</button></div>' +
-      '<div style="max-height:520px;overflow-y:auto"><table class="tbl"><thead><tr><th>名称</th><th>kind</th><th>tags</th><th>revision</th><th>草稿</th><th>状态</th><th>更新</th></tr></thead><tbody>' +
-      docRowsHtml(docs) + '</tbody></table></div></div>';
-    return th;
-  }
-  function sysTabRes(sys) {
-    var insts = sysInstances(sys.name);
-    var instCards = insts.map(function (i) {
-      return '<div class="syscard" data-act="go" data-go="s/' + esc(sys.name) + '/i/' + esc(i.name) + '">' +
-        '<div class="sc-top"><span class="sc-name">' + esc(i.name) + '</span>' + phaseChip(i.phase) + '</div>' +
-        '<div class="sc-meta"><span><span class="k">gen:</span> <span class="mono">' + i.observedGeneration + '/' + i.generation + '</span></span>' +
-        '<span><span class="k">agents:</span> ' + i.agents.map(function (a) { return '<span class="lk mono" data-act="go" data-go="agent/' + esc(a) + '">' + esc(a) + '</span>'; }).join(' ') + '</span></div>' +
-        '<div class="sc-foot"><span class="chip kind">ServiceInstance</span><span class="faint small" style="margin-left:auto">详情 →</span></div></div>';
-    }).join('');
-    var sysWs = M.workservices.filter(function (w) { return w.scope.indexOf(sys.name) >= 0 || sys.name === 'connector'; });
-    var sysCops = M.connectorops.filter(function (c) { return sys.name === 'connector' || sys.name === 'storage-system' || sys.name === 'developer-system' || sys.name === 'deploy-system'; });
-    var sysRefs = M.refs.filter(function (r) { return r.to === sys.name || r.from === sys.name; });
-    var sysProv = M.providers.filter(function (p) { return p.scope.indexOf(sys.name) >= 0 || p.scope === 'global'; });
-    function linkList(items, routeFn) {
-      if (!items.length) return '<div class="empty" style="padding:18px"><div class="e-title">无</div></div>';
-      return items.map(function (x) {
-        return '<div class="mini-row" data-act="go" data-go="' + routeFn(x) + '"><div class="mr-main"><div class="mono" style="font-weight:600">' + esc(x.name) + '</div><div class="mr-sub">' + esc(x.desc || '') + '</div></div>' + statusChip(x.status) + '</div>';
-      }).join('');
+  function refChips(content) {
+    var seen = {}, out = '';
+    var re = /([A-Za-z][A-Za-z0-9-]*):\/\/([A-Za-z0-9-_.\/]+)/g, m;
+    while ((m = re.exec(String(content))) !== null) {
+      var route = refRoute(m[1], m[2]);
+      if (!route || seen[route]) continue;
+      seen[route] = true;
+      out += '<span class="chip click mute small" data-act="go" data-go="' + esc(route) + '"><svg class="ic"><use href="#cc-i-link"/></svg>' + esc(m[0]) + '</span> ';
     }
-    return '<div class="grid" style="grid-template-columns:1fr 1fr;gap:14px">' +
-      '<div class="card"><div class="card-h"><span class="h-title">ServiceInstance（' + insts.length + '）</span></div><div class="grid" style="grid-template-columns:1fr;gap:10px;padding:12px">' + instCards + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">WorkService</span></div><div class="mini-list">' + linkList(sysWs, function (x) { return 'ws/' + x.name; }) + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">ConnectorOps 挂载</span></div><div class="mini-list">' + linkList(sysCops, function (x) { return 'connector/' + x.name; }) + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">Ref / Provider</span></div>' +
-      '<div class="mini-list">' + sysRefs.map(function (r) { return '<div class="mini-row" data-act="go" data-go="ref/' + encodeURIComponent(r.name) + '"><div class="mr-main"><div class="mono">' + esc(r.name) + '</div><div class="mr-sub">Ref · ' + esc(r.from) + ' → ' + esc(r.to) + '</div></div><span class="chip ok small">' + esc(r.status) + '</span></div>'; }).join('') +
-      sysProv.map(function (p) { return '<div class="mini-row" data-act="go" data-go="provider/' + esc(p.name) + '"><div class="mr-main"><div class="mono">' + esc(p.name) + '</div><div class="mr-sub">' + esc(p.desc) + '</div></div>' + statusChip(p.status) + '</div>'; }).join('') +
-      '</div></div></div>';
+    return out;
   }
-  function sysTabStatus(sys, drifts) {
-    var conds = sysInstances(sys.name).map(function (i) {
-      return i.conditions.map(function (c) {
-        return '<tr><td class="mono">' + esc(i.name) + '</td><td>' + esc(c.type) + '</td><td>' + (c.status === 'True' ? '<span class="chip ok small">True</span>' : '<span class="chip danger small">False</span>') + '</td><td class="small muted">' + esc(c.reason) + '</td><td class="mono faint">' + fmtAgo(c.ts) + '</td></tr>';
-      }).join('');
-    }).join('');
-    var driftRows = drifts.length ? drifts.map(function (d) {
-      return '<div class="mini-row" data-act="go" data-go="doc/' + esc(d.name) + '"><div class="mr-main"><div class="mono">' + esc(d.name) + '</div><div class="mr-sub">' + esc((d.content.match(/observed: (.*)/) || ['', ''])[0].replace('observed: ', '')) + '</div></div>' + statusChip(d.status) + '</div>';
-    }).join('') : '<div class="empty" style="padding:18px"><svg class="ic"><use href="#cc-i-check"/></svg><div class="e-title">无未解决 drift</div></div>';
-    var lastDrift = drifts[0];
-    return '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">Conditions</span><span class="h-right lk small" data-act="go" data-go="s/' + esc(sys.name) + '/metrics">指标面（曲线/阈值）→</span></div>' +
-      '<div style="max-height:300px;overflow-y:auto"><table class="tbl"><thead><tr><th>instance</th><th>type</th><th>status</th><th>reason</th><th>时间</th></tr></thead><tbody>' + conds + '</tbody></table></div></div>' +
-      '<div style="display:grid;gap:14px">' +
-      '<div class="card"><div class="card-h"><span class="h-title">Drift 摘要（' + drifts.length + '）</span></div><div class="mini-list">' + driftRows + '</div>' +
-      (lastDrift ? '<div class="card-b" style="border-top:1px solid var(--border);padding:10px 14px"><span class="lk small" data-act="go" data-go="doc/' + esc(lastDrift.name) + '">最新 DriftReport：' + esc(lastDrift.name) + ' →</span></div>' : '') + '</div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">趋势（mock sparkline · 24h）</span></div><div class="card-b" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">' +
-      '<div>' + sparkSVG(sys.name + ':tick', '#3b82f6', 120, 40) + '<div class="small faint" style="margin-top:4px">tick lag</div></div>' +
-      '<div>' + sparkSVG(sys.name + ':drift', '#f59e0b', 120, 40, 0.62) + '<div class="small faint" style="margin-top:4px">drift score</div></div>' +
-      '<div>' + sparkSVG(sys.name + ':run', '#22c55e', 120, 40, 0.45) + '<div class="small faint" style="margin-top:4px">run 成功率</div></div>' +
-      '</div></div></div></div>';
+  function objViewerHtml(kind, scope, name, ref) {
+    var path = encodeURIComponent(kind) + '/' + encodeURIComponent(scope) + '/' + encodeURIComponent(name);
+    var draft = !!treeDraftSet()[kind + '/' + scope + '/' + name];
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
+      { label: scope, go: scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + encodeURIComponent(scope) }, { label: name }]);
+    return '<div class="view-inner"><div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
+      (draft ? draftDot(true) + '<span class="chip warn small">● 未 Apply（草稿缓存）</span>' : '') + '</div>' +
+      '<div class="doc-meta-row"><span class="chip mute small">scope</span>' +
+      '<span class="chip click mute small" data-act="go" data-go="' + (scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + esc(encodeURIComponent(scope))) + '">' + esc(scope) + '</span>' +
+      '<span class="mono small">resourceVersion r' + (ref ? ref.resourceVersion : '?') + '</span>' +
+      '<span class="chip ok small">' + esc(kind) + ' 在册</span></div>' +
+      '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">对象正文（只读；编辑器=文档编辑 E4 落地，LLM 草稿→人点 Apply）</span></div>' +
+      '<div class="card-b" id="obj-content" style="padding:12px 16px">' + liveSkeletonRows(2, 0) + '</div></div>' +
+      '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">正文引用标识符（全可点）</span></div>' +
+      '<div class="card-b" id="obj-refs" style="padding:10px 16px"></div></div>' +
+      '<div class="small faint" style="margin-top:10px">对象键=(kind, scope, name) · 读面 GET /v1/objects/' + esc(kind) + '/' + esc(name) + '?scope=' + esc(scope) + '</div></div>';
   }
-  function sysTabAgents(sys) {
-    var agents = sysAgents(sys.name);
-    if (!agents.length) return '<div class="empty"><svg class="ic"><use href="#cc-i-bot"/></svg><div class="e-title">该系统暂无挂载 agent</div></div>';
-    var cards = agents.map(function (a) {
-      var gottySess = M.sessions.filter(function (s) { return s.agent === a.name && s.runner === 'gotty'; })[0];
-      return '<div class="card"><div class="card-h"><svg class="ic" style="color:#7fb0f9"><use href="#cc-i-bot"/></svg><span class="h-title mono">' + esc(a.name) + '</span>' + phaseChip(a.phase) +
-        '<span class="h-right"><button class="btn sm primary" data-act="go" data-go="chat/' + esc(a.name) + '">对话</button>' +
-        '<button class="btn sm" data-act="open-term" data-agent="' + esc(a.name) + '">终端</button></span></div>' +
-        '<div class="card-b" style="display:grid;gap:8px">' +
-        '<div class="kv"><span class="k">owner instance</span><span class="v"><span class="lk mono" data-act="go" data-go="s/' + esc(sys.name) + '/i/' + esc(a.instance.split('/')[1]) + '">' + esc(a.instance) + '</span></span></div>' +
-        '<div class="kv"><span class="k">当前 session</span><span class="v"><span class="lk mono" data-act="go" data-go="session/' + esc(a.currentSession) + '">' + esc(a.currentSession) + '</span></span></div>' +
-        '<div class="kv"><span class="k">最近任务</span><span class="v">' + esc(a.lastTask) + '</span></div>' +
-        '<div class="kv"><span class="k">权限面</span><span class="v">' + a.perms.connectorops.map(function (c) { return '<span class="chip mute small">' + esc(c) + '</span>'; }).join(' ') + '</span></div>' +
-        '</div></div>';
-    }).join('');
-    return '<div class="grid" style="grid-template-columns:1fr 1fr">' + cards + '</div>' +
-      '<div style="margin-top:10px"><span class="lk small" data-act="go" data-go="s/' + esc(sys.name) + '/permissions">展开完整权限面（role 挂载 / 权限矩阵）→</span></div>';
+  function screenObject(view, kindHint) {
+    LIVE.ensure();
+    var p = S.params;
+    var kind = kindHint || p.kind;
+    var name = p.name;
+    var scope = p.scope || '';
+    var st = LIVE.state;
+    if (st.status === 'loading' && !st.kinds.length) {
+      // 首装未完：按路由参数先出壳，注水兜底
+      if (kind && scope) { view.innerHTML = objViewerHtml(kind, scope, name, null); hydrateObjContent(view, kind, scope, name); return; }
+    }
+    var ref = null;
+    if (kind) {
+      ref = LIVE.refs(kind).filter(function (o) { return o.name === name && (!scope || o.scope === scope); })[0] || null;
+      if (!ref && !scope) {
+        // 未带 scope 的深链：全 kind 名字解析（唯一才取，歧义=空态并提示带 scope）
+        var cands = LIVE.refs(kind).filter(function (o) { return o.name === name; });
+        if (cands.length === 1) ref = cands[0];
+        else if (cands.length > 1) {
+          view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 scope 有歧义（' + cands.length + ' 个）——请从系统树进入', name) + '</div>';
+          return;
+        }
+      }
+    } else {
+      // doc/:name 兼容深链：跨 kind 名字解析
+      var all = [];
+      st.kinds.forEach(function (kd) {
+        LIVE.refs(kd.name).forEach(function (o) { if (o.name === name) all.push(o); });
+      });
+      if (all.length === 1) ref = all[0];
+      else if (all.length > 1) {
+        view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 kind/scope 有歧义（' + all.length + ' 个）——请从系统树进入', name) + '</div>';
+        return;
+      }
+    }
+    if (!ref) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
+      return;
+    }
+    view.innerHTML = objViewerHtml(ref.kind, ref.scope, ref.name, ref);
+    hydrateObjContent(view, ref.kind, ref.scope, ref.name);
   }
-  ACTIONS['open-term'] = function (el) {
-    var a = el.dataset.agent;
-    S.chatUi[a] = S.chatUi[a] || {};
-    var gs = M.sessions.filter(function (s) { return s.agent === a && s.runner === 'gotty'; })[0];
-    if (gs) { S.chatUi[a].sessionId = gs.id; S.chatUi[a].tab = 'term'; }
-    else { S.chatUi[a].forceTerm = true; }
-    go('chat/' + a);
-  };
-  function sysTabCross(sys) {
-    var rows = M.crossRequests.filter(function (r) { return r.from === sys.name || r.to === sys.name; });
-    if (!rows.length) return '<div class="empty"><svg class="ic"><use href="#cc-i-link"/></svg><div class="e-title">无跨系统申请流水</div><div>跨系统影响 = 对方文档 Apply 提案，默认进待审区</div></div>';
-    var trs = rows.map(function (r) {
-      var st = r.status === '待审' ? '<span class="chip warn small">待审</span>' : r.status === '已合入' ? '<span class="chip ok small">已合入</span>' : '<span class="chip danger small">驳回</span>';
-      return '<tr class="row-click" data-act="go" data-go="doc/' + esc(r.doc) + '"><td>' + (r.dir === 'in' ? '<span class="chip acc small">进</span>' : '<span class="chip mute small">出</span>') + '</td>' +
-        '<td class="mono">' + esc(r.from) + '</td><td class="mono">' + esc(r.to) + '</td><td>' + esc(r.topic) + '</td><td>' + st + '</td>' +
-        '<td class="mono faint">' + fmtAgo(r.ts) + '</td></tr>';
-    }).join('');
-    return '<div class="card"><div class="card-h"><span class="h-title">跨系统提案（Ref 解析 / A46）</span><span class="h-sub">点行进对应文档编辑器</span></div>' +
-      '<table class="tbl"><thead><tr><th>方向</th><th>from</th><th>to</th><th>主题</th><th>状态</th><th>时间</th></tr></thead><tbody>' + trs + '</tbody></table></div>';
+  function hydrateObjContent(view, kind, scope, name) {
+    hydrate('obj-content', 'v1/objects/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''),
+      function (el, b) {
+        var content = String(b.content || '');
+        el.innerHTML = '<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc(content) + '</pre>';
+        var refsEl = $('#obj-refs');
+        if (refsEl) {
+          var chips = refChips(content);
+          refsEl.innerHTML = chips || '<span class="faint small">无 scheme 引用词（system:// agent:// ops:// …）</span>';
+        }
+      });
   }
-  function sysTabEvents(sys) {
-    var evs = M.events.filter(function (e) { return e.system === sys.name; }).slice(0, 14);
-    var html = evs.map(function (e) {
-      var dot = e.level === 'fatal' || e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : 'acc';
-      return '<div class="mini-row" data-act="go" data-go="event/' + esc(e.id) + '">' +
-        '<span class="lamp ' + dot + '"></span><div class="mr-main"><div>' + esc(e.msg) + '</div><div class="mr-sub mono">' + esc(e.kind) + ' · ' + esc(e.lane) + '泳道 · ' + esc(e.object) + '</div></div>' +
-        '<span class="faint mono small">' + fmtAgo(e.ts) + '</span></div>';
-    }).join('');
-    return '<div class="card"><div class="card-h"><span class="h-title">该 scope 事件时间线</span><span class="h-right lk small" data-act="go" data-go="s/' + esc(sys.name) + '/events">展开完整事件面（过滤/虚拟滚动）→</span></div><div class="mini-list">' + html + '</div></div>';
+  ACTIONS['live-reload'] = function () { render(); }; // 重读=重渲染现读（读面 GET 幂等）
+  /* 事件详情（E2 真数据：event_log 归档行投影，Welcome/事件流点击落点；链路=event→involved→对象） */
+  function screenEventLive(view) {
+    LIVE.ensure();
+    var id = S.params.id;
+    var e = LIVE.state.events.filter(function (x) { return x.eventId === id; })[0] || null;
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '事件' }, { label: id }]);
+    if (!e) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('事件不在当前归档窗（最近 100 条）', id) + '</div>';
+      return;
+    }
+    var lvlCls = e.level === 'error' || e.level === 'fatal' ? 'danger' : e.level === 'warn' ? 'warn' : 'ok';
+    var involvedHtml = '';
+    if (e.involved) {
+      var segs = String(e.involved).split('/');
+      involvedHtml = '<span class="lk mono" data-act="go" data-go="doc/' +
+        esc(segs.slice(0, -1).map(encodeURIComponent).join('/')) + '/' + esc(encodeURIComponent(segs[segs.length - 1])) + '">' + esc(e.involved) + '</span>';
+    }
+    var kv = function (k, v) { return '<div class="kv"><span class="k mono">' + esc(k) + '</span><span class="v mono">' + (v || '<span class="faint">—</span>') + '</span></div>'; };
+    view.innerHTML = '<div class="view-inner"><div class="dh"><div class="dh-main"><div class="dh-title"><h1 style="font-size:18px">' + esc(e.type) + '</h1>' +
+      '<span class="chip ' + lvlCls + ' small">' + esc(e.level) + '</span><span class="chip mute small">source: ' + esc(e.source) + '</span></div>' +
+      '<div class="dh-sub"><span class="mono">' + esc(e.ts) + '</span></div></div></div>' +
+      '<div class="card" style="margin-top:12px"><div class="card-b" style="padding:10px 16px">' +
+      kv('eventId', e.eventId) + kv('type', e.type) + kv('source', e.source) +
+      kv('involved', involvedHtml) + kv('dedupKey', e.dedupKey) + kv('level', e.level) + kv('routedTo', e.routedTo) +
+      '</div></div>' +
+      '<div class="small faint" style="margin-top:10px">数据源=event_log 归档（/v1/events，最新优先投影）；involved 点击=对象详情（只读 viewer）</div></div>';
+  }
+  function screenSystem(view) {
+    LIVE.ensure();
+    var name = S.params.name;
+    var sd = LIVE.refs('ServiceDesc').filter(function (o) { return o.name === name; })[0];
+    if (!sd) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '404' }]);
+      return;
+    }
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' }, { label: name }]);
+    var set = treeDraftSet();
+    var sc = inScopeObjects(name);
+    var rows = function (k, depth) { return (sc.byKind[k] || []).map(function (o) { return treeObjRow(o, depth, set); }).join(''); };
+    var docRows = [];
+    LIVE.state.kinds.forEach(function (kd) {
+      if (kd.name === 'ServiceInstance' || kd.name === 'Workflow' || kd.name === 'WorkService' ||
+          kd.name === 'ConnectorOps' || kd.name === 'Provider' || kd.name === 'ServiceDesc') return;
+      docRows = docRows.concat(sc.byKind[kd.name] || []);
+    });
+    docRows.sort(function (a, b) { return (a.kind + a.name) < (b.kind + b.name) ? -1 : 1; });
+    var sec = function (t, inner) {
+      return '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">' + t + '</span></div><div class="card-b" style="padding:4px 8px 8px">' + (inner || '') + '</div></div>';
+    };
+    view.innerHTML = '<div class="view-inner">' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(name) + '</h1><span class="chip kind">ServiceDesc</span>' +
+      draftDot(set[sd.kind + '/' + sd.scope + '/' + sd.name]) + '</div>' +
+      '<div class="dh-sub"><span class="path-mono">' + esc(sd.scope) + '</span><span class="mono">r' + sd.resourceVersion + '</span>' +
+      '<span>声明/清单全部来自 cored 读面；对象详情=只读 viewer（E4 起升编辑器）</span></div>' +
+      '<div class="dh-sub" style="margin-top:8px">场景面（E7 落地，当前不渲染 mock）：<span class="chip mute small">事件面</span>' +
+      '<span class="chip mute small">指标面</span><span class="chip mute small">文档面（tag 过滤）</span><span class="chip mute small">权限面</span></div>' +
+      '<div class="dh-actions" id="sys-agents"></div></div></div>' +
+      sec('声明正文（ServiceDesc，现读）', '<div id="sys-spec">' + liveSkeletonRows(1, 0) + '</div>') +
+      sec('instances（ServiceInstance）', rows('ServiceInstance', 12) || '<div class="small faint" style="padding:4px 12px">暂无实例对象在册</div>') +
+      sec('workflows（系统层对象；builtin 全局同名 override 语义见 workflow.md）', rows('Workflow', 12) || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      sec('资源（WorkService / ConnectorOps / Provider）',
+        rows('WorkService', 12) + rows('ConnectorOps', 12) + rows('Provider', 12) ||
+        '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      sec('docs（文档与资源同规则，kind 徽章区分）',
+        docRows.map(function (o) { return treeObjRow(o, 12, set); }).join('') || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      '</div>';
+    hydrate('sys-spec', 'v1/objects/ServiceDesc/' + encodeURIComponent(sd.name) + '?scope=' + encodeURIComponent(sd.scope), function (el, b) {
+      var content = String(b.content || '');
+      el.innerHTML = '<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc(content) + '</pre>' +
+        (refChips(content) ? '<div style="margin-top:8px">' + refChips(content) + '</div>' : '');
+      // 与该系统 Agent 对话入口（agentRef 来自声明正文——E2 进 agent 对象详情，E5 换会话屏）
+      var ag = $('#sys-agents');
+      if (ag) {
+        var refs = (content.match(/agent:\/\/([A-Za-z0-9-_.]+)/g) || []).map(function (x) { return x.replace('agent://', ''); });
+        var uniq = refs.filter(function (v, i) { return refs.indexOf(v) === i; });
+        ag.innerHTML = uniq.map(function (a) {
+          return '<button class="btn primary" data-act="go" data-go="agent/' + esc(a) + '"><svg class="ic"><use href="#cc-i-chat"/></svg>与 ' + esc(a) + ' 对话</button>';
+        }).join('');
+      }
+    });
   }
   function emptyBox(title, sub) {
     return '<div class="empty" style="padding-top:10vh"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">' + esc(title) + '</div><div class="mono faint">' + esc(sub || '') + '</div><div class="e-act"><button class="btn primary" data-act="go" data-go="welcome">回 Welcome</button></div></div>';
@@ -2980,6 +3085,7 @@
   function ago2(min) { return new Date(Date.now() - min * 60000); }
 
   /* ================= 路由注册 & 启动 ================= */
+  // E2 路由换装：五屏真数据（Welcome/tree/s/:name/doc/object/event），其余屏保持 proto mock 待各自 E 轮
   route('welcome', screenWelcome);
   route('overview', screenOverview);
   route('tree', screenTree);
@@ -2990,21 +3096,22 @@
   route('s/:name/docs', screenSysDocs);
   route('s/:name/permissions', screenSysPermissions);
   route('workflows', screenWorkflows);
-  route('wf/:name', screenWorkflow);
+  route('wf/:name', function (v) { screenObject(v, 'Workflow'); }); // E3 起升运行管理（列表+详情+运行抽屉）
   route('wf/:name/r/:n', screenWfRun);
-  route('doc/:name', screenDoc);
+  route('doc/:name', function (v) { screenObject(v, null); });      // 名字解析（歧义=空态引导回系统树）
+  route('doc/:kind/:scope/:name', function (v) { screenObject(v); }); // 对象键直链（kind/scope/name）
   route('docs', screenDocsGlobal);
   route('chat/:agent', screenChat);
   route('connectors', screenConnectors);
-  route('connector/:name', screenConnector);
-  route('ws/:name', screenWorkService);
-  route('provider/:name', screenProvider);
-  route('ref/:name', screenRef);
-  route('role/:name', screenRole);
-  route('agent/:name', screenAgent);
+  route('connector/:name', function (v) { screenObject(v, 'ConnectorOps'); });
+  route('ws/:name', function (v) { screenObject(v, 'WorkService'); });
+  route('provider/:name', function (v) { screenObject(v, 'Provider'); });
+  route('ref/:name', function (v) { screenObject(v, 'Ref'); });
+  route('role/:name', function (v) { screenObject(v, 'Role'); });
+  route('agent/:name', function (v) { screenObject(v, 'Agent'); }); // E5 起升会话屏（运行器四选+终端 tab）
   route('session/:id', screenSession);
   route('events', screenEvents);
-  route('event/:id', screenEvent);
+  route('event/:id', screenEventLive);
   route('approvals', screenApprovals);
 
   function boot() {
@@ -3067,6 +3174,11 @@
     __CC.conn = __CC.createConnMonitor({ onChange: function (st) { applyConnState(st, {}); } });
     __CC.conn.start();
     applyConnState(__CC.conn.state(), { silent: true });
+    // E2 真数据层回调：装载完成即重渲染真数据屏（welcome/tree/s/doc——其余屏不受 LIVE 影响）
+    __CC.live.onChange = function () {
+      if (!ROOT) return;
+      if (['welcome', 'tree', 's', 'doc', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event'].indexOf(S.route) >= 0) render();
+    };
     boot();
   }
   function unmountConsole() {
@@ -3074,6 +3186,7 @@
     clearTimers();
     stopFollowTimers();
     if (__CC.conn) { __CC.conn.stop(); __CC.conn = null; }
+    if (__CC.live) __CC.live.onChange = null;
     if (ROOT) ROOT.innerHTML = '';
     ROOT = null;
   }

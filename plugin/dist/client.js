@@ -2,10 +2,10 @@
 window.__ModuleLoader__.load({ id: 'dsh-plugin-core-system', factory: function (require) {
 var module = { exports: {} }; var exports = module.exports;
 var React = require('react'); // 平台种子模块（dsh client 各 bundle 同款引用，无需 inject 边）
-var CC_CSS = "/* console-proto app.css 作用域化（构建手术 v3，loop-36）：全部规则选择器收进 .cc-app 容器（不污染 dsh 宿主）；:root/body→.cc-app；keyframes 与 animation 引用加 cc- 前缀；.cc-app.app 高度=100%（宿主面板内非视口）；原文注释已剥离（手术脚本管辖） */\n.cc-app{\n  --bg: #0b0e14;\n  --panel: #11151c;\n  --panel-2: #161b24;\n  --panel-3: #1a2029;\n  --border: #1e2530;\n  --border-2: #273041;\n  --text: #e6e9ef;\n  --text-2: #8b93a7;\n  --text-3: #5b6378;\n  --accent: #3b82f6;\n  --accent-dim: #1d3a68;\n  --ok: #22c55e;\n  --warn: #f59e0b;\n  --danger: #ef4444;\n  --esc: #fb7185;\n  --llm: #a78bfa;\n  --mono: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, monospace;\n  --sans: system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n  --rad: 8px;\n  --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);\n  --side-w: 240px;\n  --top-h: 46px;\n}.cc-app, .cc-app *{ box-sizing: border-box; margin: 0; padding: 0; }.cc-app, .cc-app{ height: 100%; }.cc-app{\n  background: var(--bg); color: var(--text);\n  font: 13px/1.55 var(--sans);\n  -webkit-font-smoothing: antialiased;\n  overflow: hidden;\n}.cc-app .mono{ font-family: var(--mono); }.cc-app .ic{ width: 15px; height: 15px; flex: none; vertical-align: -2px; }.cc-app a, .cc-app .lk{ color: var(--accent); text-decoration: none; cursor: pointer; }.cc-app .lk:hover, .cc-app a:hover{ text-decoration: underline; }.cc-app ::selection{ background: rgba(59,130,246,.32); }.cc-app ::-webkit-scrollbar{ width: 10px; height: 10px; }.cc-app ::-webkit-scrollbar-thumb{ background: #232b3a; border-radius: 6px; border: 2px solid var(--bg); }.cc-app ::-webkit-scrollbar-thumb:hover{ background: #2e3a4e; }.cc-app ::-webkit-scrollbar-corner, .cc-app ::-webkit-scrollbar-track{ background: transparent; }.cc-app .app{ display: flex; height: 100vh; }.cc-app .sidebar{\n  width: var(--side-w); flex: none; background: var(--panel);\n  border-right: 1px solid var(--border);\n  display: flex; flex-direction: column;\n  transition: margin-left .18s ease;\n  z-index: 30;\n}.cc-app .app.side-collapsed .sidebar{ margin-left: calc(var(--side-w) * -1); }.cc-app .side-rail{\n  display: none; position: fixed; left: 0; top: 8px; z-index: 40;\n  width: 26px; height: 26px; border-radius: 6px; background: var(--panel-2);\n  border: 1px solid var(--border-2); color: var(--accent);\n  font-size: 13px; text-align: center; line-height: 24px; cursor: pointer;\n}.cc-app .app.side-collapsed .side-rail{ display: block; }.cc-app .main{ flex: 1; min-width: 0; display: flex; flex-direction: column; }.cc-app .view{ flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 18px 22px 60px; position: relative; }.cc-app .view.nopad{ padding: 0; }.cc-app .view-inner{ max-width: 1460px; margin: 0 auto; }.cc-app .side-logo{ display: flex; align-items: center; gap: 9px; padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }.cc-app .logo-mark{ width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #1d3a68, #3b82f6); color: #dbe7ff; font-size: 13px; text-align: center; line-height: 28px; flex: none; }.cc-app .logo-name{ font-weight: 650; letter-spacing: .2px; font-size: 13.5px; }.cc-app .logo-sub{ font-size: 10.5px; color: var(--text-3); font-family: var(--mono); }.cc-app .side-collapse{ margin-left: auto; }.cc-app .side-nav{ flex: 1; overflow-y: auto; padding: 10px 8px; }.cc-app .nav-item{\n  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px;\n  color: var(--text-2); cursor: pointer; margin-bottom: 2px; user-select: none;\n  font-size: 13px; border: 1px solid transparent;\n}.cc-app .nav-item:hover{ background: var(--panel-2); color: var(--text); }.cc-app .nav-item.active{ background: var(--accent-dim); color: #dbe7ff; border-color: rgba(59,130,246,.35); }.cc-app .nav-item .ic{ opacity: .9; }.cc-app .nav-item .nav-badge{\n  margin-left: auto; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger);\n  color: #fff; font-size: 10.5px; font-weight: 600; text-align: center; line-height: 18px; padding: 0 5px;\n}.cc-app .nav-sec{ font-size: 10.5px; color: var(--text-3); letter-spacing: .8px; padding: 12px 10px 4px; text-transform: uppercase; }.cc-app .side-foot{ border-top: 1px solid var(--border); padding: 10px 14px 12px; display: grid; gap: 6px; }.cc-app .side-user{ display: flex; align-items: center; gap: 8px; color: var(--text); }.cc-app .avatar{ width: 22px; height: 22px; border-radius: 50%; background: var(--accent-dim); color: #9ec2ff; font-size: 11px; text-align: center; line-height: 22px; flex: none; }.cc-app .side-conn{ display: flex; align-items: center; gap: 7px; color: var(--text-3); font-size: 11px; }.cc-app .lamp{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }.cc-app .lamp.ok{ background: var(--ok); }.cc-app .lamp.warn{ background: var(--warn); }.cc-app .lamp.danger{ background: var(--danger); }.cc-app .lamp.esc{ background: var(--esc); }.cc-app .lamp.acc{ background: var(--accent); }.cc-app .lamp.off{ background: var(--text-3); }.cc-app .pulse-dot{ animation: cc-pulse 1.8s ease-out infinite; }@keyframes cc-pulse{\n  0% { box-shadow: 0 0 0 0 rgba(59,130,246,.45); }\n  70% { box-shadow: 0 0 0 7px rgba(59,130,246,0); }\n  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }\n}.cc-app .lamp.pulse-ok{ animation: cc-pulse-ok 1.8s ease-out infinite; }@keyframes cc-pulse-ok{ 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }.cc-app .lamp.pulse-warn{ animation: cc-pulse-warn 1.6s ease-out infinite; }@keyframes cc-pulse-warn{ 0% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); } 70% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } }.cc-app .lamp.pulse-danger{ animation: cc-pulse-danger 1.5s ease-out infinite; }@keyframes cc-pulse-danger{ 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.5); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }.cc-app .chip{\n  display: inline-flex; align-items: center; gap: 6px; padding: 1px 9px; border-radius: 20px;\n  font-size: 11.5px; font-weight: 550; border: 1px solid var(--border-2); color: var(--text-2);\n  background: var(--panel-2); white-space: nowrap; line-height: 20px;\n}.cc-app .chip.lg{ font-size: 12.5px; padding: 3px 12px; line-height: 22px; }.cc-app .chip.ok{ color: #4ade80; border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.09); }.cc-app .chip.warn{ color: #fbbf24; border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.09); }.cc-app .chip.danger{ color: #f87171; border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.09); }.cc-app .chip.esc{ color: var(--esc); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.09); }.cc-app .chip.acc{ color: #7fb0f9; border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.09); }.cc-app .chip.llm{ color: #c4b5fd; border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.09); }.cc-app .chip.mute{ color: var(--text-3); }.cc-app .chip.kind{ font-family: var(--mono); font-size: 10.5px; color: #9db2d0; background: #182130; border-color: var(--border-2); }.cc-app .chip.click{ cursor: pointer; }.cc-app .chip.click:hover{ border-color: var(--accent); color: var(--text); }.cc-app .tag{\n  display: inline-block; font-size: 10.5px; font-family: var(--mono); padding: 0 7px; line-height: 18px;\n  border-radius: 5px; background: #17202e; color: #8fa3c2; border: 1px solid var(--border);\n}.cc-app .badge-dot{ position: absolute; top: -2px; right: -3px; min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; padding: 0 4px; }.cc-app .badge-dot.hidden{ display: none; }.cc-app .draft-dot{ color: var(--warn); font-size: 15px; line-height: 1; margin-left: 4px; }.cc-app .kbd{\n  display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--text-2);\n  background: var(--panel-3); border: 1px solid var(--border-2); border-bottom-width: 2px;\n  border-radius: 5px; padding: 0 5px; line-height: 16px; margin: 0 1px;\n}.cc-app .btn{\n  display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 7px;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text);\n  font-size: 12.5px; font-weight: 550; cursor: pointer; user-select: none; white-space: nowrap;\n}.cc-app .btn:hover{ background: var(--panel-3); border-color: #33405a; }.cc-app .btn:active{ transform: translateY(1px); }.cc-app .btn.primary{ background: var(--accent); border-color: var(--accent); color: #fff; }.cc-app .btn.primary:hover{ background: #2f74e8; }.cc-app .btn.ok{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color: #4ade80; }.cc-app .btn.ok:hover{ background: rgba(34,197,94,.2); }.cc-app .btn.danger{ background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.45); color: #f87171; }.cc-app .btn.danger:hover{ background: rgba(239,68,68,.18); }.cc-app .btn.llm{ background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.45); color: #c4b5fd; }.cc-app .btn.llm:hover{ background: rgba(167,139,250,.2); }.cc-app .btn.sm{ padding: 2px 9px; font-size: 11.5px; border-radius: 6px; }.cc-app .btn.xs{ padding: 1px 7px; font-size: 11px; border-radius: 5px; }.cc-app .btn.lg{ padding: 8px 18px; font-size: 13.5px; }.cc-app .btn.block{ width: 100%; justify-content: center; }.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }.cc-app .btn:disabled:active{ transform: none; }.cc-app .icon-btn{\n  position: relative; width: 28px; height: 28px; border-radius: 7px; display: inline-flex;\n  align-items: center; justify-content: center; background: transparent; border: none;\n  color: var(--text-2); cursor: pointer;\n}.cc-app .icon-btn:hover{ background: var(--panel-3); color: var(--text); }.cc-app .icon-btn.on{ color: var(--accent); background: var(--accent-dim); }.cc-app .btn-group{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }.cc-app .topbar{\n  height: var(--top-h); flex: none; display: flex; align-items: center; gap: 16px;\n  border-bottom: 1px solid var(--border); background: rgba(17,21,28,.75); backdrop-filter: blur(6px);\n  padding: 0 18px; position: sticky; top: 0; z-index: 20;\n}.cc-app .crumbs{ display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 12.5px; }.cc-app .crumb{ color: var(--text-2); cursor: pointer; padding: 3px 6px; border-radius: 5px; }.cc-app .crumb:hover{ background: var(--panel-2); color: var(--text); }.cc-app .crumb.here{ color: var(--text); font-weight: 600; cursor: default; }.cc-app .crumb.here:hover{ background: transparent; }.cc-app .crumb-sep{ color: var(--text-3); }.cc-app .top-search{\n  margin-left: auto; display: flex; align-items: center; gap: 8px; width: 330px; height: 29px;\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 8px; padding: 0 9px;\n  color: var(--text-3); cursor: pointer; font-size: 12px;\n}.cc-app .top-search:hover{ border-color: #33405a; color: var(--text-2); }.cc-app .ts-placeholder{ flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }.cc-app .top-right{ display: flex; align-items: center; gap: 10px; }.cc-app .ev-count{ font-size: 11px; color: var(--text-2); background: var(--panel-2); border: 1px solid var(--border-2); padding: 2px 9px; border-radius: 14px; }.cc-app .ev-count b{ color: var(--text); }.cc-app .panel{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); box-shadow: var(--shadow); }.cc-app .card-h{ display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--border); }.cc-app .card-h .h-title{ font-weight: 620; font-size: 13px; }.cc-app .card-h .h-sub{ color: var(--text-3); font-size: 11.5px; }.cc-app .card-h .h-right{ margin-left: auto; display: flex; gap: 8px; align-items: center; }.cc-app .card-b{ padding: 14px; }.cc-app .grid{ display: grid; gap: 14px; }.cc-app .cols-2{ grid-template-columns: 1fr 1fr; }.cc-app .cols-3{ grid-template-columns: repeat(3, 1fr); }.cc-app .muted{ color: var(--text-2); }.cc-app .faint{ color: var(--text-3); }.cc-app .small{ font-size: 11.5px; }.cc-app .sec-title{ font-size: 12px; font-weight: 650; color: var(--text-2); letter-spacing: .4px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }.cc-app .hr{ border: 0; border-top: 1px solid var(--border); margin: 10px 0; }.cc-app .tbl{ width: 100%; border-collapse: collapse; font-size: 12.5px; }.cc-app .tbl th{\n  text-align: left; font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .3px;\n  padding: 6px 12px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 2;\n  white-space: nowrap;\n}.cc-app .tbl td{ padding: 0 12px; height: 36px; border-bottom: 1px solid rgba(30,37,48,.6); vertical-align: middle; }.cc-app .tbl tr.row-click{ cursor: pointer; }.cc-app .tbl tbody tr.row-click:hover{ background: rgba(59,130,246,.06); }.cc-app .tbl tbody tr:hover{ background: rgba(255,255,255,.018); }.cc-app .tbl .num{ font-variant-numeric: tabular-nums; }.cc-app .tbl-mini{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .tbl-mini td{ padding: 5px 8px; border-bottom: 1px solid rgba(30,37,48,.55); }.cc-app .tabs{ display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }.cc-app .tab{\n  padding: 7px 14px; font-size: 12.5px; font-weight: 560; color: var(--text-2); cursor: pointer;\n  border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; user-select: none; white-space: nowrap;\n}.cc-app .tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .tab .t-badge{ font-size: 10px; background: var(--panel-3); border-radius: 8px; padding: 0 5px; margin-left: 4px; color: var(--text-2); }.cc-app .tab.active .t-badge{ background: var(--accent-dim); color: #9ec2ff; }.cc-app .empty{ text-align: center; padding: 42px 20px; color: var(--text-3); }.cc-app .empty .ic{ width: 34px; height: 34px; opacity: .4; margin-bottom: 10px; }.cc-app .empty .e-title{ color: var(--text-2); font-weight: 600; margin-bottom: 4px; }.cc-app .empty .e-act{ margin-top: 14px; }.cc-app .skel{ position: relative; overflow: hidden; background: var(--panel-2); border-radius: 5px; height: 14px; }.cc-app .skel::after{\n  content: \"\"; position: absolute; inset: 0; transform: translateX(-100%);\n  background: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent);\n  animation: cc-shimmer 1.2s infinite;\n}@keyframes cc-shimmer{ to { transform: translateX(100%); } }.cc-app .skel-row{ display: flex; align-items: center; gap: 10px; padding: 9px 12px; }.cc-app .diff{ font-family: var(--mono); font-size: 11.5px; line-height: 1.65; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; overflow-x: auto; }.cc-app .diff-line{ padding: 0 10px; white-space: pre; }.cc-app .diff-line.add{ background: rgba(34,197,94,.09); color: #86efac; }.cc-app .diff-line.del{ background: rgba(239,68,68,.09); color: #fca5a5; }.cc-app .diff-line.ctx{ color: var(--text-2); }.cc-app .diff-line .d-sign{ display: inline-block; width: 12px; color: var(--text-3); }.cc-app .toast-stack{ position: fixed; right: 18px; bottom: 60px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }.cc-app .toast{\n  min-width: 240px; max-width: 380px; background: var(--panel-2); border: 1px solid var(--border-2);\n  border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; box-shadow: var(--shadow);\n  animation: cc-toast-in .22s ease; font-size: 12.5px;\n}.cc-app .toast.ok{ border-left-color: var(--ok); }.cc-app .toast.warn{ border-left-color: var(--warn); }.cc-app .toast.err{ border-left-color: var(--danger); }.cc-app .toast .t-msg{ color: var(--text); }.cc-app .toast .t-sub{ color: var(--text-3); font-size: 11px; margin-top: 2px; }@keyframes cc-toast-in{ from { opacity: 0; transform: translateY(8px); } }.cc-app .overlay{ position: fixed; inset: 0; background: rgba(4,6,10,.62); backdrop-filter: blur(2px); z-index: 100; display: flex; align-items: flex-start; justify-content: center; }.cc-app .overlay[hidden]{ display: none; }.cc-app .modal{\n  margin-top: 12vh; width: min(720px, 92vw); max-height: 76vh; display: flex; flex-direction: column;\n  background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow);\n  animation: cc-modal-in .16s ease;\n}.cc-app .modal.wide{ width: min(900px, 94vw); }.cc-app .modal.narrow{ width: min(480px, 92vw); }@keyframes cc-modal-in{ from { opacity: 0; transform: translateY(-6px) scale(.985); } }.cc-app .modal-h{ display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 10px; }.cc-app .modal-h .m-title{ font-weight: 650; font-size: 14px; }.cc-app .modal-h .icon-btn{ margin-left: auto; }.cc-app .modal-b{ padding: 16px; overflow-y: auto; }.cc-app .modal-f{ padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }.cc-app .palette{ margin-top: 11vh; width: min(640px, 92vw); background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; animation: cc-modal-in .16s ease; }.cc-app .pal-input-row{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text-3); }.cc-app .pal-input-row input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; font-family: var(--sans); }.cc-app .pal-list{ max-height: 46vh; overflow-y: auto; padding: 6px; }.cc-app .pal-item{ display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 7px; cursor: pointer; color: var(--text-2); }.cc-app .pal-item .pi-label{ color: var(--text); }.cc-app .pal-item .pi-sub{ color: var(--text-3); font-size: 11px; margin-left: auto; font-family: var(--mono); }.cc-app .pal-item.sel{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .pal-item.sel .pi-label{ color: #fff; }.cc-app .pal-item.sel .pi-sub{ color: #9ec2ff; }.cc-app .pal-sec{ font-size: 10.5px; color: var(--text-3); padding: 8px 12px 2px; letter-spacing: .6px; }.cc-app .pal-foot{ display: flex; gap: 14px; padding: 9px 16px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 11px; }.cc-app .drawer-wrap{ position: fixed; inset: 0; z-index: 90; }.cc-app .drawer-mask{ position: absolute; inset: 0; background: rgba(4,6,10,.5); }.cc-app .drawer{\n  position: absolute; top: 0; right: 0; bottom: 0; width: min(680px, 86vw);\n  background: var(--panel); border-left: 1px solid var(--border-2); box-shadow: var(--shadow);\n  display: flex; flex-direction: column; animation: cc-drawer-in .2s ease;\n}@keyframes cc-drawer-in{ from { transform: translateX(30px); opacity: .6; } }.cc-app .drawer-h{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); }.cc-app .drawer-h .d-title{ font-weight: 650; }.cc-app .drawer-b{ flex: 1; overflow-y: auto; padding: 16px; }.cc-app .help-fab{\n  position: fixed; right: 16px; bottom: 16px; width: 32px; height: 32px; border-radius: 50%;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text-2);\n  font-size: 14px; font-weight: 700; cursor: pointer; z-index: 80; box-shadow: var(--shadow);\n}.cc-app .help-fab:hover{ color: var(--accent); border-color: var(--accent); }.cc-app .settings-cards{ display: grid; gap: 14px; max-width: 760px; }.cc-app .set-card{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }.cc-app .set-card-h{ padding: 12px 16px 4px; font-weight: 650; font-size: 13px; }.cc-app .set-card-sub{ padding: 0 16px 8px; color: var(--text-3); font-size: 11.5px; }.cc-app .set-row{ display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid rgba(30,37,48,.6); font-size: 12.5px; }.cc-app .set-row .sr-label{ color: var(--text-2); width: 150px; flex: none; }.cc-app .set-row .sr-val{ color: var(--text); flex: 1; min-width: 0; }.cc-app .set-row .sr-ctl{ margin-left: auto; flex: none; }.cc-app .switch{ position: relative; width: 34px; height: 19px; border-radius: 10px; background: var(--panel-3); border: 1px solid var(--border-2); cursor: pointer; flex: none; transition: background .15s; }.cc-app .switch::after{ content: \"\"; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-3); transition: all .15s; }.cc-app .switch.on{ background: var(--accent); border-color: var(--accent); }.cc-app .switch.on::after{ left: 16px; background: #fff; }.cc-app .kv{ display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 12px; }.cc-app .kv .k{ color: var(--text-3); white-space: nowrap; }.cc-app .kv .v{ color: var(--text); min-width: 0; }.cc-app .progress{ height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; }.cc-app .progress > i{ display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }.cc-app .bar-mini{ display: inline-block; width: 56px; height: 5px; border-radius: 3px; background: var(--panel-3); overflow: hidden; vertical-align: middle; margin-right: 6px; }.cc-app .bar-mini > i{ display: block; height: 100%; background: var(--ok); }.cc-app .bar-mini.mid > i{ background: var(--warn); }.cc-app .bar-mini.low > i{ background: var(--danger); }.cc-app .spin{ animation: cc-rot 1s linear infinite; display: inline-block; }@keyframes cc-rot{ to { transform: rotate(360deg); } }.cc-app .typing-caret::after{ content: \"▍\"; color: var(--llm); animation: cc-blink .9s steps(1) infinite; }@keyframes cc-blink{ 50% { opacity: 0; } }.cc-app .welcome{ max-width: 1180px; margin: 0 auto; padding-top: 4vh; }.cc-app .w-hello{ display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; }.cc-app .w-hello h1{ font-size: 26px; font-weight: 700; letter-spacing: .3px; }.cc-app .w-hello .w-date{ color: var(--text-3); font-size: 13px; }.cc-app .w-health-row{ display: flex; gap: 18px; align-items: stretch; margin-bottom: 30px; flex-wrap: wrap; }.cc-app .w-health{\n  flex: none; display: flex; align-items: center; gap: 18px; background: var(--panel);\n  border: 1px solid var(--border); border-radius: 14px; padding: 20px 26px; box-shadow: var(--shadow);\n  position: relative;\n}.cc-app .w-health-num{ font-size: 54px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }.cc-app .w-health-num .unit{ font-size: 20px; color: var(--text-3); font-weight: 500; }.cc-app .w-health.good{ color: #4ade80; }.cc-app .w-health.mid{ color: var(--warn); }.cc-app .w-health.bad{ color: var(--danger); }.cc-app .w-health-meta{ font-size: 12px; color: var(--text-2); line-height: 1.7; }.cc-app .w-health-meta b{ color: var(--text); }.cc-app .w-insync{ flex: 1; min-width: 260px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }.cc-app .w-insync-num{ font-size: 30px; font-weight: 700; }.cc-app .w-insync-bar{ display: flex; gap: 5px; }.cc-app .w-insync-cell{ flex: 1; height: 10px; border-radius: 4px; background: var(--panel-3); position: relative; }.cc-app .w-insync-cell.lit-ok{ background: var(--ok); }.cc-app .w-insync-cell.lit-warn{ background: var(--warn); }.cc-app .w-insync-cell.lit-acc{ background: var(--accent); }.cc-app .w-insync-cell.lit-esc{ background: var(--esc); }.cc-app .w-insync-cell .cell-tip{ position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-3); white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; }.cc-app .w-insync-cell:hover .cell-tip{ opacity: 1; }.cc-app .w-quick{ display: flex; gap: 10px; align-items: center; margin-left: auto; }.cc-app .w-stagebar{ margin-bottom: 30px; }.cc-app .w-stages{ display: flex; align-items: center; gap: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; overflow-x: auto; }.cc-app .w-stage{ flex: 1; min-width: 108px; position: relative; cursor: pointer; text-align: center; padding-top: 4px; }.cc-app .w-stage:hover .ws-name{ color: var(--accent); }.cc-app .w-stage::before{ content: \"\"; position: absolute; top: 16px; left: -50%; width: 100%; height: 2px; background: var(--border-2); }.cc-app .w-stage:first-child::before{ display: none; }.cc-app .w-stage.done::before{ background: var(--ok); }.cc-app .w-stage.current::before{ background: var(--accent); }.cc-app .w-stage-dot{\n  width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 8px; position: relative; z-index: 1;\n  background: var(--panel-3); border: 2px solid var(--border-2); color: var(--text-3);\n  font-size: 11px; font-weight: 700; line-height: 20px; text-align: center;\n}.cc-app .w-stage.done .w-stage-dot{ background: rgba(34,197,94,.15); border-color: var(--ok); color: #4ade80; }.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent); color: #7fb0f9; animation: cc-pulse 1.8s ease-out infinite; }.cc-app .w-stage.wait .w-stage-dot{ border-color: var(--warn); color: #fbbf24; }.cc-app .ws-name{ font-weight: 640; font-size: 12.5px; }.cc-app .ws-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; }.cc-app .ws-note{ font-size: 10.5px; color: var(--text-2); margin-top: 4px; max-width: 140px; margin-left: auto; margin-right: auto; }.cc-app .w-services{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }.cc-app .w-svc{\n  display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border);\n  border-radius: 10px; padding: 13px 16px; cursor: pointer; transition: border-color .12s;\n}.cc-app .w-svc:hover{ border-color: var(--border-2); background: var(--panel-2); }.cc-app .w-svc .ws-main{ min-width: 0; }.cc-app .w-svc .ws-title{ font-weight: 620; font-family: var(--mono); font-size: 12.5px; }.cc-app .w-svc .ws-desc{ color: var(--text-3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.cc-app .w-svc .ws-chip{ margin-left: auto; }.cc-app .w-ev-filter{ display: flex; gap: 8px; margin-bottom: 10px; }.cc-app .fchip{ padding: 3px 12px; border-radius: 16px; font-size: 12px; font-weight: 560; border: 1px solid var(--border-2); color: var(--text-2); cursor: pointer; background: var(--panel-2); }.cc-app .fchip:hover{ color: var(--text); }.cc-app .fchip.on{ border-color: var(--accent); color: #7fb0f9; background: rgba(59,130,246,.1); }.cc-app .fchip.on.crit{ border-color: var(--danger); color: #f87171; background: rgba(239,68,68,.09); }.cc-app .w-ev-item{ display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid rgba(30,37,48,.6); }.cc-app .w-ev-item:hover{ background: rgba(255,255,255,.02); }.cc-app .w-ev-dot{ width: 8px; height: 8px; border-radius: 50%; flex: none; }.cc-app .w-ev-title{ color: var(--text); }.cc-app .w-ev-obj{ margin-left: auto; }.cc-app .w-ev-time{ color: var(--text-3); font-size: 11px; width: 44px; text-align: right; }.cc-app .statbar{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }.cc-app .stat{\n  background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);\n  padding: 12px 16px; display: flex; flex-direction: column; gap: 2px;\n}.cc-app .stat .st-num{ font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }.cc-app .stat .st-num .dim{ color: var(--text-3); font-size: 14px; font-weight: 500; }.cc-app .stat .st-label{ font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }.cc-app .stat.alert .st-num{ color: var(--esc); }.cc-app .syscards{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }.cc-app .syscard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; cursor: pointer; transition: border-color .12s, transform .12s; }.cc-app .syscard:hover{ border-color: var(--border-2); transform: translateY(-1px); }.cc-app .syscard .sc-top{ display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }.cc-app .syscard .sc-name{ font-family: var(--mono); font-weight: 650; font-size: 13px; }.cc-app .syscard .sc-meta{ display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 11.5px; color: var(--text-2); margin-bottom: 10px; }.cc-app .syscard .sc-meta .k{ color: var(--text-3); }.cc-app .syscard .sc-foot{ display: flex; align-items: center; gap: 8px; border-top: 1px solid rgba(30,37,48,.6); padding-top: 9px; }.cc-app .mini-list{ display: flex; flex-direction: column; }.cc-app .mini-row{ display: flex; align-items: center; gap: 9px; padding: 8px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; font-size: 12.5px; }.cc-app .mini-row:hover{ background: rgba(59,130,246,.06); }.cc-app .mini-row:last-child{ border-bottom: none; }.cc-app .mini-row .mr-main{ min-width: 0; flex: 1; }.cc-app .mini-row .mr-sub{ color: var(--text-3); font-size: 11px; }.cc-app .tree-toolbar{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }.cc-app .tree-box{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .tree-node{ user-select: none; }.cc-app .tree-row{\n  display: flex; align-items: center; gap: 7px; padding: 0 10px; height: 34px; cursor: pointer;\n  border-bottom: 1px solid rgba(30,37,48,.45); font-size: 12.5px; position: relative;\n}.cc-app .tree-row:hover{ background: rgba(59,130,246,.05); }.cc-app .tree-row .t-caret{ width: 14px; color: var(--text-3); flex: none; transition: transform .12s; font-size: 10px; text-align: center; }.cc-app .tree-row .t-caret.open{ transform: rotate(90deg); }.cc-app .tree-row .t-name{ font-family: var(--mono); font-weight: 560; color: var(--text); }.cc-app .tree-row:hover .t-name{ color: var(--accent); }.cc-app .tree-row .t-kind{ margin-left: 2px; }.cc-app .tree-row .t-meta{ margin-left: auto; display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 11px; flex: none; }.cc-app .tree-row .t-rev{ font-family: var(--mono); }.cc-app .tree-children.skeletonizing{ opacity: .7; }.cc-app .tree-root-badge{ font-size: 10px; color: var(--llm); border: 1px solid rgba(167,139,250,.4); border-radius: 4px; padding: 0 5px; margin-left: 4px; }.cc-app .dh{ display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }.cc-app .dh-main{ min-width: 0; }.cc-app .dh-title{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .dh-title h1{ font-size: 18px; font-weight: 700; font-family: var(--mono); letter-spacing: .2px; }.cc-app .dh-sub{ color: var(--text-2); font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.cc-app .dh-actions{ margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .path-mono{ font-family: var(--mono); color: var(--text-2); background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; }.cc-app .filter-bar{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }.cc-app .filter-bar select, .cc-app .filter-bar input[type=\"text\"], .cc-app .filter-bar input[type=\"search\"]{\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; color: var(--text);\n  font-size: 12px; padding: 5px 9px; outline: none; font-family: var(--sans);\n}.cc-app .filter-bar select:focus, .cc-app .filter-bar input:focus{ border-color: var(--accent); }.cc-app .filter-bar select option{ background: var(--panel); }.cc-app .count-note{ color: var(--text-3); font-size: 11.5px; margin-left: auto; font-family: var(--mono); }.cc-app .vlist{ position: relative; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--rad); background: var(--panel); }.cc-app .vlist-canvas{ position: absolute; top: 0; left: 0; right: 0; }.cc-app .vrow{ display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; cursor: pointer; }.cc-app .vrow:hover{ background: rgba(59,130,246,.06); }.cc-app .vrow .vc{ flex: none; }.cc-app .vrow .grow{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.cc-app .jobs-layout{ display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 14px; align-items: start; }.cc-app .jobs-list{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; max-height: 72vh; display: flex; flex-direction: column; }.cc-app .jobs-list .jl-scroll{ overflow-y: auto; flex: 1; }.cc-app .job-item{ padding: 10px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; }.cc-app .job-item:hover{ background: rgba(255,255,255,.02); }.cc-app .job-item.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .job-item .ji-top{ display: flex; align-items: center; gap: 8px; }.cc-app .job-item .ji-no{ font-family: var(--mono); font-weight: 700; color: var(--text-2); }.cc-app .job-item.sel .ji-no{ color: #9ec2ff; }.cc-app .job-item .ji-sub{ color: var(--text-3); font-size: 11px; margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .job-detail{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }.cc-app .jd-head{ padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }.cc-app .jd-title{ font-weight: 700; font-size: 14px; }.cc-app .jd-kvrow{ display: flex; gap: 18px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2); }.cc-app .jd-kvrow b{ color: var(--text); font-weight: 600; }.cc-app .jd-body{ padding: 14px 16px; display: grid; gap: 16px; }.cc-app .follow-tag{ display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-family: var(--mono); }.cc-app .follow-tag.off{ color: var(--text-3); }.cc-app .logbox{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 11.5px; max-height: 320px; overflow-y: auto; }.cc-app .log-line{ padding: 4px 12px; border-bottom: 1px solid rgba(30,37,48,.4); display: flex; gap: 10px; }.cc-app .log-line:hover{ background: rgba(255,255,255,.02); }.cc-app .log-line .lg-op{ color: #7fb0f9; flex: none; min-width: 170px; }.cc-app .log-line .lg-ts{ color: var(--text-3); flex: none; }.cc-app .log-more{ display: block; width: 100%; text-align: center; padding: 8px; background: none; border: none; border-top: 1px solid var(--border); color: var(--accent); font-size: 11.5px; cursor: pointer; font-family: var(--mono); }.cc-app .log-more:hover{ background: var(--panel-2); }.cc-app .phase-tl{ display: flex; flex-direction: column; gap: 0; }.cc-app .ptl-item{ display: flex; gap: 12px; position: relative; padding-bottom: 16px; }.cc-app .ptl-item:last-child{ padding-bottom: 0; }.cc-app .ptl-rail{ width: 22px; flex: none; display: flex; flex-direction: column; align-items: center; }.cc-app .ptl-node{ width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-2); background: var(--panel-2); flex: none; z-index: 1; }.cc-app .ptl-item.done .ptl-node{ border-color: var(--ok); background: rgba(34,197,94,.15); }.cc-app .ptl-item.current .ptl-node{ border-color: var(--accent); background: rgba(59,130,246,.2); animation: cc-pulse 1.8s ease-out infinite; }.cc-app .ptl-item.fail .ptl-node{ border-color: var(--danger); background: rgba(239,68,68,.15); }.cc-app .ptl-item.wait .ptl-node{ border-color: var(--warn); background: rgba(245,158,11,.12); }.cc-app .ptl-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .ptl-item.done .ptl-line{ background: var(--ok); }.cc-app .ptl-main{ flex: 1; min-width: 0; padding-top: 0; }.cc-app .ptl-head{ display: flex; align-items: baseline; gap: 8px; }.cc-app .ptl-phase{ font-weight: 650; font-size: 12.5px; }.cc-app .ptl-ts{ color: var(--text-3); font-size: 11px; font-family: var(--mono); }.cc-app .ptl-note{ color: var(--text-2); font-size: 11.5px; margin-top: 2px; }.cc-app .flowwrap{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 22px; overflow-x: auto; }.cc-app .fnode{ cursor: pointer; }.cc-app .fnode rect{ fill: var(--panel-2); stroke: var(--border-2); stroke-width: 1.4; rx: 8; }.cc-app .fnode:hover rect{ stroke: var(--accent); }.cc-app .fnode.cur rect{ stroke: var(--accent); stroke-width: 2; fill: rgba(59,130,246,.1); }.cc-app .fnode.abn rect{ stroke: var(--danger); }.cc-app .fnode text{ fill: var(--text); font-size: 12px; font-family: var(--sans); }.cc-app .fnode .fsub{ fill: var(--text-3); font-size: 10px; }.cc-app .fedge{ stroke: var(--border-2); stroke-width: 1.6; fill: none; marker-end: url(#arrow); }.cc-app .fedge.hot{ stroke: var(--accent); }.cc-app .fedge.abn{ stroke: var(--danger); stroke-dasharray: 4 3; }.cc-app .topo-svg text{ fill: var(--text-2); font-size: 11px; font-family: var(--mono); }.cc-app .topo-node{ cursor: pointer; }.cc-app .topo-node rect{ fill: var(--panel-2); stroke: var(--border-2); rx: 7; }.cc-app .topo-node:hover rect{ stroke: var(--accent); }.cc-app .topo-edge{ stroke: #2b3646; stroke-width: 1.4; fill: none; cursor: pointer; }.cc-app .topo-edge:hover{ stroke: var(--accent); }.cc-app .metric-chart{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; }.cc-app .metric-chart text{ font-size: 9.5px; fill: var(--text-3); font-family: var(--mono); }.cc-app .doc-layout{ display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }.cc-app .doc-main{ min-width: 0; display: grid; gap: 12px; }.cc-app .doc-headbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .doc-path{ font-family: var(--mono); font-size: 13px; font-weight: 650; }.cc-app .doc-meta-row{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text-2); font-size: 12px; }.cc-app .doc-editor-wrap{ position: relative; }.cc-app textarea.doc-editor{\n  width: 100%; min-height: 480px; background: var(--bg); color: var(--text);\n  border: 1px solid var(--border-2); border-radius: var(--rad); padding: 14px 16px;\n  font: 12px/1.7 var(--mono); outline: none; resize: vertical; tab-size: 2;\n}.cc-app textarea.doc-editor:focus{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,.15); }.cc-app .doc-collab{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); position: sticky; top: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 90px); }.cc-app .collab-tabs{ display: flex; border-bottom: 1px solid var(--border); flex: none; }.cc-app .collab-tab{ flex: 1; text-align: center; padding: 9px 4px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .collab-tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .collab-tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .collab-tab .ct-badge{ font-size: 9.5px; background: var(--warn); color: #201200; border-radius: 8px; padding: 0 5px; margin-left: 3px; font-weight: 700; }.cc-app .collab-body{ flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; min-height: 0; }.cc-app .llm-msgs{ flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 120px; }.cc-app .llm-msg{ border-radius: 9px; padding: 9px 12px; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }.cc-app .llm-msg.user{ background: var(--accent-dim); align-self: flex-end; max-width: 90%; }.cc-app .llm-msg.agent{ background: var(--panel-2); border: 1px solid var(--border); border-left: 2px solid var(--llm); }.cc-app .llm-chips{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; flex: none; }.cc-app .llm-chip{ font-size: 11px; padding: 3px 10px; border-radius: 14px; border: 1px solid rgba(167,139,250,.4); color: #c4b5fd; background: rgba(167,139,250,.07); cursor: pointer; }.cc-app .llm-chip:hover{ background: rgba(167,139,250,.16); }.cc-app .llm-input-row{ display: flex; gap: 8px; margin-top: 10px; flex: none; }.cc-app .llm-input-row input{ flex: 1; background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; padding: 7px 10px; color: var(--text); font-size: 12.5px; outline: none; }.cc-app .llm-input-row input:focus{ border-color: var(--llm); }.cc-app .draft-card{ border: 1px solid rgba(167,139,250,.35); border-radius: 9px; margin-top: 8px; overflow: hidden; background: var(--bg); }.cc-app .draft-card .dc-head{ display: flex; align-items: center; gap: 8px; padding: 7px 11px; font-size: 11.5px; color: #c4b5fd; background: rgba(167,139,250,.07); }.cc-app .draft-card .dc-body{ padding: 8px; }.cc-app .draft-card .dc-acts{ display: flex; gap: 8px; padding: 8px; border-top: 1px solid var(--border); }.cc-app .draft-item{ border: 1px solid var(--border-2); border-radius: 9px; margin-bottom: 10px; overflow: hidden; }.cc-app .draft-item .di-head{ display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--panel-2); font-size: 12px; }.cc-app .draft-item .di-src{ font-size: 10px; border-radius: 4px; padding: 0 6px; font-weight: 700; }.cc-app .draft-item .di-src.llm{ background: rgba(167,139,250,.15); color: #c4b5fd; }.cc-app .draft-item .di-src.manual{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .draft-item .di-acts{ display: flex; gap: 8px; padding: 8px 11px; border-top: 1px solid var(--border); }.cc-app .apply-dock{ position: sticky; bottom: 0; padding: 12px; border-top: 1px solid var(--border); background: var(--panel); flex: none; }.cc-app .apply-dock .hint{ font-size: 11px; color: var(--text-3); margin-bottom: 8px; }.cc-app .rev-item{ display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; font-size: 12px; border-radius: 6px; }.cc-app .rev-item:hover{ background: var(--panel-2); }.cc-app .rev-item .rv-no{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; width: 34px; }.cc-app .rev-item .rv-author{ color: var(--text-2); }.cc-app .rev-item .rv-sum{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }.cc-app .checklist{ display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }.cc-app .check-item{ display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--text-2); padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; }.cc-app .check-item .ci-ic{ color: var(--text-3); }.cc-app .check-item.pass .ci-ic{ color: var(--ok); }.cc-app .check-item.pass{ color: var(--text); border-color: rgba(34,197,94,.3); }.cc-app .apply-progress{ margin: 14px 0 6px; }.cc-app .chat-layout{ display: grid; grid-template-columns: 240px 1fr 300px; height: calc(100vh - var(--top-h)); }.cc-app .chat-sub{ background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }.cc-app .cs-head{ padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }.cc-app .cs-agent{ display: flex; align-items: center; gap: 9px; }.cc-app .cs-agent .ca-name{ font-family: var(--mono); font-weight: 700; font-size: 13px; }.cc-app .cs-agent .ca-sub{ color: var(--text-3); font-size: 10.5px; }.cc-app .cs-filter{ display: flex; gap: 4px; }.cc-app .cs-filter .cf-tab{ flex: 1; text-align: center; font-size: 11px; padding: 3px 0; border-radius: 5px; color: var(--text-3); cursor: pointer; }.cc-app .cs-filter .cf-tab.on{ background: var(--panel-3); color: var(--text); }.cc-app .cs-search{ display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border-2); border-radius: 6px; padding: 4px 8px; color: var(--text-3); }.cc-app .cs-search input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 11.5px; min-width: 0; }.cc-app .cs-list{ flex: 1; overflow-y: auto; }.cc-app .sess-row{ padding: 9px 12px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; position: relative; }.cc-app .sess-row:hover{ background: var(--panel-2); }.cc-app .sess-row.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .sess-row.archived{ opacity: .55; }.cc-app .sess-row .ss-title{ font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 18px; }.cc-app .sess-row .ss-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; display: flex; gap: 7px; align-items: center; }.cc-app .sess-row .ss-pin{ position: absolute; top: 8px; right: 8px; color: var(--warn); }.cc-app .sess-row .ss-menu{ position: absolute; top: 6px; right: 6px; opacity: 0; }.cc-app .sess-row:hover .ss-menu{ opacity: 1; }.cc-app .runner-tag{ font-size: 9.5px; font-family: var(--mono); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; color: var(--text-2); }.cc-app .chat-main{ display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }.cc-app .chat-headbar{ display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); flex: none; background: var(--panel); }.cc-app .view-switch{ display: flex; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 7px; overflow: hidden; }.cc-app .view-switch .vs-opt{ padding: 4px 13px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }.cc-app .view-switch .vs-opt.on{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .chat-scroll{ flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }.cc-app .msg-row{ display: flex; gap: 10px; margin-bottom: 18px; }.cc-app .msg-avatar{ width: 26px; height: 26px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; }.cc-app .msg-avatar.user{ background: var(--panel-3); color: var(--text-2); }.cc-app .msg-avatar.agent{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .msg-body{ flex: 1; min-width: 0; }.cc-app .msg-who{ font-size: 11px; color: var(--text-3); margin-bottom: 3px; display: flex; gap: 8px; align-items: center; }.cc-app .msg-who .who-name{ font-weight: 650; color: var(--text-2); }.cc-app .msg-text{ white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.65; }.cc-app .msg-cards{ display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }.cc-app .mcard{ border: 1px solid var(--border-2); border-radius: 9px; background: var(--panel); overflow: hidden; max-width: 640px; }.cc-app .mcard .mc-head{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12px; color: var(--text-2); cursor: pointer; }.cc-app .mcard .mc-head:hover{ background: var(--panel-2); }.cc-app .mcard .mc-op{ font-family: var(--mono); color: #7fb0f9; font-weight: 650; }.cc-app .mcard .mc-title{ color: var(--text); font-weight: 600; }.cc-app .mcard .mc-body{ border-top: 1px solid var(--border); padding: 10px 12px; font-size: 12px; }.cc-app .mcard.op{ border-left: 3px solid var(--accent); }.cc-app .mcard.files{ border-left: 3px solid var(--warn); }.cc-app .mcard.proposal{ border-left: 3px solid var(--llm); }.cc-app .mcard.approval{ border-left: 3px solid var(--danger); }.cc-app .mcard.diag{ border-left: 3px solid var(--esc); }.cc-app .mcard .mc-status{ margin-left: auto; }.cc-app .file-row{ display: flex; align-items: center; gap: 10px; padding: 5px 4px; font-family: var(--mono); font-size: 11.5px; border-bottom: 1px solid rgba(30,37,48,.4); }.cc-app .file-row:last-child{ border-bottom: none; }.cc-app .file-row .fp{ color: var(--text); }.cc-app .file-row .fadd{ color: #4ade80; }.cc-app .file-row .fdel{ color: #f87171; }.cc-app .file-row .fst{ margin-left: auto; }.cc-app .diag-item{ display: flex; gap: 8px; padding: 4px 0; font-size: 12px; align-items: baseline; }.cc-app .diag-item .d-sev{ font-family: var(--mono); font-size: 10px; padding: 0 5px; border-radius: 4px; flex: none; }.cc-app .diag-item .d-sev.error{ background: rgba(239,68,68,.15); color: #f87171; }.cc-app .diag-item .d-sev.warning{ background: rgba(245,158,11,.15); color: #fbbf24; }.cc-app .turn-tail{ margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-2); display: flex; gap: 14px; font-size: 10.5px; color: var(--text-3); font-family: var(--mono); flex-wrap: wrap; }.cc-app .chat-inputbar{ border-top: 1px solid var(--border); padding: 12px 16px; flex: none; background: var(--panel); }.cc-app .chat-input-wrap{ display: flex; gap: 10px; align-items: flex-end; background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 9px 12px; }.cc-app .chat-input-wrap:focus-within{ border-color: var(--accent); }.cc-app .chat-input-wrap textarea{ flex: 1; background: none; border: none; outline: none; color: var(--text); font: 13px/1.5 var(--sans); resize: none; max-height: 120px; min-height: 22px; }.cc-app .chat-hints{ display: flex; gap: 12px; margin-top: 7px; font-size: 10.5px; color: var(--text-3); }.cc-app .traj-scroll{ flex: 1; overflow-y: auto; padding: 16px 22px; min-height: 0; }.cc-app .traj-item{ display: flex; gap: 12px; position: relative; padding-bottom: 14px; }.cc-app .traj-rail{ width: 20px; display: flex; flex-direction: column; align-items: center; flex: none; }.cc-app .traj-dot{ width: 12px; height: 12px; border-radius: 3px; border: 2px solid var(--border-2); background: var(--panel-2); z-index: 1; }.cc-app .traj-item.kind-tool .traj-dot{ border-color: var(--accent); }.cc-app .traj-item.kind-doc .traj-dot{ border-color: var(--llm); }.cc-app .traj-item.kind-user .traj-dot{ border-color: var(--text-2); }.cc-app .traj-item.kind-agent .traj-dot{ border-color: var(--ok); }.cc-app .traj-item.kind-files .traj-dot{ border-color: var(--warn); }.cc-app .traj-item.kind-diag .traj-dot{ border-color: var(--esc); }.cc-app .traj-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .traj-kind{ font-size: 10px; font-family: var(--mono); color: var(--text-3); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; }.cc-app .traj-label{ font-weight: 600; font-size: 12.5px; }.cc-app .traj-detail{ color: var(--text-2); font-size: 11.5px; }.cc-app .chat-ctx{ background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }.cc-app .ctx-sec{ border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }.cc-app .ctx-sec .cx-h{ padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: .5px; background: var(--panel-2); border-bottom: 1px solid var(--border); }.cc-app .ctx-sec .cx-b{ padding: 9px 12px; display: flex; flex-direction: column; gap: 7px; font-size: 12px; }.cc-app .ctx-row{ display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; flex-wrap: wrap; }.cc-app .ctx-row .cr-k{ color: var(--text-3); width: 78px; flex: none; }.cc-app .live-status{ display: flex; align-items: center; gap: 8px; font-size: 12px; }.cc-app .term-tabs{ display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }.cc-app .term-tab{ padding: 7px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .term-tab.active{ color: #4ade80; border-bottom-color: var(--ok); }.cc-app .term-wrap{ flex: 1; min-height: 0; padding: 14px 22px; display: flex; }.cc-app .term{\n  flex: 1; background: #060a0f; border: 1px solid #14202c; border-radius: 10px; overflow-y: auto;\n  font: 12px/1.6 var(--mono); color: #9fd8b8; padding: 14px 16px; cursor: text;\n}.cc-app .term .t-line{ white-space: pre-wrap; word-break: break-all; }.cc-app .term .t-cmd{ color: #7fb0f9; }.cc-app .term .t-dim{ color: #4d6076; }.cc-app .term .caret{ display: inline-block; width: 7px; height: 14px; background: #9fd8b8; vertical-align: -2px; animation: cc-blink .9s steps(1) infinite; }.cc-app .runner-cards{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.cc-app .runner-card{ border: 1px solid var(--border-2); border-radius: 10px; padding: 13px; cursor: pointer; background: var(--panel-2); }.cc-app .runner-card:hover{ border-color: #33405a; }.cc-app .runner-card.sel{ border-color: var(--accent); background: var(--accent-dim); }.cc-app .runner-card .rc-name{ font-weight: 700; font-size: 13px; margin-bottom: 3px; }.cc-app .runner-card .rc-desc{ font-size: 11px; color: var(--text-2); }.cc-app .runner-card.sel .rc-desc{ color: #9ec2ff; }.cc-app .conn-group{ margin-bottom: 22px; }.cc-app .conncards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .conncard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 13px 15px; cursor: pointer; transition: border-color .12s; }.cc-app .conncard:hover{ border-color: var(--border-2); }.cc-app .conncard .cc-top{ display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }.cc-app .conncard .cc-name{ font-family: var(--mono); font-weight: 650; font-size: 12.5px; }.cc-app .conncard .cc-desc{ font-size: 11px; color: var(--text-3); min-height: 30px; }.cc-app .op-cards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .op-card{ background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 12px 14px; }.cc-app .op-card .oc-name{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; font-size: 12.5px; }.cc-app .op-card .oc-desc{ font-size: 11px; color: var(--text-2); margin-top: 4px; }.cc-app .yaml-block{ background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font: 11.5px/1.7 var(--mono); overflow-x: auto; white-space: pre; color: #b6c2d9; }.cc-app .yaml-block .y-key{ color: #7fb0f9; }.cc-app .env-table{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .env-table th{ text-align: left; color: var(--text-3); font-size: 11px; padding: 6px 10px; border-bottom: 1px solid var(--border); }.cc-app .env-table td{ padding: 6px 10px; border-bottom: 1px solid rgba(30,37,48,.5); }.cc-app .env-table td.mono{ color: #7fb0f9; }.cc-app .ap-card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); margin-bottom: 14px; overflow: hidden; }.cc-app .ap-card.resolved{ opacity: .68; }.cc-app .ap-card .ap-head{ display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }.cc-app .ap-card .ap-title{ font-weight: 650; font-size: 13px; }.cc-app .ap-card .ap-meta{ display: flex; gap: 14px; padding: 9px 16px; color: var(--text-2); font-size: 11.5px; flex-wrap: wrap; }.cc-app .ap-card .ap-body{ padding: 0 16px 14px; }.cc-app .ap-card .ap-acts{ display: flex; gap: 8px; padding: 0 16px 14px; }.cc-app .keys-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }.cc-app .keys-row{ display: flex; align-items: center; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; }.cc-app .keys-row .kr-desc{ color: var(--text-2); }.cc-app .keys-row .kr-keys{ display: flex; gap: 3px; }@media (max-width: 1100px){.cc-app .doc-layout{ grid-template-columns: 1fr; }.cc-app .doc-collab{ position: static; max-height: none; }.cc-app .chat-layout{ grid-template-columns: 220px 1fr; }.cc-app .chat-ctx{ display: none; }.cc-app .jobs-layout{ grid-template-columns: 1fr; }.cc-app .statbar{ grid-template-columns: repeat(3, 1fr); }.cc-app .syscards, .cc-app .w-services{ grid-template-columns: 1fr 1fr; }.cc-app .conncards{ grid-template-columns: 1fr 1fr; }\n}\n\n";
+var CC_CSS = "/* console-proto app.css 作用域化（构建手术 v3，loop-36）：全部规则选择器收进 .cc-app 容器（不污染 dsh 宿主）；:root/body→.cc-app；keyframes 与 animation 引用加 cc- 前缀；.cc-app.app 高度=100%（宿主面板内非视口）；原文注释已剥离（手术脚本管辖） */\n.cc-app{\n  --bg: #0b0e14;\n  --panel: #11151c;\n  --panel-2: #161b24;\n  --panel-3: #1a2029;\n  --border: #1e2530;\n  --border-2: #273041;\n  --text: #e6e9ef;\n  --text-2: #8b93a7;\n  --text-3: #5b6378;\n  --accent: #3b82f6;\n  --accent-dim: #1d3a68;\n  --ok: #22c55e;\n  --warn: #f59e0b;\n  --danger: #ef4444;\n  --esc: #fb7185;\n  --llm: #a78bfa;\n  --mono: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, monospace;\n  --sans: system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n  --rad: 8px;\n  --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);\n  --side-w: 240px;\n  --top-h: 46px;\n}.cc-app, .cc-app *{ box-sizing: border-box; margin: 0; padding: 0; }.cc-app, .cc-app{ height: 100%; }.cc-app{\n  background: var(--bg); color: var(--text);\n  font: 13px/1.55 var(--sans);\n  -webkit-font-smoothing: antialiased;\n  overflow: hidden;\n}.cc-app .mono{ font-family: var(--mono); }.cc-app .ic{ width: 15px; height: 15px; flex: none; vertical-align: -2px; }.cc-app a, .cc-app .lk{ color: var(--accent); text-decoration: none; cursor: pointer; }.cc-app .lk:hover, .cc-app a:hover{ text-decoration: underline; }.cc-app ::selection{ background: rgba(59,130,246,.32); }.cc-app ::-webkit-scrollbar{ width: 10px; height: 10px; }.cc-app ::-webkit-scrollbar-thumb{ background: #232b3a; border-radius: 6px; border: 2px solid var(--bg); }.cc-app ::-webkit-scrollbar-thumb:hover{ background: #2e3a4e; }.cc-app ::-webkit-scrollbar-corner, .cc-app ::-webkit-scrollbar-track{ background: transparent; }.cc-app .app{ display: flex; height: 100vh; }.cc-app .sidebar{\n  width: var(--side-w); flex: none; background: var(--panel);\n  border-right: 1px solid var(--border);\n  display: flex; flex-direction: column;\n  transition: margin-left .18s ease;\n  z-index: 30;\n}.cc-app .app.side-collapsed .sidebar{ margin-left: calc(var(--side-w) * -1); }.cc-app .side-rail{\n  display: none; position: fixed; left: 0; top: 8px; z-index: 40;\n  width: 26px; height: 26px; border-radius: 6px; background: var(--panel-2);\n  border: 1px solid var(--border-2); color: var(--accent);\n  font-size: 13px; text-align: center; line-height: 24px; cursor: pointer;\n}.cc-app .app.side-collapsed .side-rail{ display: block; }.cc-app .main{ flex: 1; min-width: 0; display: flex; flex-direction: column; }.cc-app .view{ flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 18px 22px 60px; position: relative; }.cc-app .view.nopad{ padding: 0; }.cc-app .view-inner{ max-width: 1460px; margin: 0 auto; }.cc-app .side-logo{ display: flex; align-items: center; gap: 9px; padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }.cc-app .logo-mark{ width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #1d3a68, #3b82f6); color: #dbe7ff; font-size: 13px; text-align: center; line-height: 28px; flex: none; }.cc-app .logo-name{ font-weight: 650; letter-spacing: .2px; font-size: 13.5px; }.cc-app .logo-sub{ font-size: 10.5px; color: var(--text-3); font-family: var(--mono); }.cc-app .side-collapse{ margin-left: auto; }.cc-app .side-nav{ flex: 1; overflow-y: auto; padding: 10px 8px; }.cc-app .nav-item{\n  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px;\n  color: var(--text-2); cursor: pointer; margin-bottom: 2px; user-select: none;\n  font-size: 13px; border: 1px solid transparent;\n}.cc-app .nav-item:hover{ background: var(--panel-2); color: var(--text); }.cc-app .nav-item.active{ background: var(--accent-dim); color: #dbe7ff; border-color: rgba(59,130,246,.35); }.cc-app .nav-item .ic{ opacity: .9; }.cc-app .nav-item .nav-badge{\n  margin-left: auto; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger);\n  color: #fff; font-size: 10.5px; font-weight: 600; text-align: center; line-height: 18px; padding: 0 5px;\n}.cc-app .nav-sec{ font-size: 10.5px; color: var(--text-3); letter-spacing: .8px; padding: 12px 10px 4px; text-transform: uppercase; }.cc-app .side-foot{ border-top: 1px solid var(--border); padding: 10px 14px 12px; display: grid; gap: 6px; }.cc-app .side-user{ display: flex; align-items: center; gap: 8px; color: var(--text); }.cc-app .avatar{ width: 22px; height: 22px; border-radius: 50%; background: var(--accent-dim); color: #9ec2ff; font-size: 11px; text-align: center; line-height: 22px; flex: none; }.cc-app .side-conn{ display: flex; align-items: center; gap: 7px; color: var(--text-3); font-size: 11px; }.cc-app .lamp{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }.cc-app .lamp.ok{ background: var(--ok); }.cc-app .lamp.warn{ background: var(--warn); }.cc-app .lamp.danger{ background: var(--danger); }.cc-app .lamp.esc{ background: var(--esc); }.cc-app .lamp.acc{ background: var(--accent); }.cc-app .lamp.off{ background: var(--text-3); }.cc-app .pulse-dot{ animation: cc-pulse 1.8s ease-out infinite; }@keyframes cc-pulse{\n  0% { box-shadow: 0 0 0 0 rgba(59,130,246,.45); }\n  70% { box-shadow: 0 0 0 7px rgba(59,130,246,0); }\n  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }\n}.cc-app .lamp.pulse-ok{ animation: cc-pulse-ok 1.8s ease-out infinite; }@keyframes cc-pulse-ok{ 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }.cc-app .lamp.pulse-warn{ animation: cc-pulse-warn 1.6s ease-out infinite; }@keyframes cc-pulse-warn{ 0% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); } 70% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } }.cc-app .lamp.pulse-danger{ animation: cc-pulse-danger 1.5s ease-out infinite; }@keyframes cc-pulse-danger{ 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.5); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }.cc-app .chip{\n  display: inline-flex; align-items: center; gap: 6px; padding: 1px 9px; border-radius: 20px;\n  font-size: 11.5px; font-weight: 550; border: 1px solid var(--border-2); color: var(--text-2);\n  background: var(--panel-2); white-space: nowrap; line-height: 20px;\n}.cc-app .chip.lg{ font-size: 12.5px; padding: 3px 12px; line-height: 22px; }.cc-app .chip.ok{ color: #4ade80; border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.09); }.cc-app .chip.warn{ color: #fbbf24; border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.09); }.cc-app .chip.danger{ color: #f87171; border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.09); }.cc-app .chip.esc{ color: var(--esc); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.09); }.cc-app .chip.acc{ color: #7fb0f9; border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.09); }.cc-app .chip.llm{ color: #c4b5fd; border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.09); }.cc-app .chip.mute{ color: var(--text-3); }.cc-app .chip.kind{ font-family: var(--mono); font-size: 10.5px; color: #9db2d0; background: #182130; border-color: var(--border-2); }.cc-app .chip.click{ cursor: pointer; }.cc-app .chip.click:hover{ border-color: var(--accent); color: var(--text); }.cc-app .tag{\n  display: inline-block; font-size: 10.5px; font-family: var(--mono); padding: 0 7px; line-height: 18px;\n  border-radius: 5px; background: #17202e; color: #8fa3c2; border: 1px solid var(--border);\n}.cc-app .badge-dot{ position: absolute; top: -2px; right: -3px; min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; padding: 0 4px; }.cc-app .badge-dot.hidden{ display: none; }.cc-app .draft-dot{ color: var(--warn); font-size: 15px; line-height: 1; margin-left: 4px; }.cc-app .kbd{\n  display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--text-2);\n  background: var(--panel-3); border: 1px solid var(--border-2); border-bottom-width: 2px;\n  border-radius: 5px; padding: 0 5px; line-height: 16px; margin: 0 1px;\n}.cc-app .btn{\n  display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 7px;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text);\n  font-size: 12.5px; font-weight: 550; cursor: pointer; user-select: none; white-space: nowrap;\n}.cc-app .btn:hover{ background: var(--panel-3); border-color: #33405a; }.cc-app .btn:active{ transform: translateY(1px); }.cc-app .btn.primary{ background: var(--accent); border-color: var(--accent); color: #fff; }.cc-app .btn.primary:hover{ background: #2f74e8; }.cc-app .btn.ok{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color: #4ade80; }.cc-app .btn.ok:hover{ background: rgba(34,197,94,.2); }.cc-app .btn.danger{ background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.45); color: #f87171; }.cc-app .btn.danger:hover{ background: rgba(239,68,68,.18); }.cc-app .btn.llm{ background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.45); color: #c4b5fd; }.cc-app .btn.llm:hover{ background: rgba(167,139,250,.2); }.cc-app .btn.sm{ padding: 2px 9px; font-size: 11.5px; border-radius: 6px; }.cc-app .btn.xs{ padding: 1px 7px; font-size: 11px; border-radius: 5px; }.cc-app .btn.lg{ padding: 8px 18px; font-size: 13.5px; }.cc-app .btn.block{ width: 100%; justify-content: center; }.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }.cc-app .btn:disabled:active{ transform: none; }.cc-app .icon-btn{\n  position: relative; width: 28px; height: 28px; border-radius: 7px; display: inline-flex;\n  align-items: center; justify-content: center; background: transparent; border: none;\n  color: var(--text-2); cursor: pointer;\n}.cc-app .icon-btn:hover{ background: var(--panel-3); color: var(--text); }.cc-app .icon-btn.on{ color: var(--accent); background: var(--accent-dim); }.cc-app .btn-group{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }.cc-app .topbar{\n  height: var(--top-h); flex: none; display: flex; align-items: center; gap: 16px;\n  border-bottom: 1px solid var(--border); background: rgba(17,21,28,.75); backdrop-filter: blur(6px);\n  padding: 0 18px; position: sticky; top: 0; z-index: 20;\n}.cc-app .crumbs{ display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 12.5px; }.cc-app .crumb{ color: var(--text-2); cursor: pointer; padding: 3px 6px; border-radius: 5px; }.cc-app .crumb:hover{ background: var(--panel-2); color: var(--text); }.cc-app .crumb.here{ color: var(--text); font-weight: 600; cursor: default; }.cc-app .crumb.here:hover{ background: transparent; }.cc-app .crumb-sep{ color: var(--text-3); }.cc-app .top-search{\n  margin-left: auto; display: flex; align-items: center; gap: 8px; width: 330px; height: 29px;\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 8px; padding: 0 9px;\n  color: var(--text-3); cursor: pointer; font-size: 12px;\n}.cc-app .top-search:hover{ border-color: #33405a; color: var(--text-2); }.cc-app .ts-placeholder{ flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }.cc-app .top-right{ display: flex; align-items: center; gap: 10px; }.cc-app .ev-count{ font-size: 11px; color: var(--text-2); background: var(--panel-2); border: 1px solid var(--border-2); padding: 2px 9px; border-radius: 14px; }.cc-app .ev-count b{ color: var(--text); }.cc-app .panel{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); box-shadow: var(--shadow); }.cc-app .card-h{ display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--border); }.cc-app .card-h .h-title{ font-weight: 620; font-size: 13px; }.cc-app .card-h .h-sub{ color: var(--text-3); font-size: 11.5px; }.cc-app .card-h .h-right{ margin-left: auto; display: flex; gap: 8px; align-items: center; }.cc-app .card-b{ padding: 14px; }.cc-app .grid{ display: grid; gap: 14px; }.cc-app .cols-2{ grid-template-columns: 1fr 1fr; }.cc-app .cols-3{ grid-template-columns: repeat(3, 1fr); }.cc-app .muted{ color: var(--text-2); }.cc-app .faint{ color: var(--text-3); }.cc-app .small{ font-size: 11.5px; }.cc-app .sec-title{ font-size: 12px; font-weight: 650; color: var(--text-2); letter-spacing: .4px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }.cc-app .hr{ border: 0; border-top: 1px solid var(--border); margin: 10px 0; }.cc-app .tbl{ width: 100%; border-collapse: collapse; font-size: 12.5px; }.cc-app .tbl th{\n  text-align: left; font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .3px;\n  padding: 6px 12px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 2;\n  white-space: nowrap;\n}.cc-app .tbl td{ padding: 0 12px; height: 36px; border-bottom: 1px solid rgba(30,37,48,.6); vertical-align: middle; }.cc-app .tbl tr.row-click{ cursor: pointer; }.cc-app .tbl tbody tr.row-click:hover{ background: rgba(59,130,246,.06); }.cc-app .tbl tbody tr:hover{ background: rgba(255,255,255,.018); }.cc-app .tbl .num{ font-variant-numeric: tabular-nums; }.cc-app .tbl-mini{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .tbl-mini td{ padding: 5px 8px; border-bottom: 1px solid rgba(30,37,48,.55); }.cc-app .tabs{ display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }.cc-app .tab{\n  padding: 7px 14px; font-size: 12.5px; font-weight: 560; color: var(--text-2); cursor: pointer;\n  border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; user-select: none; white-space: nowrap;\n}.cc-app .tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .tab .t-badge{ font-size: 10px; background: var(--panel-3); border-radius: 8px; padding: 0 5px; margin-left: 4px; color: var(--text-2); }.cc-app .tab.active .t-badge{ background: var(--accent-dim); color: #9ec2ff; }.cc-app .empty{ text-align: center; padding: 42px 20px; color: var(--text-3); }.cc-app .empty .ic{ width: 34px; height: 34px; opacity: .4; margin-bottom: 10px; }.cc-app .empty .e-title{ color: var(--text-2); font-weight: 600; margin-bottom: 4px; }.cc-app .empty .e-act{ margin-top: 14px; }.cc-app .skel{ position: relative; overflow: hidden; background: var(--panel-2); border-radius: 5px; height: 14px; }.cc-app .skel::after{\n  content: \"\"; position: absolute; inset: 0; transform: translateX(-100%);\n  background: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent);\n  animation: cc-shimmer 1.2s infinite;\n}@keyframes cc-shimmer{ to { transform: translateX(100%); } }.cc-app .skel-row{ display: flex; align-items: center; gap: 10px; padding: 9px 12px; }.cc-app .diff{ font-family: var(--mono); font-size: 11.5px; line-height: 1.65; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; overflow-x: auto; }.cc-app .diff-line{ padding: 0 10px; white-space: pre; }.cc-app .diff-line.add{ background: rgba(34,197,94,.09); color: #86efac; }.cc-app .diff-line.del{ background: rgba(239,68,68,.09); color: #fca5a5; }.cc-app .diff-line.ctx{ color: var(--text-2); }.cc-app .diff-line .d-sign{ display: inline-block; width: 12px; color: var(--text-3); }.cc-app .toast-stack{ position: fixed; right: 18px; bottom: 60px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }.cc-app .toast{\n  min-width: 240px; max-width: 380px; background: var(--panel-2); border: 1px solid var(--border-2);\n  border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; box-shadow: var(--shadow);\n  animation: cc-toast-in .22s ease; font-size: 12.5px;\n}.cc-app .toast.ok{ border-left-color: var(--ok); }.cc-app .toast.warn{ border-left-color: var(--warn); }.cc-app .toast.err{ border-left-color: var(--danger); }.cc-app .toast .t-msg{ color: var(--text); }.cc-app .toast .t-sub{ color: var(--text-3); font-size: 11px; margin-top: 2px; }@keyframes cc-toast-in{ from { opacity: 0; transform: translateY(8px); } }.cc-app .overlay{ position: fixed; inset: 0; background: rgba(4,6,10,.62); backdrop-filter: blur(2px); z-index: 100; display: flex; align-items: flex-start; justify-content: center; }.cc-app .overlay[hidden]{ display: none; }.cc-app .modal{\n  margin-top: 12vh; width: min(720px, 92vw); max-height: 76vh; display: flex; flex-direction: column;\n  background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow);\n  animation: cc-modal-in .16s ease;\n}.cc-app .modal.wide{ width: min(900px, 94vw); }.cc-app .modal.narrow{ width: min(480px, 92vw); }@keyframes cc-modal-in{ from { opacity: 0; transform: translateY(-6px) scale(.985); } }.cc-app .modal-h{ display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 10px; }.cc-app .modal-h .m-title{ font-weight: 650; font-size: 14px; }.cc-app .modal-h .icon-btn{ margin-left: auto; }.cc-app .modal-b{ padding: 16px; overflow-y: auto; }.cc-app .modal-f{ padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }.cc-app .palette{ margin-top: 11vh; width: min(640px, 92vw); background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; animation: cc-modal-in .16s ease; }.cc-app .pal-input-row{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text-3); }.cc-app .pal-input-row input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; font-family: var(--sans); }.cc-app .pal-list{ max-height: 46vh; overflow-y: auto; padding: 6px; }.cc-app .pal-item{ display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 7px; cursor: pointer; color: var(--text-2); }.cc-app .pal-item .pi-label{ color: var(--text); }.cc-app .pal-item .pi-sub{ color: var(--text-3); font-size: 11px; margin-left: auto; font-family: var(--mono); }.cc-app .pal-item.sel{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .pal-item.sel .pi-label{ color: #fff; }.cc-app .pal-item.sel .pi-sub{ color: #9ec2ff; }.cc-app .pal-sec{ font-size: 10.5px; color: var(--text-3); padding: 8px 12px 2px; letter-spacing: .6px; }.cc-app .pal-foot{ display: flex; gap: 14px; padding: 9px 16px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 11px; }.cc-app .drawer-wrap{ position: fixed; inset: 0; z-index: 90; }.cc-app .drawer-mask{ position: absolute; inset: 0; background: rgba(4,6,10,.5); }.cc-app .drawer{\n  position: absolute; top: 0; right: 0; bottom: 0; width: min(680px, 86vw);\n  background: var(--panel); border-left: 1px solid var(--border-2); box-shadow: var(--shadow);\n  display: flex; flex-direction: column; animation: cc-drawer-in .2s ease;\n}@keyframes cc-drawer-in{ from { transform: translateX(30px); opacity: .6; } }.cc-app .drawer-h{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); }.cc-app .drawer-h .d-title{ font-weight: 650; }.cc-app .drawer-b{ flex: 1; overflow-y: auto; padding: 16px; }.cc-app .help-fab{\n  position: fixed; right: 16px; bottom: 16px; width: 32px; height: 32px; border-radius: 50%;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text-2);\n  font-size: 14px; font-weight: 700; cursor: pointer; z-index: 80; box-shadow: var(--shadow);\n}.cc-app .help-fab:hover{ color: var(--accent); border-color: var(--accent); }.cc-app .settings-cards{ display: grid; gap: 14px; max-width: 760px; }.cc-app .set-card{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }.cc-app .set-card-h{ padding: 12px 16px 4px; font-weight: 650; font-size: 13px; }.cc-app .set-card-sub{ padding: 0 16px 8px; color: var(--text-3); font-size: 11.5px; }.cc-app .set-row{ display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid rgba(30,37,48,.6); font-size: 12.5px; }.cc-app .set-row .sr-label{ color: var(--text-2); width: 150px; flex: none; }.cc-app .set-row .sr-val{ color: var(--text); flex: 1; min-width: 0; }.cc-app .set-row .sr-ctl{ margin-left: auto; flex: none; }.cc-app .switch{ position: relative; width: 34px; height: 19px; border-radius: 10px; background: var(--panel-3); border: 1px solid var(--border-2); cursor: pointer; flex: none; transition: background .15s; }.cc-app .switch::after{ content: \"\"; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-3); transition: all .15s; }.cc-app .switch.on{ background: var(--accent); border-color: var(--accent); }.cc-app .switch.on::after{ left: 16px; background: #fff; }.cc-app .kv{ display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 12px; }.cc-app .kv .k{ color: var(--text-3); white-space: nowrap; }.cc-app .kv .v{ color: var(--text); min-width: 0; }.cc-app .progress{ height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; }.cc-app .progress > i{ display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }.cc-app .bar-mini{ display: inline-block; width: 56px; height: 5px; border-radius: 3px; background: var(--panel-3); overflow: hidden; vertical-align: middle; margin-right: 6px; }.cc-app .bar-mini > i{ display: block; height: 100%; background: var(--ok); }.cc-app .bar-mini.mid > i{ background: var(--warn); }.cc-app .bar-mini.low > i{ background: var(--danger); }.cc-app .spin{ animation: cc-rot 1s linear infinite; display: inline-block; }@keyframes cc-rot{ to { transform: rotate(360deg); } }.cc-app .typing-caret::after{ content: \"▍\"; color: var(--llm); animation: cc-blink .9s steps(1) infinite; }@keyframes cc-blink{ 50% { opacity: 0; } }.cc-app .welcome{ max-width: 1180px; margin: 0 auto; padding-top: 4vh; }.cc-app .w-hello{ display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; }.cc-app .w-hello h1{ font-size: 26px; font-weight: 700; letter-spacing: .3px; }.cc-app .w-hello .w-date{ color: var(--text-3); font-size: 13px; }.cc-app .w-health-row{ display: flex; gap: 18px; align-items: stretch; margin-bottom: 30px; flex-wrap: wrap; }.cc-app .w-health{\n  flex: none; display: flex; align-items: center; gap: 18px; background: var(--panel);\n  border: 1px solid var(--border); border-radius: 14px; padding: 20px 26px; box-shadow: var(--shadow);\n  position: relative;\n}.cc-app .w-health-num{ font-size: 54px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }.cc-app .w-health-num .unit{ font-size: 20px; color: var(--text-3); font-weight: 500; }.cc-app .w-health.good{ color: #4ade80; }.cc-app .w-health.mid{ color: var(--warn); }.cc-app .w-health.bad{ color: var(--danger); }.cc-app .w-health-meta{ font-size: 12px; color: var(--text-2); line-height: 1.7; }.cc-app .w-health-meta b{ color: var(--text); }.cc-app .w-insync{ flex: 1; min-width: 260px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }.cc-app .w-insync-num{ font-size: 30px; font-weight: 700; }.cc-app .w-insync-bar{ display: flex; gap: 5px; }.cc-app .w-insync-cell{ flex: 1; height: 10px; border-radius: 4px; background: var(--panel-3); position: relative; }.cc-app .w-insync-cell.lit-ok{ background: var(--ok); }.cc-app .w-insync-cell.lit-warn{ background: var(--warn); }.cc-app .w-insync-cell.lit-acc{ background: var(--accent); }.cc-app .w-insync-cell.lit-esc{ background: var(--esc); }.cc-app .w-insync-cell .cell-tip{ position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-3); white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; }.cc-app .w-insync-cell:hover .cell-tip{ opacity: 1; }.cc-app .w-quick{ display: flex; gap: 10px; align-items: center; margin-left: auto; }.cc-app .w-stagebar{ margin-bottom: 30px; }.cc-app .w-stages{ display: flex; align-items: center; gap: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; overflow-x: auto; }.cc-app .w-stage{ flex: 1; min-width: 108px; position: relative; cursor: pointer; text-align: center; padding-top: 4px; }.cc-app .w-stage:hover .ws-name{ color: var(--accent); }.cc-app .w-stage::before{ content: \"\"; position: absolute; top: 16px; left: -50%; width: 100%; height: 2px; background: var(--border-2); }.cc-app .w-stage:first-child::before{ display: none; }.cc-app .w-stage.done::before{ background: var(--ok); }.cc-app .w-stage.current::before{ background: var(--accent); }.cc-app .w-stage-dot{\n  width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 8px; position: relative; z-index: 1;\n  background: var(--panel-3); border: 2px solid var(--border-2); color: var(--text-3);\n  font-size: 11px; font-weight: 700; line-height: 20px; text-align: center;\n}.cc-app .w-stage.done .w-stage-dot{ background: rgba(34,197,94,.15); border-color: var(--ok); color: #4ade80; }.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent); color: #7fb0f9; animation: cc-pulse 1.8s ease-out infinite; }.cc-app .w-stage.wait .w-stage-dot{ border-color: var(--warn); color: #fbbf24; }.cc-app .ws-name{ font-weight: 640; font-size: 12.5px; }.cc-app .ws-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; }.cc-app .ws-note{ font-size: 10.5px; color: var(--text-2); margin-top: 4px; max-width: 140px; margin-left: auto; margin-right: auto; }.cc-app .w-services{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }.cc-app .w-svc{\n  display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border);\n  border-radius: 10px; padding: 13px 16px; cursor: pointer; transition: border-color .12s;\n}.cc-app .w-svc:hover{ border-color: var(--border-2); background: var(--panel-2); }.cc-app .w-svc .ws-main{ min-width: 0; }.cc-app .w-svc .ws-title{ font-weight: 620; font-family: var(--mono); font-size: 12.5px; }.cc-app .w-svc .ws-desc{ color: var(--text-3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.cc-app .w-svc .ws-chip{ margin-left: auto; }.cc-app .w-ev-filter{ display: flex; gap: 8px; margin-bottom: 10px; }.cc-app .fchip{ padding: 3px 12px; border-radius: 16px; font-size: 12px; font-weight: 560; border: 1px solid var(--border-2); color: var(--text-2); cursor: pointer; background: var(--panel-2); }.cc-app .fchip:hover{ color: var(--text); }.cc-app .fchip.on{ border-color: var(--accent); color: #7fb0f9; background: rgba(59,130,246,.1); }.cc-app .fchip.on.crit{ border-color: var(--danger); color: #f87171; background: rgba(239,68,68,.09); }.cc-app .w-ev-item{ display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid rgba(30,37,48,.6); }.cc-app .w-ev-item:hover{ background: rgba(255,255,255,.02); }.cc-app .w-ev-dot{ width: 8px; height: 8px; border-radius: 50%; flex: none; }.cc-app .w-ev-title{ color: var(--text); }.cc-app .w-ev-obj{ margin-left: auto; }.cc-app .w-ev-time{ color: var(--text-3); font-size: 11px; width: 44px; text-align: right; }.cc-app .statbar{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }.cc-app .stat{\n  background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);\n  padding: 12px 16px; display: flex; flex-direction: column; gap: 2px;\n}.cc-app .stat .st-num{ font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }.cc-app .stat .st-num .dim{ color: var(--text-3); font-size: 14px; font-weight: 500; }.cc-app .stat .st-label{ font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }.cc-app .stat.alert .st-num{ color: var(--esc); }.cc-app .syscards{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }.cc-app .syscard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; cursor: pointer; transition: border-color .12s, transform .12s; }.cc-app .syscard:hover{ border-color: var(--border-2); transform: translateY(-1px); }.cc-app .syscard .sc-top{ display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }.cc-app .syscard .sc-name{ font-family: var(--mono); font-weight: 650; font-size: 13px; }.cc-app .syscard .sc-meta{ display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 11.5px; color: var(--text-2); margin-bottom: 10px; }.cc-app .syscard .sc-meta .k{ color: var(--text-3); }.cc-app .syscard .sc-foot{ display: flex; align-items: center; gap: 8px; border-top: 1px solid rgba(30,37,48,.6); padding-top: 9px; }.cc-app .mini-list{ display: flex; flex-direction: column; }.cc-app .mini-row{ display: flex; align-items: center; gap: 9px; padding: 8px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; font-size: 12.5px; }.cc-app .mini-row:hover{ background: rgba(59,130,246,.06); }.cc-app .mini-row:last-child{ border-bottom: none; }.cc-app .mini-row .mr-main{ min-width: 0; flex: 1; }.cc-app .mini-row .mr-sub{ color: var(--text-3); font-size: 11px; }.cc-app .tree-toolbar{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }.cc-app .tree-box{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .tree-node{ user-select: none; }.cc-app .tree-row{\n  display: flex; align-items: center; gap: 7px; padding: 0 10px; height: 34px; cursor: pointer;\n  border-bottom: 1px solid rgba(30,37,48,.45); font-size: 12.5px; position: relative;\n}.cc-app .tree-row:hover{ background: rgba(59,130,246,.05); }.cc-app .tree-row .t-caret{ width: 14px; color: var(--text-3); flex: none; transition: transform .12s; font-size: 10px; text-align: center; }.cc-app .tree-row .t-caret.open{ transform: rotate(90deg); }.cc-app .tree-row .t-name{ font-family: var(--mono); font-weight: 560; color: var(--text); }.cc-app .tree-row:hover .t-name{ color: var(--accent); }.cc-app .tree-row .t-kind{ margin-left: 2px; }.cc-app .tree-row .t-meta{ margin-left: auto; display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 11px; flex: none; }.cc-app .tree-row .t-rev{ font-family: var(--mono); }.cc-app .tree-children.skeletonizing{ opacity: .7; }.cc-app .tree-root-badge{ font-size: 10px; color: var(--llm); border: 1px solid rgba(167,139,250,.4); border-radius: 4px; padding: 0 5px; margin-left: 4px; }.cc-app .dh{ display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }.cc-app .dh-main{ min-width: 0; }.cc-app .dh-title{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .dh-title h1{ font-size: 18px; font-weight: 700; font-family: var(--mono); letter-spacing: .2px; }.cc-app .dh-sub{ color: var(--text-2); font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.cc-app .dh-actions{ margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .path-mono{ font-family: var(--mono); color: var(--text-2); background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; }.cc-app .filter-bar{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }.cc-app .filter-bar select, .cc-app .filter-bar input[type=\"text\"], .cc-app .filter-bar input[type=\"search\"]{\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; color: var(--text);\n  font-size: 12px; padding: 5px 9px; outline: none; font-family: var(--sans);\n}.cc-app .filter-bar select:focus, .cc-app .filter-bar input:focus{ border-color: var(--accent); }.cc-app .filter-bar select option{ background: var(--panel); }.cc-app .count-note{ color: var(--text-3); font-size: 11.5px; margin-left: auto; font-family: var(--mono); }.cc-app .vlist{ position: relative; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--rad); background: var(--panel); }.cc-app .vlist-canvas{ position: absolute; top: 0; left: 0; right: 0; }.cc-app .vrow{ display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; cursor: pointer; }.cc-app .vrow:hover{ background: rgba(59,130,246,.06); }.cc-app .vrow .vc{ flex: none; }.cc-app .vrow .grow{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.cc-app .jobs-layout{ display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 14px; align-items: start; }.cc-app .jobs-list{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; max-height: 72vh; display: flex; flex-direction: column; }.cc-app .jobs-list .jl-scroll{ overflow-y: auto; flex: 1; }.cc-app .job-item{ padding: 10px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; }.cc-app .job-item:hover{ background: rgba(255,255,255,.02); }.cc-app .job-item.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .job-item .ji-top{ display: flex; align-items: center; gap: 8px; }.cc-app .job-item .ji-no{ font-family: var(--mono); font-weight: 700; color: var(--text-2); }.cc-app .job-item.sel .ji-no{ color: #9ec2ff; }.cc-app .job-item .ji-sub{ color: var(--text-3); font-size: 11px; margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .job-detail{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }.cc-app .jd-head{ padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }.cc-app .jd-title{ font-weight: 700; font-size: 14px; }.cc-app .jd-kvrow{ display: flex; gap: 18px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2); }.cc-app .jd-kvrow b{ color: var(--text); font-weight: 600; }.cc-app .jd-body{ padding: 14px 16px; display: grid; gap: 16px; }.cc-app .follow-tag{ display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-family: var(--mono); }.cc-app .follow-tag.off{ color: var(--text-3); }.cc-app .logbox{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 11.5px; max-height: 320px; overflow-y: auto; }.cc-app .log-line{ padding: 4px 12px; border-bottom: 1px solid rgba(30,37,48,.4); display: flex; gap: 10px; }.cc-app .log-line:hover{ background: rgba(255,255,255,.02); }.cc-app .log-line .lg-op{ color: #7fb0f9; flex: none; min-width: 170px; }.cc-app .log-line .lg-ts{ color: var(--text-3); flex: none; }.cc-app .log-more{ display: block; width: 100%; text-align: center; padding: 8px; background: none; border: none; border-top: 1px solid var(--border); color: var(--accent); font-size: 11.5px; cursor: pointer; font-family: var(--mono); }.cc-app .log-more:hover{ background: var(--panel-2); }.cc-app .phase-tl{ display: flex; flex-direction: column; gap: 0; }.cc-app .ptl-item{ display: flex; gap: 12px; position: relative; padding-bottom: 16px; }.cc-app .ptl-item:last-child{ padding-bottom: 0; }.cc-app .ptl-rail{ width: 22px; flex: none; display: flex; flex-direction: column; align-items: center; }.cc-app .ptl-node{ width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-2); background: var(--panel-2); flex: none; z-index: 1; }.cc-app .ptl-item.done .ptl-node{ border-color: var(--ok); background: rgba(34,197,94,.15); }.cc-app .ptl-item.current .ptl-node{ border-color: var(--accent); background: rgba(59,130,246,.2); animation: cc-pulse 1.8s ease-out infinite; }.cc-app .ptl-item.fail .ptl-node{ border-color: var(--danger); background: rgba(239,68,68,.15); }.cc-app .ptl-item.wait .ptl-node{ border-color: var(--warn); background: rgba(245,158,11,.12); }.cc-app .ptl-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .ptl-item.done .ptl-line{ background: var(--ok); }.cc-app .ptl-main{ flex: 1; min-width: 0; padding-top: 0; }.cc-app .ptl-head{ display: flex; align-items: baseline; gap: 8px; }.cc-app .ptl-phase{ font-weight: 650; font-size: 12.5px; }.cc-app .ptl-ts{ color: var(--text-3); font-size: 11px; font-family: var(--mono); }.cc-app .ptl-note{ color: var(--text-2); font-size: 11.5px; margin-top: 2px; }.cc-app .flowwrap{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 22px; overflow-x: auto; }.cc-app .fnode{ cursor: pointer; }.cc-app .fnode rect{ fill: var(--panel-2); stroke: var(--border-2); stroke-width: 1.4; rx: 8; }.cc-app .fnode:hover rect{ stroke: var(--accent); }.cc-app .fnode.cur rect{ stroke: var(--accent); stroke-width: 2; fill: rgba(59,130,246,.1); }.cc-app .fnode.abn rect{ stroke: var(--danger); }.cc-app .fnode text{ fill: var(--text); font-size: 12px; font-family: var(--sans); }.cc-app .fnode .fsub{ fill: var(--text-3); font-size: 10px; }.cc-app .fedge{ stroke: var(--border-2); stroke-width: 1.6; fill: none; marker-end: url(#arrow); }.cc-app .fedge.hot{ stroke: var(--accent); }.cc-app .fedge.abn{ stroke: var(--danger); stroke-dasharray: 4 3; }.cc-app .topo-svg text{ fill: var(--text-2); font-size: 11px; font-family: var(--mono); }.cc-app .topo-node{ cursor: pointer; }.cc-app .topo-node rect{ fill: var(--panel-2); stroke: var(--border-2); rx: 7; }.cc-app .topo-node:hover rect{ stroke: var(--accent); }.cc-app .topo-edge{ stroke: #2b3646; stroke-width: 1.4; fill: none; cursor: pointer; }.cc-app .topo-edge:hover{ stroke: var(--accent); }.cc-app .metric-chart{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; }.cc-app .metric-chart text{ font-size: 9.5px; fill: var(--text-3); font-family: var(--mono); }.cc-app .doc-layout{ display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }.cc-app .doc-main{ min-width: 0; display: grid; gap: 12px; }.cc-app .doc-headbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .doc-path{ font-family: var(--mono); font-size: 13px; font-weight: 650; }.cc-app .doc-meta-row{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text-2); font-size: 12px; }.cc-app .doc-editor-wrap{ position: relative; }.cc-app textarea.doc-editor{\n  width: 100%; min-height: 480px; background: var(--bg); color: var(--text);\n  border: 1px solid var(--border-2); border-radius: var(--rad); padding: 14px 16px;\n  font: 12px/1.7 var(--mono); outline: none; resize: vertical; tab-size: 2;\n}.cc-app textarea.doc-editor:focus{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,.15); }.cc-app .doc-collab{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); position: sticky; top: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 90px); }.cc-app .collab-tabs{ display: flex; border-bottom: 1px solid var(--border); flex: none; }.cc-app .collab-tab{ flex: 1; text-align: center; padding: 9px 4px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .collab-tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .collab-tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .collab-tab .ct-badge{ font-size: 9.5px; background: var(--warn); color: #201200; border-radius: 8px; padding: 0 5px; margin-left: 3px; font-weight: 700; }.cc-app .collab-body{ flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; min-height: 0; }.cc-app .llm-msgs{ flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 120px; }.cc-app .llm-msg{ border-radius: 9px; padding: 9px 12px; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }.cc-app .llm-msg.user{ background: var(--accent-dim); align-self: flex-end; max-width: 90%; }.cc-app .llm-msg.agent{ background: var(--panel-2); border: 1px solid var(--border); border-left: 2px solid var(--llm); }.cc-app .llm-chips{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; flex: none; }.cc-app .llm-chip{ font-size: 11px; padding: 3px 10px; border-radius: 14px; border: 1px solid rgba(167,139,250,.4); color: #c4b5fd; background: rgba(167,139,250,.07); cursor: pointer; }.cc-app .llm-chip:hover{ background: rgba(167,139,250,.16); }.cc-app .llm-input-row{ display: flex; gap: 8px; margin-top: 10px; flex: none; }.cc-app .llm-input-row input{ flex: 1; background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; padding: 7px 10px; color: var(--text); font-size: 12.5px; outline: none; }.cc-app .llm-input-row input:focus{ border-color: var(--llm); }.cc-app .draft-card{ border: 1px solid rgba(167,139,250,.35); border-radius: 9px; margin-top: 8px; overflow: hidden; background: var(--bg); }.cc-app .draft-card .dc-head{ display: flex; align-items: center; gap: 8px; padding: 7px 11px; font-size: 11.5px; color: #c4b5fd; background: rgba(167,139,250,.07); }.cc-app .draft-card .dc-body{ padding: 8px; }.cc-app .draft-card .dc-acts{ display: flex; gap: 8px; padding: 8px; border-top: 1px solid var(--border); }.cc-app .draft-item{ border: 1px solid var(--border-2); border-radius: 9px; margin-bottom: 10px; overflow: hidden; }.cc-app .draft-item .di-head{ display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--panel-2); font-size: 12px; }.cc-app .draft-item .di-src{ font-size: 10px; border-radius: 4px; padding: 0 6px; font-weight: 700; }.cc-app .draft-item .di-src.llm{ background: rgba(167,139,250,.15); color: #c4b5fd; }.cc-app .draft-item .di-src.manual{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .draft-item .di-acts{ display: flex; gap: 8px; padding: 8px 11px; border-top: 1px solid var(--border); }.cc-app .apply-dock{ position: sticky; bottom: 0; padding: 12px; border-top: 1px solid var(--border); background: var(--panel); flex: none; }.cc-app .apply-dock .hint{ font-size: 11px; color: var(--text-3); margin-bottom: 8px; }.cc-app .rev-item{ display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; font-size: 12px; border-radius: 6px; }.cc-app .rev-item:hover{ background: var(--panel-2); }.cc-app .rev-item .rv-no{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; width: 34px; }.cc-app .rev-item .rv-author{ color: var(--text-2); }.cc-app .rev-item .rv-sum{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }.cc-app .checklist{ display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }.cc-app .check-item{ display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--text-2); padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; }.cc-app .check-item .ci-ic{ color: var(--text-3); }.cc-app .check-item.pass .ci-ic{ color: var(--ok); }.cc-app .check-item.pass{ color: var(--text); border-color: rgba(34,197,94,.3); }.cc-app .apply-progress{ margin: 14px 0 6px; }.cc-app .chat-layout{ display: grid; grid-template-columns: 240px 1fr 300px; height: calc(100vh - var(--top-h)); }.cc-app .chat-sub{ background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }.cc-app .cs-head{ padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }.cc-app .cs-agent{ display: flex; align-items: center; gap: 9px; }.cc-app .cs-agent .ca-name{ font-family: var(--mono); font-weight: 700; font-size: 13px; }.cc-app .cs-agent .ca-sub{ color: var(--text-3); font-size: 10.5px; }.cc-app .cs-filter{ display: flex; gap: 4px; }.cc-app .cs-filter .cf-tab{ flex: 1; text-align: center; font-size: 11px; padding: 3px 0; border-radius: 5px; color: var(--text-3); cursor: pointer; }.cc-app .cs-filter .cf-tab.on{ background: var(--panel-3); color: var(--text); }.cc-app .cs-search{ display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border-2); border-radius: 6px; padding: 4px 8px; color: var(--text-3); }.cc-app .cs-search input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 11.5px; min-width: 0; }.cc-app .cs-list{ flex: 1; overflow-y: auto; }.cc-app .sess-row{ padding: 9px 12px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; position: relative; }.cc-app .sess-row:hover{ background: var(--panel-2); }.cc-app .sess-row.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .sess-row.archived{ opacity: .55; }.cc-app .sess-row .ss-title{ font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 18px; }.cc-app .sess-row .ss-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; display: flex; gap: 7px; align-items: center; }.cc-app .sess-row .ss-pin{ position: absolute; top: 8px; right: 8px; color: var(--warn); }.cc-app .sess-row .ss-menu{ position: absolute; top: 6px; right: 6px; opacity: 0; }.cc-app .sess-row:hover .ss-menu{ opacity: 1; }.cc-app .runner-tag{ font-size: 9.5px; font-family: var(--mono); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; color: var(--text-2); }.cc-app .chat-main{ display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }.cc-app .chat-headbar{ display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); flex: none; background: var(--panel); }.cc-app .view-switch{ display: flex; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 7px; overflow: hidden; }.cc-app .view-switch .vs-opt{ padding: 4px 13px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }.cc-app .view-switch .vs-opt.on{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .chat-scroll{ flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }.cc-app .msg-row{ display: flex; gap: 10px; margin-bottom: 18px; }.cc-app .msg-avatar{ width: 26px; height: 26px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; }.cc-app .msg-avatar.user{ background: var(--panel-3); color: var(--text-2); }.cc-app .msg-avatar.agent{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .msg-body{ flex: 1; min-width: 0; }.cc-app .msg-who{ font-size: 11px; color: var(--text-3); margin-bottom: 3px; display: flex; gap: 8px; align-items: center; }.cc-app .msg-who .who-name{ font-weight: 650; color: var(--text-2); }.cc-app .msg-text{ white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.65; }.cc-app .msg-cards{ display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }.cc-app .mcard{ border: 1px solid var(--border-2); border-radius: 9px; background: var(--panel); overflow: hidden; max-width: 640px; }.cc-app .mcard .mc-head{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12px; color: var(--text-2); cursor: pointer; }.cc-app .mcard .mc-head:hover{ background: var(--panel-2); }.cc-app .mcard .mc-op{ font-family: var(--mono); color: #7fb0f9; font-weight: 650; }.cc-app .mcard .mc-title{ color: var(--text); font-weight: 600; }.cc-app .mcard .mc-body{ border-top: 1px solid var(--border); padding: 10px 12px; font-size: 12px; }.cc-app .mcard.op{ border-left: 3px solid var(--accent); }.cc-app .mcard.files{ border-left: 3px solid var(--warn); }.cc-app .mcard.proposal{ border-left: 3px solid var(--llm); }.cc-app .mcard.approval{ border-left: 3px solid var(--danger); }.cc-app .mcard.diag{ border-left: 3px solid var(--esc); }.cc-app .mcard .mc-status{ margin-left: auto; }.cc-app .file-row{ display: flex; align-items: center; gap: 10px; padding: 5px 4px; font-family: var(--mono); font-size: 11.5px; border-bottom: 1px solid rgba(30,37,48,.4); }.cc-app .file-row:last-child{ border-bottom: none; }.cc-app .file-row .fp{ color: var(--text); }.cc-app .file-row .fadd{ color: #4ade80; }.cc-app .file-row .fdel{ color: #f87171; }.cc-app .file-row .fst{ margin-left: auto; }.cc-app .diag-item{ display: flex; gap: 8px; padding: 4px 0; font-size: 12px; align-items: baseline; }.cc-app .diag-item .d-sev{ font-family: var(--mono); font-size: 10px; padding: 0 5px; border-radius: 4px; flex: none; }.cc-app .diag-item .d-sev.error{ background: rgba(239,68,68,.15); color: #f87171; }.cc-app .diag-item .d-sev.warning{ background: rgba(245,158,11,.15); color: #fbbf24; }.cc-app .turn-tail{ margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-2); display: flex; gap: 14px; font-size: 10.5px; color: var(--text-3); font-family: var(--mono); flex-wrap: wrap; }.cc-app .chat-inputbar{ border-top: 1px solid var(--border); padding: 12px 16px; flex: none; background: var(--panel); }.cc-app .chat-input-wrap{ display: flex; gap: 10px; align-items: flex-end; background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 9px 12px; }.cc-app .chat-input-wrap:focus-within{ border-color: var(--accent); }.cc-app .chat-input-wrap textarea{ flex: 1; background: none; border: none; outline: none; color: var(--text); font: 13px/1.5 var(--sans); resize: none; max-height: 120px; min-height: 22px; }.cc-app .chat-hints{ display: flex; gap: 12px; margin-top: 7px; font-size: 10.5px; color: var(--text-3); }.cc-app .traj-scroll{ flex: 1; overflow-y: auto; padding: 16px 22px; min-height: 0; }.cc-app .traj-item{ display: flex; gap: 12px; position: relative; padding-bottom: 14px; }.cc-app .traj-rail{ width: 20px; display: flex; flex-direction: column; align-items: center; flex: none; }.cc-app .traj-dot{ width: 12px; height: 12px; border-radius: 3px; border: 2px solid var(--border-2); background: var(--panel-2); z-index: 1; }.cc-app .traj-item.kind-tool .traj-dot{ border-color: var(--accent); }.cc-app .traj-item.kind-doc .traj-dot{ border-color: var(--llm); }.cc-app .traj-item.kind-user .traj-dot{ border-color: var(--text-2); }.cc-app .traj-item.kind-agent .traj-dot{ border-color: var(--ok); }.cc-app .traj-item.kind-files .traj-dot{ border-color: var(--warn); }.cc-app .traj-item.kind-diag .traj-dot{ border-color: var(--esc); }.cc-app .traj-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .traj-kind{ font-size: 10px; font-family: var(--mono); color: var(--text-3); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; }.cc-app .traj-label{ font-weight: 600; font-size: 12.5px; }.cc-app .traj-detail{ color: var(--text-2); font-size: 11.5px; }.cc-app .chat-ctx{ background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }.cc-app .ctx-sec{ border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }.cc-app .ctx-sec .cx-h{ padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: .5px; background: var(--panel-2); border-bottom: 1px solid var(--border); }.cc-app .ctx-sec .cx-b{ padding: 9px 12px; display: flex; flex-direction: column; gap: 7px; font-size: 12px; }.cc-app .ctx-row{ display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; flex-wrap: wrap; }.cc-app .ctx-row .cr-k{ color: var(--text-3); width: 78px; flex: none; }.cc-app .live-status{ display: flex; align-items: center; gap: 8px; font-size: 12px; }.cc-app .term-tabs{ display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }.cc-app .term-tab{ padding: 7px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .term-tab.active{ color: #4ade80; border-bottom-color: var(--ok); }.cc-app .term-wrap{ flex: 1; min-height: 0; padding: 14px 22px; display: flex; }.cc-app .term{\n  flex: 1; background: #060a0f; border: 1px solid #14202c; border-radius: 10px; overflow-y: auto;\n  font: 12px/1.6 var(--mono); color: #9fd8b8; padding: 14px 16px; cursor: text;\n}.cc-app .term .t-line{ white-space: pre-wrap; word-break: break-all; }.cc-app .term .t-cmd{ color: #7fb0f9; }.cc-app .term .t-dim{ color: #4d6076; }.cc-app .term .caret{ display: inline-block; width: 7px; height: 14px; background: #9fd8b8; vertical-align: -2px; animation: cc-blink .9s steps(1) infinite; }.cc-app .runner-cards{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.cc-app .runner-card{ border: 1px solid var(--border-2); border-radius: 10px; padding: 13px; cursor: pointer; background: var(--panel-2); }.cc-app .runner-card:hover{ border-color: #33405a; }.cc-app .runner-card.sel{ border-color: var(--accent); background: var(--accent-dim); }.cc-app .runner-card .rc-name{ font-weight: 700; font-size: 13px; margin-bottom: 3px; }.cc-app .runner-card .rc-desc{ font-size: 11px; color: var(--text-2); }.cc-app .runner-card.sel .rc-desc{ color: #9ec2ff; }.cc-app .conn-group{ margin-bottom: 22px; }.cc-app .conncards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .conncard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 13px 15px; cursor: pointer; transition: border-color .12s; }.cc-app .conncard:hover{ border-color: var(--border-2); }.cc-app .conncard .cc-top{ display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }.cc-app .conncard .cc-name{ font-family: var(--mono); font-weight: 650; font-size: 12.5px; }.cc-app .conncard .cc-desc{ font-size: 11px; color: var(--text-3); min-height: 30px; }.cc-app .op-cards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .op-card{ background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 12px 14px; }.cc-app .op-card .oc-name{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; font-size: 12.5px; }.cc-app .op-card .oc-desc{ font-size: 11px; color: var(--text-2); margin-top: 4px; }.cc-app .yaml-block{ background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font: 11.5px/1.7 var(--mono); overflow-x: auto; white-space: pre; color: #b6c2d9; }.cc-app .yaml-block .y-key{ color: #7fb0f9; }.cc-app .env-table{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .env-table th{ text-align: left; color: var(--text-3); font-size: 11px; padding: 6px 10px; border-bottom: 1px solid var(--border); }.cc-app .env-table td{ padding: 6px 10px; border-bottom: 1px solid rgba(30,37,48,.5); }.cc-app .env-table td.mono{ color: #7fb0f9; }.cc-app .ap-card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); margin-bottom: 14px; overflow: hidden; }.cc-app .ap-card.resolved{ opacity: .68; }.cc-app .ap-card .ap-head{ display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }.cc-app .ap-card .ap-title{ font-weight: 650; font-size: 13px; }.cc-app .ap-card .ap-meta{ display: flex; gap: 14px; padding: 9px 16px; color: var(--text-2); font-size: 11.5px; flex-wrap: wrap; }.cc-app .ap-card .ap-body{ padding: 0 16px 14px; }.cc-app .ap-card .ap-acts{ display: flex; gap: 8px; padding: 0 16px 14px; }.cc-app .keys-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }.cc-app .keys-row{ display: flex; align-items: center; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; }.cc-app .keys-row .kr-desc{ color: var(--text-2); }.cc-app .keys-row .kr-keys{ display: flex; gap: 3px; }@media (max-width: 1100px){.cc-app .doc-layout{ grid-template-columns: 1fr; }.cc-app .doc-collab{ position: static; max-height: none; }.cc-app .chat-layout{ grid-template-columns: 220px 1fr; }.cc-app .chat-ctx{ display: none; }.cc-app .jobs-layout{ grid-template-columns: 1fr; }.cc-app .statbar{ grid-template-columns: repeat(3, 1fr); }.cc-app .syscards, .cc-app .w-services{ grid-template-columns: 1fr 1fr; }.cc-app .conncards{ grid-template-columns: 1fr 1fr; }\n}\n\n/* E2 真数据屏补充（welcome 阶段条失败态 + 对象 viewer 正文块） */\n.cc-app .w-stage.bad::before{ background: var(--danger); }\n.cc-app .w-stage.bad .w-stage-dot{ background: rgba(239,68,68,.15); border-color: var(--danger); color: var(--danger); }\n.cc-app pre.mono{ font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace); color: var(--text-2); }\n";
 var __CC = { MOCK: {} };
 // console-proto index.html 骨架（整体内嵌起点代码，图标 id 加 cc- 前缀防宿主碰撞；保留 .app 布局根；尾部两节点=E1 连接态灯/细条 §1.5）
-var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 sprite\uff08\u96f6\u5916\u94fe\uff09 ===== -->\n  <svg width=\"0\" height=\"0\" style=\"position:absolute\" aria-hidden=\"true\">\n    <defs>\n      <symbol id=\"cc-i-home\" viewBox=\"0 0 16 16\"><path d=\"M2 8.5 8 3l6 5.5V14H9.5v-4h-3v4H2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-grid\" viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"2\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"9\" y=\"2\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"2\" y=\"9\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"9\" y=\"9\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-tree\" viewBox=\"0 0 16 16\"><path d=\"M3 2v12M3 5h5M3 9h5M8 5v1.5M8 9v1.5M8 6.5h4M8 10.5h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-flow\" viewBox=\"0 0 16 16\"><rect x=\"5.5\" y=\"1.5\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"1.5\" y=\"11\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"9.5\" y=\"11\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><path d=\"M8 5v3M8 8H4v3M8 8h4v3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/></symbol>\n      <symbol id=\"cc-i-doc\" viewBox=\"0 0 16 16\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M9.5 1.5V5H13M6 8h4.5M6 10.5h4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-pulse\" viewBox=\"0 0 16 16\"><path d=\"M1.5 8h3l2-5 3 10 2-5h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-check\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"6.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m5 8.2 2.1 2.1L11.2 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-plug\" viewBox=\"0 0 16 16\"><path d=\"M5 1.5v3M11 1.5v3M4 4.5h8v3a4 4 0 0 1-8 0zM8 11.5v3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-chat\" viewBox=\"0 0 16 16\"><path d=\"M2 3.5h12v8H8l-3 3v-3H2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M5 6.5h6M5 8.8h4\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-search\" viewBox=\"0 0 16 16\"><circle cx=\"7\" cy=\"7\" r=\"4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/><path d=\"m10.5 10.5 3.5 3.5\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-bell\" viewBox=\"0 0 16 16\"><path d=\"M8 2a4 4 0 0 1 4 4c0 3 .8 4.2 1.5 5h-11C3.2 10.2 4 9 4 6a4 4 0 0 1 4-4zM6.5 13a1.6 1.6 0 0 0 3 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-chev\" viewBox=\"0 0 16 16\"><path d=\"m6 4 4 4-4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-down\" viewBox=\"0 0 16 16\"><path d=\"m4 6 4 4 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-folder\" viewBox=\"0 0 16 16\"><path d=\"M1.5 3.5h4.5l1.5 2h7v8h-13z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-term\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"2.5\" width=\"13\" height=\"11\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m4 6 2.5 2.2L4 10.5M8.5 11h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-close\" viewBox=\"0 0 16 16\"><path d=\"m4 4 8 8M12 4l-8 8\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-plus\" viewBox=\"0 0 16 16\"><path d=\"M8 3v10M3 8h10\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-bot\" viewBox=\"0 0 16 16\"><rect x=\"3\" y=\"5\" width=\"10\" height=\"8\" rx=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><circle cx=\"6.2\" cy=\"9\" r=\"1\" fill=\"currentColor\"/><circle cx=\"9.8\" cy=\"9\" r=\"1\" fill=\"currentColor\"/><path d=\"M8 5V2.5M1.5 8.5v2M14.5 8.5v2\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-spark\" viewBox=\"0 0 16 16\"><path d=\"M8 1.5 9.6 6 14 8l-4.4 2L8 14.5 6.4 10 2 8l4.4-2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-link\" viewBox=\"0 0 16 16\"><path d=\"M6.5 9.5a3 3 0 0 0 4.3 0l2.4-2.4a3 3 0 1 0-4.3-4.3L7.6 4.1M9.5 6.5a3 3 0 0 0-4.3 0L2.8 8.9a3 3 0 1 0 4.3 4.3l1.3-1.3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-key\" viewBox=\"0 0 16 16\"><circle cx=\"5\" cy=\"11\" r=\"2.8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m7 9 6.5-6.5M11 5l2 2M9 7l1.6 1.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-filter\" viewBox=\"0 0 16 16\"><path d=\"M2 3.5h12L9.5 8.5v4L6.5 14V8.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-pin\" viewBox=\"0 0 16 16\"><path d=\"m8 1.5 1.8 3.4 3.7.5-2.7 2.6.7 3.7L8 9.9l-3.5 1.8.7-3.7-2.7-2.6 3.7-.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/><path d=\"M8 11v3.5\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-archive\" viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"2.5\" width=\"12\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M3.5 6v7.5h9V6M6.5 9h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-more\" viewBox=\"0 0 16 16\"><circle cx=\"3.5\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"8\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"12.5\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/></symbol>\n      <symbol id=\"cc-i-refresh\" viewBox=\"0 0 16 16\"><path d=\"M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5V6H10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-play\" viewBox=\"0 0 16 16\"><path d=\"M4.5 2.5 13 8l-8.5 5.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-stop\" viewBox=\"0 0 16 16\"><rect x=\"3.5\" y=\"3.5\" width=\"9\" height=\"9\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/></symbol>\n      <symbol id=\"cc-i-clone\" viewBox=\"0 0 16 16\"><rect x=\"5.5\" y=\"5.5\" width=\"8\" height=\"8\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-import\" viewBox=\"0 0 16 16\"><path d=\"M8 2v8M5 7.5 8 10.5 11 7.5M2.5 13.5h11\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-expand\" viewBox=\"0 0 16 16\"><path d=\"M2 6V2h4M14 10v4h-4M2 2l5 5M14 14 9 9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-warn\" viewBox=\"0 0 16 16\"><path d=\"M8 2 15 14H1z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M8 6.5v3.2M8 11.4v.1\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-ext\" viewBox=\"0 0 16 16\"><path d=\"M6.5 3H3v10h10V9.5M9 2.5h4.5V7M13.5 2.5 8 8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-empty\" viewBox=\"0 0 16 16\"><path d=\"M2 4.5h12V12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12zM2 4.5 4 2h8l2 2.5M6.5 8.5h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-user\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"5.5\" r=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M2.5 14a5.5 5.5 0 0 1 11 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-db\" viewBox=\"0 0 16 16\"><ellipse cx=\"8\" cy=\"3.5\" rx=\"5.5\" ry=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M2.5 3.5v9c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2v-9M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-clock\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M8 4.5V8l2.5 1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-split\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"2\" width=\"5.5\" height=\"12\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"9\" y=\"2\" width=\"5.5\" height=\"12\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/></symbol>\n    </defs>\n  </svg>\n\n  <!-- ===== \u4fa7\u680f ===== -->\n  <aside class=\"sidebar\" id=\"sidebar\">\n    <div class=\"side-logo\">\n      <div class=\"logo-mark\">\u25c6</div>\n      <div class=\"logo-text\">\n        <div class=\"logo-name\">core console</div>\n        <div class=\"logo-sub\">proto \u00b7 mock</div>\n      </div>\n      <button class=\"icon-btn side-collapse\" id=\"btn-side-collapse\" title=\"\u6298\u53e0\u4fa7\u680f\"><svg class=\"ic\"><use href=\"#cc-i-chev\"/></svg></button>\n    </div>\n    <nav class=\"side-nav\" id=\"side-nav\"></nav>\n    <div class=\"side-foot\">\n      <div class=\"side-user\">\n        <span class=\"avatar\">r</span>\n        <span class=\"mono\">root@core</span>\n      </div>\n      <div class=\"side-conn\"><span class=\"lamp ok pulse-dot\"></span><span class=\"mono\">cored: connected</span></div>\n    </div>\n  </aside>\n  <div class=\"side-rail\" id=\"side-rail\" title=\"\u5c55\u5f00\u4fa7\u680f\">\u25c6</div>\n\n  <!-- ===== \u4e3b\u533a ===== -->\n  <div class=\"main\">\n    <header class=\"topbar\">\n      <div class=\"crumbs\" id=\"crumbs\"></div>\n      <div class=\"top-search\" id=\"top-search\">\n        <svg class=\"ic\"><use href=\"#cc-i-search\"/></svg>\n        <span class=\"ts-placeholder\">\u641c\u7d22 services / workflows / docs / agents / runs\u2026</span>\n        <span class=\"kbd\">\u2318K</span>\n      </div>\n      <div class=\"top-right\">\n        <div class=\"ev-count mono\" id=\"ev-count\" title=\"24h \u4e8b\u4ef6\u6570\"></div>\n        <button class=\"icon-btn\" id=\"btn-bell\" title=\"\u901a\u77e5\">\n          <svg class=\"ic\"><use href=\"#cc-i-bell\"/></svg><span class=\"badge-dot\" id=\"bell-badge\"></span>\n        </button>\n      </div>\n    </header>\n    <div id=\"view\" class=\"view\"></div>\n  </div>\n\n  <!-- ===== \u6d6e\u5c42 ===== -->\n  <div class=\"overlay\" id=\"overlay-palette\" hidden>\n    <div class=\"palette\" id=\"palette\">\n      <div class=\"pal-input-row\">\n        <svg class=\"ic\"><use href=\"#cc-i-search\"/></svg>\n        <input id=\"pal-input\" type=\"text\" placeholder=\"\u6a21\u7cca\u641c\u7d22\uff1a\u670d\u52a1 / workflow / \u6587\u6863 / agent / \u8fd0\u884c\u8f6e\u6b21\uff0c\u6216\u8f93\u5165\u52a8\u4f5c\u540d\u2026\" autocomplete=\"off\">\n        <span class=\"kbd\">Esc</span>\n      </div>\n      <div class=\"pal-list\" id=\"pal-list\"></div>\n      <div class=\"pal-foot\"><span><span class=\"kbd\">\u2191</span><span class=\"kbd\">\u2193</span> \u9009\u62e9</span><span><span class=\"kbd\">Enter</span> \u8df3\u8f6c</span><span><span class=\"kbd\">Esc</span> \u5173\u95ed</span></div>\n    </div>\n  </div>\n\n  <div class=\"overlay\" id=\"overlay-modal\" hidden><div id=\"modal-root\"></div></div>\n  <div id=\"drawer-root\"></div>\n  <div id=\"toast-stack\" class=\"toast-stack\"></div>\n\n  <button class=\"help-fab\" id=\"btn-help\" title=\"\u5173\u4e8e\u672c\u539f\u578b\">?</button>\n  <div id=\"help-root\"></div>\n  <div class=\"cc-conn-strip\" id=\"cc-conn-strip\" hidden><span class=\"lamp warn\" id=\"cc-conn-strip-lamp\"></span><span id=\"cc-conn-strip-text\"></span></div>\n  <button class=\"cc-conn-lamp\" id=\"cc-conn-lamp\" data-act=\"conn-cycle-detail\" title=\"\u8fde\u63a5\u6001\uff1a\u8fde\u63a5 dsh web \u901a\u9053\uff08\u00a71.5\uff09\"><span class=\"lamp ok\" id=\"cc-conn-dot\"></span><span class=\"mono\" id=\"cc-conn-label\">conn</span></button>\n</div>";
+var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 sprite\uff08\u96f6\u5916\u94fe\uff09 ===== -->\n  <svg width=\"0\" height=\"0\" style=\"position:absolute\" aria-hidden=\"true\">\n    <defs>\n      <symbol id=\"cc-i-home\" viewBox=\"0 0 16 16\"><path d=\"M2 8.5 8 3l6 5.5V14H9.5v-4h-3v4H2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-grid\" viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"2\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"9\" y=\"2\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"2\" y=\"9\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"9\" y=\"9\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-tree\" viewBox=\"0 0 16 16\"><path d=\"M3 2v12M3 5h5M3 9h5M8 5v1.5M8 9v1.5M8 6.5h4M8 10.5h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-flow\" viewBox=\"0 0 16 16\"><rect x=\"5.5\" y=\"1.5\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"1.5\" y=\"11\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"9.5\" y=\"11\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><path d=\"M8 5v3M8 8H4v3M8 8h4v3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/></symbol>\n      <symbol id=\"cc-i-doc\" viewBox=\"0 0 16 16\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M9.5 1.5V5H13M6 8h4.5M6 10.5h4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-pulse\" viewBox=\"0 0 16 16\"><path d=\"M1.5 8h3l2-5 3 10 2-5h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-check\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"6.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m5 8.2 2.1 2.1L11.2 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-plug\" viewBox=\"0 0 16 16\"><path d=\"M5 1.5v3M11 1.5v3M4 4.5h8v3a4 4 0 0 1-8 0zM8 11.5v3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-chat\" viewBox=\"0 0 16 16\"><path d=\"M2 3.5h12v8H8l-3 3v-3H2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M5 6.5h6M5 8.8h4\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-search\" viewBox=\"0 0 16 16\"><circle cx=\"7\" cy=\"7\" r=\"4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/><path d=\"m10.5 10.5 3.5 3.5\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-bell\" viewBox=\"0 0 16 16\"><path d=\"M8 2a4 4 0 0 1 4 4c0 3 .8 4.2 1.5 5h-11C3.2 10.2 4 9 4 6a4 4 0 0 1 4-4zM6.5 13a1.6 1.6 0 0 0 3 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-chev\" viewBox=\"0 0 16 16\"><path d=\"m6 4 4 4-4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-down\" viewBox=\"0 0 16 16\"><path d=\"m4 6 4 4 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-folder\" viewBox=\"0 0 16 16\"><path d=\"M1.5 3.5h4.5l1.5 2h7v8h-13z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-term\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"2.5\" width=\"13\" height=\"11\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m4 6 2.5 2.2L4 10.5M8.5 11h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-close\" viewBox=\"0 0 16 16\"><path d=\"m4 4 8 8M12 4l-8 8\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-plus\" viewBox=\"0 0 16 16\"><path d=\"M8 3v10M3 8h10\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-bot\" viewBox=\"0 0 16 16\"><rect x=\"3\" y=\"5\" width=\"10\" height=\"8\" rx=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><circle cx=\"6.2\" cy=\"9\" r=\"1\" fill=\"currentColor\"/><circle cx=\"9.8\" cy=\"9\" r=\"1\" fill=\"currentColor\"/><path d=\"M8 5V2.5M1.5 8.5v2M14.5 8.5v2\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-spark\" viewBox=\"0 0 16 16\"><path d=\"M8 1.5 9.6 6 14 8l-4.4 2L8 14.5 6.4 10 2 8l4.4-2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-link\" viewBox=\"0 0 16 16\"><path d=\"M6.5 9.5a3 3 0 0 0 4.3 0l2.4-2.4a3 3 0 1 0-4.3-4.3L7.6 4.1M9.5 6.5a3 3 0 0 0-4.3 0L2.8 8.9a3 3 0 1 0 4.3 4.3l1.3-1.3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-key\" viewBox=\"0 0 16 16\"><circle cx=\"5\" cy=\"11\" r=\"2.8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m7 9 6.5-6.5M11 5l2 2M9 7l1.6 1.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-filter\" viewBox=\"0 0 16 16\"><path d=\"M2 3.5h12L9.5 8.5v4L6.5 14V8.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-pin\" viewBox=\"0 0 16 16\"><path d=\"m8 1.5 1.8 3.4 3.7.5-2.7 2.6.7 3.7L8 9.9l-3.5 1.8.7-3.7-2.7-2.6 3.7-.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/><path d=\"M8 11v3.5\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-archive\" viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"2.5\" width=\"12\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M3.5 6v7.5h9V6M6.5 9h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-more\" viewBox=\"0 0 16 16\"><circle cx=\"3.5\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"8\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"12.5\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/></symbol>\n      <symbol id=\"cc-i-refresh\" viewBox=\"0 0 16 16\"><path d=\"M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5V6H10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-play\" viewBox=\"0 0 16 16\"><path d=\"M4.5 2.5 13 8l-8.5 5.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-stop\" viewBox=\"0 0 16 16\"><rect x=\"3.5\" y=\"3.5\" width=\"9\" height=\"9\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/></symbol>\n      <symbol id=\"cc-i-clone\" viewBox=\"0 0 16 16\"><rect x=\"5.5\" y=\"5.5\" width=\"8\" height=\"8\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-import\" viewBox=\"0 0 16 16\"><path d=\"M8 2v8M5 7.5 8 10.5 11 7.5M2.5 13.5h11\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-expand\" viewBox=\"0 0 16 16\"><path d=\"M2 6V2h4M14 10v4h-4M2 2l5 5M14 14 9 9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-warn\" viewBox=\"0 0 16 16\"><path d=\"M8 2 15 14H1z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M8 6.5v3.2M8 11.4v.1\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-ext\" viewBox=\"0 0 16 16\"><path d=\"M6.5 3H3v10h10V9.5M9 2.5h4.5V7M13.5 2.5 8 8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-empty\" viewBox=\"0 0 16 16\"><path d=\"M2 4.5h12V12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12zM2 4.5 4 2h8l2 2.5M6.5 8.5h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-user\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"5.5\" r=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M2.5 14a5.5 5.5 0 0 1 11 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-db\" viewBox=\"0 0 16 16\"><ellipse cx=\"8\" cy=\"3.5\" rx=\"5.5\" ry=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M2.5 3.5v9c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2v-9M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-clock\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M8 4.5V8l2.5 1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-split\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"2\" width=\"5.5\" height=\"12\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"9\" y=\"2\" width=\"5.5\" height=\"12\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/></symbol>\n    </defs>\n  </svg>\n\n  <!-- ===== \u4fa7\u680f ===== -->\n  <aside class=\"sidebar\" id=\"sidebar\">\n    <div class=\"side-logo\">\n      <div class=\"logo-mark\">\u25c6</div>\n      <div class=\"logo-text\">\n        <div class=\"logo-name\">core console</div>\n        <div class=\"logo-sub\">core console \u00b7 live</div>\n      </div>\n      <button class=\"icon-btn side-collapse\" id=\"btn-side-collapse\" title=\"\u6298\u53e0\u4fa7\u680f\"><svg class=\"ic\"><use href=\"#cc-i-chev\"/></svg></button>\n    </div>\n    <nav class=\"side-nav\" id=\"side-nav\"></nav>\n    <div class=\"side-foot\">\n      <div class=\"side-user\">\n        <span class=\"avatar\">r</span>\n        <span class=\"mono\">root@core</span>\n      </div>\n      <div class=\"side-conn\"><span class=\"lamp ok pulse-dot\"></span><span class=\"mono\">cored: connected</span></div>\n    </div>\n  </aside>\n  <div class=\"side-rail\" id=\"side-rail\" title=\"\u5c55\u5f00\u4fa7\u680f\">\u25c6</div>\n\n  <!-- ===== \u4e3b\u533a ===== -->\n  <div class=\"main\">\n    <header class=\"topbar\">\n      <div class=\"crumbs\" id=\"crumbs\"></div>\n      <div class=\"top-search\" id=\"top-search\">\n        <svg class=\"ic\"><use href=\"#cc-i-search\"/></svg>\n        <span class=\"ts-placeholder\">\u641c\u7d22 services / workflows / docs / agents / runs\u2026</span>\n        <span class=\"kbd\">\u2318K</span>\n      </div>\n      <div class=\"top-right\">\n        <div class=\"ev-count mono\" id=\"ev-count\" title=\"24h \u4e8b\u4ef6\u6570\"></div>\n        <button class=\"icon-btn\" id=\"btn-bell\" title=\"\u901a\u77e5\">\n          <svg class=\"ic\"><use href=\"#cc-i-bell\"/></svg><span class=\"badge-dot\" id=\"bell-badge\"></span>\n        </button>\n      </div>\n    </header>\n    <div id=\"view\" class=\"view\"></div>\n  </div>\n\n  <!-- ===== \u6d6e\u5c42 ===== -->\n  <div class=\"overlay\" id=\"overlay-palette\" hidden>\n    <div class=\"palette\" id=\"palette\">\n      <div class=\"pal-input-row\">\n        <svg class=\"ic\"><use href=\"#cc-i-search\"/></svg>\n        <input id=\"pal-input\" type=\"text\" placeholder=\"\u6a21\u7cca\u641c\u7d22\uff1a\u670d\u52a1 / workflow / \u6587\u6863 / agent / \u8fd0\u884c\u8f6e\u6b21\uff0c\u6216\u8f93\u5165\u52a8\u4f5c\u540d\u2026\" autocomplete=\"off\">\n        <span class=\"kbd\">Esc</span>\n      </div>\n      <div class=\"pal-list\" id=\"pal-list\"></div>\n      <div class=\"pal-foot\"><span><span class=\"kbd\">\u2191</span><span class=\"kbd\">\u2193</span> \u9009\u62e9</span><span><span class=\"kbd\">Enter</span> \u8df3\u8f6c</span><span><span class=\"kbd\">Esc</span> \u5173\u95ed</span></div>\n    </div>\n  </div>\n\n  <div class=\"overlay\" id=\"overlay-modal\" hidden><div id=\"modal-root\"></div></div>\n  <div id=\"drawer-root\"></div>\n  <div id=\"toast-stack\" class=\"toast-stack\"></div>\n\n  <button class=\"help-fab\" id=\"btn-help\" title=\"\u5173\u4e8e\u672c\u539f\u578b\">?</button>\n  <div id=\"help-root\"></div>\n  <div class=\"cc-conn-strip\" id=\"cc-conn-strip\" hidden><span class=\"lamp warn\" id=\"cc-conn-strip-lamp\"></span><span id=\"cc-conn-strip-text\"></span></div>\n  <button class=\"cc-conn-lamp\" id=\"cc-conn-lamp\" data-act=\"conn-cycle-detail\" title=\"\u8fde\u63a5\u6001\uff1a\u8fde\u63a5 dsh web \u901a\u9053\uff08\u00a71.5\uff09\"><span class=\"lamp ok\" id=\"cc-conn-dot\"></span><span class=\"mono\" id=\"cc-conn-label\">conn</span></button>\n</div>";
 
 // console-proto data.js（整体内嵌起点代码）：window.MOCK → 闭包 __CC.MOCK（不落 window 全局）
 /* data.js — core console 原型 mock 数据（单一 MOCK 对象，所有屏共享；普通 script）
@@ -1283,11 +1283,138 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   __CC.MOCK.hex = hex;
 })();
 
+// console-live.js —— E2 cored 读面真数据层（console-adoption.md §5 规则 2：渲染数据无双源——
+// 全部来自 cored 读面+ops DB；console 不自建持久状态）。
+// 通路：浏览器 → dsh web（同源）→ 宿主插件代理路由 /core-console/api（src/index.ts 注册，
+// connection 鉴权栅栏 requestRejection 同 open-in-app 口径）→ cored 只读 GET 面（cored-bridge.md §2）。
+// 本层只发 GET：写路径唯一入口是 cored POST /v1/apply（缺省关闭），客户端零旁路。
+// 退化纪律（§1.4）：读面不可达=骨架空态+轻提示，不白屏不报错块——连接态灯（conn-monitor）已承载失联三色。
+(function () {
+  'use strict';
+
+  var PREFIX = '/core-console/api';
+  var REFRESH_MS = 15000; // 稳态轻刷新窗（读面快照老化阈值；不替代连接态灯的活性判定）
+
+  var state = {
+    status: 'idle', // idle | loading | ok | degraded
+    at: 0,          // 最近一次成功装载时刻（Date.now）
+    err: '',        // 退化原因（degraded 时非空）
+    kinds: [],      // /v1/scheme/kinds 载荷（name/storage/spec/relations/...）
+    objects: {},    // kind -> [{kind,name,scope,resourceVersion}]（瘦身引用，跨 scope 枚举）
+    drafts: [],     // /v1/drafts 载荷（kind/scope/name/fieldManager/baseResourceVersion/updatedAt/bytes）
+    runs: [],       // /v1/workflows/runs.runs（触发面 run 投影）
+    runMeta: null,  // runs 面计数（started/dropped/advances/braked/capped）
+    events: [],     // /v1/events 归档行（最新优先；event_log=Welcome 最近重要事件持久源）
+    instanceStatus: {}, // ServiceInstance key -> {phase, observedGeneration}（status 回写在正文，逐个现读）
+    triggers: null, // /v1/triggers（received/dropped/records——触发留痕，进程内投影）
+    deliveries: null,
+    wakes: null,
+    metrics: [],
+    pending: false
+  };
+
+  function api(p) { return PREFIX + '/' + String(p).replace(/^\/+/, ''); }
+  function jget(p) {
+    return fetch(api(p), { headers: { accept: 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+        return r.json();
+      });
+  }
+  function refList(k) { return (state.objects[k] || []); }
+
+  /** 全量装载：scheme kinds → 逐 kind 对象枚举 + 四投影面 + 归档事件。任一子面失败=整轮退化（不半装载——
+   *  投影一致性优先于可得性；连接态灯已把失联作常态设计，恢复后下轮整装替换）。 */
+  function load() {
+    if (state.pending) return state.cur || Promise.resolve();
+    state.pending = true;
+    state.status = state.at ? 'ok' : 'loading'; // 首装=loading（骨架），重装期间保旧面（§1.4 基线渲染）
+    var cur = Promise.resolve()
+      .then(function () { return jget('v1/scheme/kinds'); })
+      .then(function (body) {
+        state.kinds = body.kinds || [];
+        return Promise.all(state.kinds.map(function (kd) {
+          return jget('v1/objects/' + encodeURIComponent(kd.name)).catch(function () { return { objects: [] }; });
+        })).then(function (all) {
+          var m = {};
+          state.kinds.forEach(function (kd, i) { m[kd.name] = (all[i] && all[i].objects) || []; });
+          state.objects = m;
+          // ServiceInstance status 回写在正文（InSync 率口径的数据面）：实例在册才逐个现读。
+          var insts = m.ServiceInstance || [];
+          state.instanceStatus = {};
+          return Promise.all(insts.map(function (o) {
+            return jget('v1/objects/ServiceInstance/' + encodeURIComponent(o.name) +
+              (o.scope ? '?scope=' + encodeURIComponent(o.scope) : ''))
+              .then(function (b) {
+                var c = String(b.content || '');
+                var ph = /phase:\s*([A-Za-z]+)/.exec(c);
+                var og = /observedGeneration:\s*([0-9]+)/.exec(c);
+                state.instanceStatus[o.kind + '/' + o.scope + '/' + o.name] = {
+                  phase: ph ? ph[1] : '',
+                  observedGeneration: og ? Number(og[1]) : null,
+                };
+              }).catch(function () { /* 单实例正文不可读=该实例无相位投影，不放大为整轮退化 */ });
+          }));
+        });
+      })
+      .then(function () {
+        return Promise.all([
+          jget('v1/workflows/runs').then(function (r) { state.runs = r.runs || []; state.runMeta = r; }),
+          jget('v1/triggers').then(function (r) { state.triggers = r; }),
+          jget('v1/events?limit=100').then(function (r) { state.events = r.events || []; }),
+          jget('v1/drafts').then(function (r) { state.drafts = r.drafts || []; }),
+          jget('v1/notifications/deliveries').then(function (r) { state.deliveries = r; }).catch(function () { state.deliveries = null; }),
+          jget('v1/agents/wakes').then(function (r) { state.wakes = r; }).catch(function () { state.wakes = null; }),
+          jget('v1/metrics').then(function (r) { state.metrics = r.metrics || []; }),
+        ]);
+      })
+      .then(function () {
+        state.status = 'ok'; state.at = Date.now(); state.err = '';
+      })
+      .catch(function (e) {
+        state.status = 'degraded'; state.err = String((e && e.message) || e);
+      })
+      .then(function () {
+        state.pending = false;
+        if (typeof __CC.live.onChange === 'function') __CC.live.onChange();
+        return state.status;
+      });
+    state.cur = cur;
+    return cur;
+  }
+
+  /** 进入真数据屏（Welcome/系统树）的装载入口：首装即拉，稳态超窗轻刷新，装载中不重入。 */
+  function ensure() {
+    if (state.status === 'idle') { load(); return; }
+    if (state.status === 'ok' && Date.now() - state.at > REFRESH_MS) load();
+  }
+
+  /** 单对象读取（get 载荷含 content 原文；对象键=(kind,scope,name)）。不缓存——渲染即现读（git 后端权威）。 */
+  function fetchObject(kind, scope, name) {
+    var p = 'v1/objects/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
+      (scope ? '?scope=' + encodeURIComponent(scope) : '');
+    return jget(p);
+  }
+
+  __CC.live = {
+    state: state,
+    load: load,
+    ensure: ensure,
+    fetchObject: fetchObject,
+    get: jget,
+    refs: refList,
+    onChange: null
+  };
+})();
+
 // console-proto app.js（整体内嵌起点代码）手术注记：M←__CC.MOCK；ROOT 容器纪律（$/委托/键盘收进容器）；监听与 boot 移入 mountConsole（可卸载）；连接态灯三色 UI 更新（§1.5）；图标 id 加 cc- 前缀
+// E2 手术注记（console-adoption.md §1.8）：Welcome 大屏/系统树/系统详情/对象详情/事件详情五屏换 cored
+// 读面真数据（__CC.live，经 /core-console/api 宿主代理只读 GET）；其余屏保持 proto mock 待各自 E 轮替换。
 /* app.js — core console 原型逻辑（普通 script，无模块） */
 (function () {
   'use strict';
   var M = __CC.MOCK;
+  var LIVE = __CC.live; // E2 真数据层（console-live.js：cored 读面快照 + ensure/fetchObject）
   var ROOT = null; // 容器根（挂载时由 mountConsole 指定；$/委托/键盘一律收进容器，不触宿主全局）
 
   /* ================= 全局状态 ================= */
@@ -1954,7 +2081,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     renderNav(); updateCounters();
     view.scrollTop = 0;
   }
-  /* ================= 屏 0：Welcome 大屏 ================= */
+  /* ================= 屏 0：Welcome 大屏（E2：cored 读面真数据，console-ui.md 屏幕 0） =================
+   * 数据来源（无双源红线）：系统/实例=cored 对象枚举（scheme/objects）；阶段条=run 投影；
+   * 重要事件=event_log 归档（/v1/events）；草稿=草稿缓存清单。健康度合成口径写进 tooltip
+   * ——大数字不许是无出处黑盒。读面未就绪=骨架行（§1.4：不白屏不报错块）。 */
   function greeting() {
     var h = new Date().getHours();
     if (h < 5) return '夜深了，root';
@@ -1963,110 +2093,193 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     if (h < 19) return '下午好，root';
     return '晚上好，root';
   }
-  function devDeliveryStageState() {
-    var wf = wfByName('dev-delivery');
-    var run = wf.runs[0];
-    var tl = run.timeline;
-    function find(phase) { for (var i = 0; i < tl.length; i++) if (tl[i].phase === phase) return tl[i]; return null; }
-    var cur = tl.filter(function (t) { return t.state === 'current'; })[0];
-    var phaseOf = { analyze: 'Analyzing', gate: 'AwaitingApproval', plan: 'Planning', execute: 'Executing', verify: 'Verifying', deploy: 'Executing', report: 'Reporting' };
-    var curPhase = cur ? cur.phase : null;
-    return wf.stages.map(function (st) {
-      var ph = phaseOf[st.id];
-      var t = find(ph);
+  function liveSkeletonRows(n, pad) {
+    var out = '';
+    for (var i = 0; i < n; i++) {
+      out += '<div class="skel-row" style="padding:6px ' + (pad || 16) + 'px"><div class="skel" style="width:' +
+        (140 + (i % 3) * 60) + 'px"></div><div class="skel" style="width:60px"></div></div>';
+    }
+    return out;
+  }
+  function liveDegradedNote() {
+    return '<div class="small faint" style="padding:8px 16px">cored 读面暂不可达（' + esc(LIVE.state.err || '未就绪') +
+      '）——保留骨架，恢复后自动整装替换（连接态灯见右下）</div>';
+  }
+  function liveHealth() {
+    var st = LIVE.state;
+    var systems = LIVE.refs('ServiceDesc');
+    var instances = LIVE.refs('ServiceInstance');
+    var drifts = LIVE.refs('DriftReport');
+    var events24 = st.events.filter(function (e) {
+      var t = Date.parse(e.ts);
+      return !isNaN(t) && (Date.now() - t) < 86400000;
+    }).length;
+    var approvals = st.events.filter(function (e) { return e.type === 'ApprovalNeeded'; }).length;
+    var started = (st.runMeta && st.runMeta.started) || 0;
+    var failed = st.runs.filter(function (r) { return r.status === 'failed'; }).length;
+    // InSync 率=phase=InSync 实例占比（console-ui.md 屏幕 0 口径的落地投影：instance status
+    // 回写在正文，live 层逐个现读——现势 0 实例=n/a，tooltip 给构成不冒充 100%）。
+    var insyncCount = instances.filter(function (o) {
+      return (st.instanceStatus[o.kind + '/' + o.scope + '/' + o.name] || {}).phase === 'InSync';
+    }).length;
+    return {
+      systems: systems, instances: instances, insyncCount: insyncCount, drifts: drifts.length, events24: events24,
+      approvals: approvals, started: started, failed: failed,
+      failedRate: started ? Math.round(failed / started * 100) : null,
+      truncated: st.events.length >= 100
+    };
+  }
+  function welcomeStageStrip() {
+    // dev-delivery 阶段条（console-ui.md 屏幕 0）：run 投影的相位落点→阶段态。run=触发面
+    // 受理投影（status: triggered|running|suspended|failed），非终态推进不冒充执行完毕。
+    var run = LIVE.state.runs.filter(function (r) { return r.workflow === 'dev-delivery'; })[0] || null;
+    var stages = [
+      { id: 'trigger', label: '触发' }, { id: 'analyze', label: 'Analyze' }, { id: 'gate', label: 'Gate' },
+      { id: 'plan', label: 'Plan' }, { id: 'execute', label: 'Execute' }, { id: 'verify', label: 'Verify' },
+      { id: 'deploy', label: 'Deploy' }, { id: 'report', label: 'Report' }
+    ];
+    var phaseMap = { Analyzing: 'analyze', AwaitingApproval: 'gate', Planning: 'plan', Executing: 'execute',
+      Verifying: 'verify', Deploying: 'deploy', Reporting: 'report' };
+    var curId = run ? (phaseMap[run.phase] || null) : null;
+    var curIdx = stages.findIndex(function (s) { return s.id === curId; });
+    var failed = !!run && run.status === 'failed';
+    var suspended = !!run && run.status === 'suspended';
+    var shown = stages.map(function (st, i) {
       var state = 'wait';
-      if (t && t.state === 'done') state = 'done';
-      if (curPhase && ph === curPhase) state = (st.id === 'gate') ? 'wait' : 'current';
-      if (st.id === 'gate') { state = find('AwaitingApproval') ? 'wait' : (curPhase && curPhase !== 'AwaitingApproval' && t ? 'done' : 'done'); if (curPhase === 'AwaitingApproval') state = 'wait'; }
-      return {
-        id: st.id, label: st.label, note: st.note, state: state,
-        dur: t && t.dur ? t.dur + 'm' : (state === 'current' ? '进行中' : '—'),
-        detail: t ? t.note : st.note
-      };
+      if (curIdx >= 0) state = i < curIdx ? 'done' : i === curIdx ? (failed ? 'bad' : 'current') : 'wait';
+      if (st.id === 'trigger' && curIdx >= 0 && !failed) state = 'done';
+      var note = '—';
+      if (run) {
+        if (st.id === curId) note = failed ? '失败' : suspended ? '等待批准' : '进行中';
+        else if (state === 'done') note = '已过';
+      }
+      return { id: st.id, label: st.label, state: state, note: note };
     });
+    return { run: run, stages: shown, suspended: suspended };
+  }
+  function welcomeBizTitle(e) {
+    // 业务化标题=展示层生成（console-ui.md 屏幕 0：不入库为准）
+    var involved = e.involved || '';
+    switch (e.type) {
+      case 'ApprovalNeeded': return '有审批在等你：' + involved;
+      case 'Escalate': return '升级上报：' + involved;
+      case 'DocApplied': return '文档落库：' + involved;
+      case 'HeartbeatLost': return '心跳丢失：' + involved;
+      case 'MetricThreshold': return '指标越线：' + involved;
+      case 'ExternalChanged': return '外部变化：' + involved;
+      case 'ReconcileTick': return '定时巡检一轮';
+      default: return e.type + (involved ? '：' + involved : '');
+    }
   }
   function screenWelcome(view) {
-    var h = healthScore();
-    var cls = h.score >= 90 ? 'good' : h.score >= 70 ? 'mid' : 'bad';
-    var stages = devDeliveryStageState();
-    var wfs = wfByName('dev-delivery');
+    LIVE.ensure();
+    var st = LIVE.state;
     setCrumbs([{ label: 'Welcome' }]);
-    var cells = M.systems.map(function (s) {
-      var lit = s.phase === 'InSync' ? 'lit-ok' : s.phase === 'Drifting' ? 'lit-warn' : s.phase === 'Remediating' ? 'lit-acc' : 'lit-esc';
-      return '<div class="w-insync-cell ' + lit + '" data-act="go" data-go="s/' + s.name + '" title="' + esc(s.name + ' · ' + s.phase) + '"><span class="cell-tip">' + esc(s.name) + '</span></div>';
+    var h = liveHealth();
+    var cells = h.systems.map(function (s) {
+      return '<div class="w-insync-cell lit-ok" data-act="go" data-go="s/' + esc(s.name) +
+        '" title="' + esc(s.name + ' · ServiceDesc r' + s.resourceVersion) + '"><span class="cell-tip">' + esc(s.name) + '</span></div>';
     }).join('');
-    var stagesHtml = stages.map(function (st, i) {
-      var dot = st.state === 'done' ? '✓' : (i + 1);
-      return '<div class="w-stage ' + st.state + '" data-act="go" data-go="wf/dev-delivery" title="跳转 dev-delivery 运行详情">' +
-        '<div class="w-stage-dot">' + dot + '</div><div class="ws-name">' + esc(st.label) + '</div>' +
-        '<div class="ws-sub">' + esc(st.dur) + '</div><div class="ws-note">' + esc(st.note) + '</div></div>';
+    var insyncPct = h.instances.length
+      ? Math.round(h.insyncCount / h.instances.length * 100) + '%'
+      : '—';
+    var strip = welcomeStageStrip();
+    var stagesHtml = strip.stages.map(function (sg) {
+      var dot = sg.state === 'done' ? '✓' : (sg.state === 'bad' ? '!' : sg.label.charAt(0));
+      return '<div class="w-stage ' + sg.state + '" data-act="go" data-go="wf/dev-delivery" title="跳转 dev-delivery（对象详情；运行管理 E3 落地）">' +
+        '<div class="w-stage-dot">' + dot + '</div><div class="ws-name">' + esc(sg.label) + '</div>' +
+        '<div class="ws-sub">' + esc(sg.note) + '</div></div>';
     }).join('');
-    var svcHtml = M.systems.map(function (s) {
-      var dN = openDrifts().filter(function (d) { return d.scope === 'systems/' + s.name; }).length;
-      var desc = s.phase === 'Drifting' ? '漂移未解决 ' + dN + ' 条，修复循环进行中'
-        : s.phase === 'Remediating' ? 'gotty-web 挂载重建 attempt 1/3'
-        : s.phase === 'Escalated' ? 'prod 门禁无人在环，等待 root'
-        : '对账正常，observedGeneration 已追平';
-      return '<div class="w-svc" data-act="go" data-go="s/' + s.name + '">' +
-        '<span class="lamp ' + (PHASE_CLS[s.phase] || 'mute') + ' ' + (PHASE_PULSE[s.phase] || '') + '" style="width:10px;height:10px"></span>' +
-        '<div class="ws-main"><div class="ws-title">' + esc(s.name) + '</div><div class="ws-desc">' + esc(desc) + '</div></div>' +
-        '<span class="ws-chip">' + phaseChip(s.phase) + '</span></div>';
+    var svcHtml = h.systems.map(function (s) {
+      var inScope = function (k) { return LIVE.refs(k).filter(function (o) { return o.scope === s.name || o.scope === 'systems/' + s.name; }); };
+      var wfs = inScope('Workflow').length;
+      var docs = 0;
+      LIVE.state.kinds.forEach(function (kd) {
+        if (kd.name === 'ServiceDesc') return;
+        docs += inScope(kd.name).length;
+      });
+      return '<div class="w-svc" data-act="go" data-go="s/' + esc(s.name) + '">' +
+        '<span class="lamp ok" style="width:10px;height:10px"></span>' +
+        '<div class="ws-main"><div class="ws-title">' + esc(s.name) + '</div><div class="ws-desc">ServiceDesc r' + s.resourceVersion +
+        ' · workflow ' + wfs + ' · 对象 ' + docs + '</div></div>' +
+        '<span class="ws-chip">' + phaseChip('InSync') + '</span></div>';
     }).join('');
-    // 重要事件（业务化标题）
-    var bizEvents = M.events.filter(function (e) { return e.lane === 'event'; }).slice(0, 60).map(function (e) {
-      var lvl = e.level === 'fatal' ? 'critical' : e.level === 'warn' ? 'high' : 'info';
-      var title = e.msg;
-      if (e.kind === 'Escalated') title = '部署 prod 待审批：' + e.msg;
-      else if (e.kind === 'ApprovalNeeded') title = '有审批在等你：' + e.msg;
-      else if (e.kind === 'MetricThreshold') title = '指标越线：' + e.msg;
-      else if (e.kind === 'DocApplied') title = '文档落库：' + e.msg;
-      else if (e.kind === 'ExternalChanged' && e.level === 'warn') title = '外部变化需关注：' + e.msg;
-      return { e: e, lvl: lvl, title: title };
-    });
+    if (!svcHtml) svcHtml = liveSkeletonRows(2);
     var lvlFilter = S.wImpLevel;
-    var shown = bizEvents.filter(function (x) { return lvlFilter === 'all' || x.lvl === lvlFilter; }).slice(0, 10);
-    var evHtml = shown.map(function (x) {
+    var lvlMap = { fatal: 'critical', error: 'critical', warn: 'high', info: 'info' };
+    var bizEvents = LIVE.state.events.map(function (e) {
+      return { e: e, lvl: lvlMap[e.level] || 'info', title: welcomeBizTitle(e) };
+    }).filter(function (x) { return lvlFilter === 'all' || x.lvl === lvlFilter; }).slice(0, 10);
+    var evHtml = bizEvents.map(function (x) {
       var dotc = x.lvl === 'critical' ? 'var(--danger)' : x.lvl === 'high' ? 'var(--warn)' : 'var(--accent)';
-      var lnk = x.e.link || '#/event/' + x.e.id;
+      var obj = x.e.involved || '';
+      var objLink = '';
+      if (obj) {
+        var segs = obj.split('/');
+        objLink = '<span class="w-ev-obj"><span class="lk mono small" data-act="go" data-go="doc/' +
+          esc(segs.slice(0, -1).map(encodeURIComponent).join('/')) + '/' + esc(encodeURIComponent(segs[segs.length - 1])) + '">' + esc(obj) + '</span></span>';
+      }
       return '<div class="w-ev-item"><span class="w-ev-dot" style="background:' + dotc + '"></span>' +
-        '<span class="w-ev-title">' + esc(x.title) + '</span>' +
-        '<span class="w-ev-obj"><span class="lk mono small" data-act="go" data-go="' + esc(lnk.replace('#/', '')) + '">' + esc(x.e.object) + '</span></span>' +
-        '<span class="w-ev-time mono">' + fmtTime(x.e.ts) + '</span></div>';
+        '<span class="w-ev-title">' + esc(x.title) + '</span>' + objLink +
+        '<span class="w-ev-time mono">' + esc(String(x.e.ts).replace('T', ' ').slice(5, 16)) + '</span></div>';
     }).join('');
-    if (!evHtml) evHtml = '<div class="empty" style="padding:24px"><div class="e-title">该级别暂无事件</div></div>';
+    if (!evHtml) {
+      evHtml = st.status === 'loading' ? liveSkeletonRows(3)
+        : '<div class="empty" style="padding:22px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">归档窗内暂无事件</div><div>event_log 为空：文档库 bootstrap 阶段尚无 Apply/触发流水（事件经 Apply 与注入产生）</div></div>';
+    }
+    if (st.status === 'degraded') evHtml = liveSkeletonRows(2) + liveDegradedNote();
+    var healthTip = '健康度构成（console-ui.md 屏幕 0 口径）：InSync 率=status.phase=InSync 实例/全部实例' +
+      '（现势 ServiceInstance 在册 ' + h.instances.length + ' → ' + (h.instances.length ? insyncPct : 'n/a——无实例在册不冒充 100%') + '）；' +
+      'drift=DriftReport 在册 ' + h.drifts + '；审批积压=ApprovalNeeded 归档 ' + h.approvals + '；' +
+      '24h 失败率=run 终态 failed ' + h.failed + '/' + h.started + (h.failedRate == null ? '（暂无 run）' : '=' + h.failedRate + '%');
+    var stageNote = strip.run
+      ? '最近一轮 ' + esc(strip.run.workflow) + ' · phase ' + esc(strip.run.phase) + ' · ' + esc(strip.run.status) +
+        (strip.suspended ? '（闸锚挂起——等待批准信号）' : '')
+      : '暂无 run：等待触发（DocApplied/ExternalChanged 事件或 timer resync）';
+    var loading = st.status === 'loading';
     view.innerHTML = '<div class="welcome">' +
-      '<div class="w-hello"><h1>' + esc(greeting()) + '</h1><span class="w-date">' + fmtDate(new Date()) + ' · core console proto · 全部为 mock 数据</span></div>' +
+      '<div class="w-hello"><h1>' + esc(greeting()) + '</h1><span class="w-date">' + fmtDate(new Date()) +
+      ' · 数据源=cored 读面（/core-console/api 代理 · 只读 GET）</span></div>' +
       '<div class="w-health-row">' +
-        '<div class="w-health ' + cls + '" title="健康度构成：100 − Escalated×' + 4 + '（' + h.esc + '） − 未解决drift×2（' + h.drift + '） − 待审批×1（' + h.pend + '） − 非InSync系统×2（' + (6 - h.insync) + '）' +
-          ' = ' + h.score + '">' +
-          '<div class="w-health-num">' + h.score + '<span class="unit">/100</span></div>' +
-          '<div class="w-health-meta"><b>业务健康度</b><br>构成见 tooltip · 悬停查看</div>' +
+        '<div class="w-health ' + (h.failedRate == null ? 'mid' : h.failedRate >= 90 ? 'good' : h.failedRate >= 70 ? 'mid' : 'bad') + '" title="' + esc(healthTip) + '">' +
+          '<div class="w-health-num">' + (h.failedRate == null ? '—' : h.failedRate) + '<span class="unit">' + (h.failedRate == null ? '' : '%') + '</span></div>' +
+          '<div class="w-health-meta"><b>24h 失败率</b><br>构成见 tooltip · 悬停查看</div>' +
         '</div>' +
         '<div class="w-insync">' +
-          '<div class="w-insync-num">' + h.insync + '<span class="dim">/6</span> <span class="small muted">系统 InSync</span></div>' +
-          '<div class="w-insync-bar">' + cells + '</div>' +
-          '<div class="small faint">漂移 ' + h.drift + ' · 待审批 ' + h.pend + ' · Escalated ' + h.esc + '</div>' +
+          '<div class="w-insync-num">' + h.systems.length + '<span class="dim"> 系统</span> <span class="small muted">' +
+            h.instances.length + ' 实例</span></div>' +
+          '<div class="w-insync-bar">' + (cells || '<span class="small faint">系统树见左侧导航</span>') + '</div>' +
+          '<div class="small faint">InSync 率 ' + esc(insyncPct) + ' · drift ' + h.drifts + ' · 待审批 ' + h.approvals +
+            ' · run 受理 ' + h.started + '</div>' +
         '</div>' +
         '<div class="w-quick">' +
           '<button class="btn" data-act="manual-tick"><svg class="ic"><use href="#cc-i-refresh"/></svg>手动触发一轮</button>' +
           '<button class="btn" data-act="new-goal"><svg class="ic"><use href="#cc-i-plus"/></svg>新建 Goal</button>' +
-          '<button class="btn primary" data-act="go" data-go="chat/builtinRoot"><svg class="ic"><use href="#cc-i-chat"/></svg>与 root 对话</button>' +
+          '<button class="btn primary" data-act="go" data-go="agent/core-headless"><svg class="ic"><use href="#cc-i-chat"/></svg>与 root 对话</button>' +
         '</div>' +
       '</div>' +
-      '<div class="w-stagebar"><div class="sec-title">默认流转 · dev-delivery（最近一轮 #' + wfs.runs[0].no + '，点击阶段进入运行管理）</div>' +
-        '<div class="w-stages">' + stagesHtml + '</div></div>' +
+      '<div class="w-stagebar"><div class="sec-title">默认流转 · dev-delivery（点击阶段进运行详情）</div>' +
+        '<div class="small faint" style="margin:2px 0 6px">' + esc(stageNote) + '</div>' +
+        '<div class="w-stages">' + (loading ? liveSkeletonRows(1, 0) : stagesHtml) + '</div></div>' +
       '<div class="sec-title">服务状态（Service 关注行）</div>' +
       '<div class="w-services">' + svcHtml + '</div>' +
-      '<div class="sec-title">最近重要事件</div>' +
+      '<div class="sec-title">最近重要事件（event_log 归档' + (h.truncated ? ' · 显示最近 100 条' : '') + '）</div>' +
       '<div class="w-ev-filter">' +
         [['all', '全部'], ['critical', 'critical'], ['high', 'high'], ['info', 'info']].map(function (f) {
-          return '<span class="fchip' + (f[0] === 'crit' ? ' crit' : '') + (S.wImpLevel === f[0] ? ' on' : '') + '" data-act="w-ev-level" data-lv="' + f[0] + '">' + f[1] + '</span>';
+          return '<span class="fchip' + (S.wImpLevel === f[0] ? ' on' : '') + '" data-act="w-ev-level" data-lv="' + f[0] + '">' + f[1] + '</span>';
         }).join('') +
       '</div>' +
       '<div class="card"><div class="card-b" style="padding:6px 16px">' + evHtml + '</div></div>' +
       '</div>';
   }
   ACTIONS['w-ev-level'] = function (el) { S.wImpLevel = el.dataset.lv; render(); };
+  // 快捷动作（E2 诚实投影：写路径=Apply，未开启写面的装配不下发假回执）
+  ACTIONS['manual-tick'] = function () {
+    toast('只读装配不下发手动触发', '写路径唯一入口=POST /v1/apply（--allow-apply；E3 运行管理接 Apply override 闭环）', 'warn');
+  };
+  ACTIONS['new-goal'] = function () {
+    toast('新建 Goal 由文档编辑器落地（E4）', 'LLM 草稿 → 人点 Apply → Revision+1 全链路（apply.md §1/§6）', 'warn');
+  };
 
   /* ================= 屏 1：总览（服务关注区） ================= */
   function screenOverview(view) {
@@ -2125,98 +2338,80 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       '</div></div>';
   }
 
-  /* ================= 屏 2：系统树 ================= */
-  function treeDocNode(d, depth) {
-    return '<div class="tree-node"><div class="tree-row" style="padding-left:' + (12 + depth * 22) + 'px" data-act="go" data-go="doc/' + d.name + '">' +
-      '<span class="t-caret"></span><svg class="ic" style="color:#5b6378"><use href="#cc-i-doc"/></svg>' +
-      '<span class="t-name">' + esc(d.name) + '</span>' + kindBadge(d.kind) + draftDot(docHasDraft(d.name)) +
-      '<span class="t-meta"><span class="t-rev">r' + d.revision + '</span>' + statusChip(d.status === 'Closed' ? 'Idle' : (d.status === 'Open' || d.status === 'Escalated' || d.status === 'Remediating' ? d.status : 'InSync')) + '</span></div></div>';
+  /* ================= 屏 2：系统树（E2：cored 读面真数据，console-ui.md 屏幕 2） =================
+   * 第一层树全屏化 + docs 一等子树：Global（builtin/global）→ 系统（ServiceDesc）→
+   * instances / workflows / workservices / docs 全展开。文档节点与资源节点完全同构渲染
+   * （kind 徽章 / rev / 草稿圆点）；树上任何标识符可点 → 对象详情（只读 viewer，E4 起升编辑器）。
+   * 数据=cored 读面（scheme kinds + 逐 kind 对象枚举 + 草稿缓存清单）——子层懒展开=前端分组
+   * （数据已全量在册，树上过滤为前端过滤）。 */
+  function treeDraftSet() {
+    var set = {};
+    LIVE.state.drafts.forEach(function (d) { set[d.kind + '/' + d.scope + '/' + d.name] = true; });
+    return set;
   }
-  function treeSystemChildren(sysName) {
-    var sys = sysByName(sysName);
+  function treeObjRow(o, depth, set) {
+    var path = encodeURIComponent(o.kind) + '/' + encodeURIComponent(o.scope) + '/' + encodeURIComponent(o.name);
+    return '<div class="tree-row" style="padding-left:' + depth + 'px" data-act="go" data-go="doc/' + path + '">' +
+      '<span class="t-caret"></span><svg class="ic" style="color:#5b6378"><use href="#cc-i-doc"/></svg>' +
+      '<span class="t-name">' + esc(o.name) + '</span>' + kindBadge(o.kind) + draftDot(set[o.kind + '/' + o.scope + '/' + o.name]) +
+      '<span class="t-meta"><span class="t-rev">r' + o.resourceVersion + '</span></span></div>';
+  }
+  function treeGroup(key, label, count, depth, icon, kidsHtml) {
+    var open = S.treeOpen[key];
+    return '<div class="tree-node"><div class="tree-row" style="padding-left:' + depth + 'px" data-act="tree-toggle" data-key="' + esc(key) + '">' +
+      '<span class="t-caret' + (open ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#' + icon + '"/></svg>' +
+      '<span class="t-name" style="font-family:var(--sans);font-weight:600">' + esc(label) + '</span>' +
+      '<span class="t-meta"><span>' + count + '</span></span></div>' +
+      (open ? '<div class="tree-children">' + kidsHtml + '</div>' : '') + '</div>';
+  }
+  function inScopeObjects(sysName) {
+    // scope 匹配：现势文档库 scope=系统名裸名（layout.md 物化）；兼容 'systems/<name>' 前缀形。
+    var hit = {};
+    var rows = [];
+    LIVE.state.kinds.forEach(function (kd) {
+      var objs = LIVE.refs(kd.name).filter(function (o) { return o.scope === sysName || o.scope === 'systems/' + sysName; });
+      if (objs.length) { hit[kd.name] = objs; rows = rows.concat(objs); }
+    });
+    return { byKind: hit, rows: rows };
+  }
+  function treeSystemChildren(sysName, set, ql) {
     var kids = '';
-    // 文档（与资源完全同构的行）
-    var sdocs = sysDocs(sysName);
-    kids += '<div class="tree-node"><div class="tree-row" style="padding-left:34px" data-act="tree-toggle" data-key="docs:' + sysName + '">' +
-      '<span class="t-caret' + (S.treeOpen['docs:' + sysName] ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-folder"/></svg>' +
-      '<span class="t-name" style="font-family:var(--sans);font-weight:600">docs</span>' + kindBadge(DOC_GROUP) +
-      '<span class="t-meta"><span>' + sdocs.length + ' 对象</span></span></div>';
-    if (S.treeOpen['docs:' + sysName]) {
-      kids += '<div class="tree-children' + (S.treeLoaded['docs:' + sysName] ? '' : ' skeletonizing') + '" id="tc-docs-' + esc(sysName) + '">' +
-        (S.treeLoaded['docs:' + sysName] ? sdocs.map(function (d) { return treeDocNode(d, 2); }).join('') :
-          '<div class="skel-row" style="padding-left:56px"><div class="skel" style="width:180px"></div><div class="skel" style="width:60px"></div></div><div class="skel-row" style="padding-left:56px"><div class="skel" style="width:220px"></div><div class="skel" style="width:60px"></div></div><div class="skel-row" style="padding-left:56px"><div class="skel" style="width:150px"></div><div class="skel" style="width:60px"></div></div>') +
-        '</div>';
-    }
-    kids += '</div>';
+    var sc = inScopeObjects(sysName);
+    var match = function (o) { return !ql || (o.name + ' ' + o.kind + ' ' + o.scope).toLowerCase().indexOf(ql) >= 0; };
     // instances
-    var insts = sysInstances(sysName);
-    kids += '<div class="tree-node"><div class="tree-row" style="padding-left:34px" data-act="tree-toggle" data-key="inst:' + sysName + '">' +
-      '<span class="t-caret' + (S.treeOpen['inst:' + sysName] ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-db"/></svg>' +
-      '<span class="t-name" style="font-family:var(--sans);font-weight:600">instances</span><span class="t-meta"><span>' + insts.length + '</span></span></div>';
-    if (S.treeOpen['inst:' + sysName]) {
-      kids += '<div class="tree-children">' + insts.map(function (i) {
-        var chips = i.agents.map(function (a) { return '<span class="chip click mute" data-act="go" data-go="agent/' + a + '"><svg class="ic"><use href="#cc-i-bot"/></svg>' + esc(a) + '</span>'; }).join('');
-        return '<div class="tree-node"><div class="tree-row" style="padding-left:56px" data-act="go" data-go="s/' + sysName + '/i/' + i.name + '">' +
-          '<span class="t-caret"></span><span class="t-name">' + esc(i.name) + '</span><span class="chip kind">ServiceInstance</span>' +
-          '<span class="t-meta">' + chips + phaseChip(i.phase) + '</span></div></div>';
-      }).join('') + '</div>';
-    }
-    kids += '</div>';
-    // workflows
-    var wfs = M.workflows.filter(function (w) { return w.scope === 'systems/' + sysName; });
-    if (!wfs.length) wfs = M.workflows.filter(function (w) { return w.scope === 'global'; });
-    kids += '<div class="tree-node"><div class="tree-row" style="padding-left:34px" data-act="tree-toggle" data-key="wf:' + sysName + '">' +
-      '<span class="t-caret' + (S.treeOpen['wf:' + sysName] ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-flow"/></svg>' +
-      '<span class="t-name" style="font-family:var(--sans);font-weight:600">workflows</span><span class="t-meta"><span>' + wfs.length + '</span></span></div>';
-    if (S.treeOpen['wf:' + sysName]) {
-      kids += '<div class="tree-children">' + wfs.map(function (w) {
-        return '<div class="tree-row" style="padding-left:56px" data-act="go" data-go="wf/' + w.name + '">' +
-          '<span class="t-caret"></span><span class="t-name">' + esc(w.name) + '</span>' + (w.builtin ? '<span class="chip mute small">builtin</span>' : '') +
-          '<span class="t-meta"><span class="mono">' + w.runsTotal + ' runs</span>' + phaseChip(w.phase) + (w.enabled ? '' : '<span class="chip mute">disabled</span>') + '</span></div>';
-      }).join('') + '</div>';
-    }
-    kids += '</div>';
-    // workservices → connectorops / providers / refs
-    var wss = M.workservices.filter(function (w) { return w.scope.indexOf(sysName) >= 0; });
-    var cops = M.connectorops.filter(function (c) { return sysName === 'connector' || sysName === 'storage-system' || sysName === 'developer-system' && (c.name === 'onedev-ci' || c.name === 'agent-comm'); });
-    var provs = M.providers.filter(function (p) { return p.scope.indexOf(sysName) >= 0; });
-    var rfs = M.refs.filter(function (r) { return r.to === sysName; });
-    var wssAll = wss.length ? wss : (sysName === 'connector' ? M.workservices : []);
-    var resKids = wssAll.map(function (w) {
-      var copKids = M.connectorops.filter(function (c) { return c.workService === w.name; }).map(function (c) {
-        return '<div class="tree-row" style="padding-left:100px" data-act="go" data-go="connector/' + c.name + '">' +
-          '<span class="t-caret"></span><span class="t-name">' + esc(c.name) + '</span><span class="chip kind">ConnectorOps</span>' +
-          '<span class="t-meta">' + statusChip(c.status) + '</span></div>';
-      }).join('');
-      return '<div class="tree-node"><div class="tree-row" style="padding-left:56px" data-act="go" data-go="ws/' + w.name + '">' +
-        '<span class="t-caret"></span><span class="t-name">' + esc(w.name) + '</span><span class="chip kind">WorkService</span>' +
-        '<span class="t-meta">' + statusChip(w.status) + '</span></div>' + copKids + '</div>';
-    }).join('');
-    resKids += provs.map(function (p) {
-      return '<div class="tree-row" style="padding-left:56px" data-act="go" data-go="provider/' + p.name + '">' +
-        '<span class="t-caret"></span><span class="t-name">' + esc(p.name) + '</span><span class="chip kind">Provider</span>' +
-        '<span class="t-meta">' + statusChip(p.status) + '</span></div>';
-    }).join('');
-    resKids += rfs.map(function (r) {
-      return '<div class="tree-row" style="padding-left:56px" data-act="go" data-go="ref/' + encodeURIComponent(r.name) + '">' +
-        '<span class="t-caret"></span><span class="t-name">' + esc(r.name) + '</span><span class="chip kind">Ref</span>' +
-        '<span class="t-meta"><span class="chip ok small">' + esc(r.status) + '</span></span></div>';
-    }).join('');
-    kids += '<div class="tree-node"><div class="tree-row" style="padding-left:34px" data-act="tree-toggle" data-key="res:' + sysName + '">' +
-      '<span class="t-caret' + (S.treeOpen['res:' + sysName] ? ' open' : '') + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-plug"/></svg>' +
-      '<span class="t-name" style="font-family:var(--sans);font-weight:600">workservices</span><span class="t-meta"><span>' + (wssAll.length + provs.length + rfs.length) + '</span></span></div>' +
-      (S.treeOpen['res:' + sysName] ? '<div class="tree-children">' + resKids + '</div>' : '') + '</div>';
+    var insts = (sc.byKind.ServiceInstance || []).filter(match);
+    kids += treeGroup('inst:' + sysName, 'instances', insts.length, 34, 'cc-i-db',
+      insts.map(function (o) { return treeObjRow(o, 56, set); }).join(''));
+    // workflows（builtin 全局同名 override 在此与系统层同名对象并排可见）
+    var wfs = (sc.byKind.Workflow || []).filter(match);
+    kids += treeGroup('wf:' + sysName, 'workflows', wfs.length, 34, 'cc-i-flow',
+      wfs.map(function (o) { return treeObjRow(o, 56, set); }).join(''));
+    // workservices（WorkService/ConnectorOps/Provider 并组——资源节点与文档节点同构）
+    var resRows = []
+      .concat(sc.byKind.WorkService || []).concat(sc.byKind.ConnectorOps || []).concat(sc.byKind.Provider || []).filter(match);
+    kids += treeGroup('res:' + sysName, 'workservices', resRows.length, 34, 'cc-i-plug',
+      resRows.map(function (o) { return treeObjRow(o, 56, set); }).join(''));
+    // docs（一等子树全展开：除上述资源/实例/workflow 外的全部 kind，按 kind 分组行）
+    var docRows = [];
+    LIVE.state.kinds.forEach(function (kd) {
+      if (kd.name === 'ServiceInstance' || kd.name === 'Workflow' || kd.name === 'WorkService' ||
+          kd.name === 'ConnectorOps' || kd.name === 'Provider' || kd.name === 'ServiceDesc') return;
+      docRows = docRows.concat((sc.byKind[kd.name] || []).filter(match));
+    });
+    docRows.sort(function (a, b) { return (a.kind + a.name) < (b.kind + b.name) ? -1 : 1; });
+    kids += treeGroup('docs:' + sysName, 'docs', docRows.length, 34, 'cc-i-folder',
+      docRows.map(function (o) { return treeObjRow(o, 56, set); }).join(''));
     return kids;
   }
-  var DOC_GROUP = 'docs·同规则';
+  var TREE_KEYS = [];
   function screenTree(view) {
+    LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树' }]);
-    var totalDocs = M.docs.length;
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>系统树</h1><span class="chip kind">Global → ServiceDesc → …</span></div>' +
-      '<div class="dh-sub">文档节点与资源节点完全同构：同样的行样式 / kind 徽章 / revision / 草稿圆点 / 状态灯。树上出现的任何标识符都可点。<span class="mono faint">' + totalDocs + ' 文档对象 · ' + M.workflows.length + ' workflow · ' + M.instances.length + ' instance</span></div></div></div>' +
+      '<div class="dh-sub">文档节点与资源节点完全同构：同样的行样式 / kind 徽章 / revision / 草稿圆点。树上出现的任何标识符都可点（对象详情只读 viewer）。<span class="mono faint">数据源=cored 读面（scheme kinds + 对象枚举 + 草稿缓存）</span></div></div></div>' +
       '<div class="tree-toolbar">' +
-        '<input type="search" id="tree-q" placeholder="按 kind / 名称 / 状态过滤…" style="flex:1;max-width:360px;background:var(--bg);border:1px solid var(--border-2);border-radius:7px;padding:6px 11px;color:var(--text);outline:none;font-size:12.5px">' +
+        '<input type="search" id="tree-q" placeholder="按 kind / 名称 / scope 过滤…" style="flex:1;max-width:360px;background:var(--bg);border:1px solid var(--border-2);border-radius:7px;padding:6px 11px;color:var(--text);outline:none;font-size:12.5px">' +
         '<button class="btn sm" data-act="tree-expand">展开全部</button>' +
         '<button class="btn sm" data-act="tree-collapse">收起</button>' +
         '<span class="count-note" id="tree-count"></span>' +
@@ -2227,248 +2422,282 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   }
   function paintTree(q) {
     var box = $('#tree-box');
+    var st = LIVE.state;
+    var set = treeDraftSet();
     var ql = (q || '').toLowerCase().trim();
-    var systems = M.systems;
-    if (ql) systems = systems.filter(function (s) { return (s.name + ' ' + s.phase).toLowerCase().indexOf(ql) >= 0; });
-    var html = '<div class="tree-node"><div class="tree-row" style="padding-left:10px" data-act="go" data-go="overview">' +
+    var note = $('#tree-count');
+    TREE_KEYS = [];
+    if (st.status === 'loading') {
+      box.innerHTML = '<div class="tree-node">' + liveSkeletonRows(6, 10) + '</div>';
+      if (note) note.textContent = '装载 cored 读面…';
+      return;
+    }
+    if (st.status === 'degraded') {
+      box.innerHTML = '<div class="tree-node">' + liveSkeletonRows(3, 10) + liveDegradedNote() + '</div>';
+      if (note) note.textContent = '读面不可达（保留骨架）';
+      return;
+    }
+    var match = function (o) { return !ql || (o.name + ' ' + o.kind + ' ' + o.scope).toLowerCase().indexOf(ql) >= 0; };
+    var totalRows = 0;
+    var html = '<div class="tree-node"><div class="tree-row" style="padding-left:10px">' +
       '<span class="t-caret"></span><svg class="ic" style="color:#a78bfa"><use href="#cc-i-home"/></svg>' +
-      '<span class="t-name">Global</span><span class="tree-root-badge">root scope</span>' +
-      '<span class="t-meta"><span class="mono">' + M.docs.filter(function (d) { return d.scope === 'global'; }).length + ' global docs</span>' + phaseChip('InSync') + '</span></div>';
+      '<span class="t-name">Global</span><span class="tree-root-badge">builtin/global 根 scope</span>' +
+      '<span class="t-meta"><span class="mono">' + st.kinds.length + ' kinds 在册</span></span></div>';
     html += '<div class="tree-children">';
+    // 系统子树（ServiceDesc 逐系统）
+    var systems = LIVE.refs('ServiceDesc').filter(match);
     systems.forEach(function (s) {
-      var matchKids = ql && ql.length > 2;
-      html += '<div class="tree-node"><div class="tree-row" style="padding-left:30px" data-act="go" data-go="s/' + s.name + '">' +
-        '<span class="t-caret' + ((matchKids || S.treeOpen['sys:' + s.name]) ? ' open' : '') + '" data-act="tree-sys-toggle" data-key="sys:' + esc(s.name) + '">▶</span><svg class="ic" style="color:#5b6378"><use href="#cc-i-grid"/></svg>' +
+      var sysKey = 'sys:' + s.name;
+      TREE_KEYS.push(sysKey);
+      var sc = inScopeObjects(s.name);
+      var anyQ = ql ? sc.rows.some(match) : true;
+      var open = ql ? anyQ : S.treeOpen[sysKey];
+      html += '<div class="tree-node"><div class="tree-row" style="padding-left:30px" data-act="go" data-go="s/' + encodeURIComponent(s.name) + '">' +
+        '<span class="t-caret' + (open ? ' open' : '') + '" data-act="tree-toggle" data-key="' + esc(sysKey) + '">▶</span>' +
+        '<svg class="ic" style="color:#5b6378"><use href="#cc-i-grid"/></svg>' +
         '<span class="t-name">' + esc(s.name) + '</span><span class="chip kind">ServiceDesc</span>' +
-        '<span class="t-meta"><span class="t-rev">gen ' + s.observedGeneration + '/' + s.generation + '</span>' + phaseChip(s.phase) + '</span></div>';
-      if (matchKids || S.treeOpen['sys:' + s.name]) html += '<div class="tree-children" data-sys="' + esc(s.name) + '">' + treeSystemChildren(s.name) + '</div>';
+        '<span class="t-meta"><span class="t-rev">r' + s.resourceVersion + '</span>' + draftDot(set[s.kind + '/' + s.scope + '/' + s.name]) + '</span></div>';
+      if (open) html += '<div class="tree-children" data-sys="' + esc(s.name) + '">' + treeSystemChildren(s.name, set, ql) + '</div>';
       html += '</div>';
+      totalRows += sc.rows.length;
+    });
+    // Global/builtin kind 分组（树的第一层“Global → …”其余对象）
+    var gRows = 0;
+    st.kinds.forEach(function (kd) {
+      var rows = LIVE.refs(kd.name).filter(function (o) {
+        return (o.scope === 'global' || o.scope === 'builtin') && match(o);
+      });
+      if (!rows.length) return;
+      gRows += rows.length;
+      var key = 'g:' + kd.name;
+      TREE_KEYS.push(key);
+      html += treeGroup(key, kd.name, rows.length, 30, 'cc-i-folder',
+        rows.map(function (o) { return treeObjRow(o, 52, set); }).join(''));
     });
     html += '</div></div>';
     box.innerHTML = html;
-    var total = systems.length;
-    $('#tree-count').textContent = ql ? systems.length + '/' + M.systems.length + ' 系统匹配' : M.systems.length + ' 系统 · 全部子层点击展开（模拟异步 300ms）';
-    if (ql) expandMatched(ql);
-  }
-  function expandMatched(ql) {
-    // 搜索时自动展开有匹配子节点的组
-    M.systems.forEach(function (s) {
-      var docs = sysDocs(s.name).filter(function (d) { return (d.name + ' ' + d.kind).toLowerCase().indexOf(ql) >= 0; });
-      var insts = sysInstances(s.name).filter(function (i) { return i.name.toLowerCase().indexOf(ql) >= 0; });
-      var wfs = M.workflows.filter(function (w) { return w.name.toLowerCase().indexOf(ql) >= 0; });
-      if (docs.length) { S.treeOpen['docs:' + s.name] = true; S.treeLoaded['docs:' + s.name] = true; }
-      if (insts.length || wfs.length || docs.length) { S.treeOpen['inst:' + s.name] = true; S.treeOpen['wf:' + s.name] = true; }
-    });
+    totalRows += gRows;
+    if (note) {
+      note.textContent = ql
+        ? systems.length + '/' + LIVE.refs('ServiceDesc').length + ' 系统匹配 · 命中对象 ' + totalRows
+        : LIVE.refs('ServiceDesc').length + ' 系统 · ' + totalRows + ' 对象在册 · 全部来自 cored 读面';
+    }
+    if (!LIVE.refs('ServiceDesc').length && !gRows) {
+      box.innerHTML = '<div class="empty" style="padding:28px"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
+        '<div class="e-title">读面无对象在册</div><div>cored 读面 200 但零对象——检查文档库挂载（--docs）</div></div>';
+    }
   }
   ACTIONS['tree-sys-toggle'] = function (el) {
-    var key = el.dataset.key;               // sys:<name>
-    var sys = key.slice(4);
+    var key = el.dataset.key;
     S.treeOpen[key] = !S.treeOpen[key];
-    if (S.treeOpen[key]) {
-      // 展开系统子层：docs 组自动打开并模拟异步 300ms 加载（skeleton）
-      if (!S.treeOpen['docs:' + sys]) S.treeOpen['docs:' + sys] = true;
-      if (!S.treeLoaded['docs:' + sys]) {
-        S.treeLoaded['docs:' + sys] = false;
-        render();
-        setTimeout(function () {
-          if (S.route !== 'tree') return;
-          S.treeLoaded['docs:' + sys] = true;
-          render();
-        }, 300);
-        return;
-      }
-    }
     render();
   };
   ACTIONS['tree-toggle'] = function (el) {
     var key = el.dataset.key;
-    if (S.treeOpen[key]) { S.treeOpen[key] = false; render(); return; }
-    S.treeOpen[key] = true;
-    S.treeLoaded[key] = false;
+    S.treeOpen[key] = !S.treeOpen[key];
     render();
-    // 模拟异步 300ms 加载
-    setTimeout(function () {
-      if (!parseHash().length || S.route !== 'tree') return;
-      S.treeLoaded[key] = true;
-      if (S.route === 'tree') render();
-    }, 300);
   };
   ACTIONS['tree-expand'] = function () {
-    M.systems.forEach(function (s) {
-      ['sys:', 'docs:', 'inst:', 'wf:', 'res:'].forEach(function (p) { S.treeOpen[p + s.name] = true; });
-      S.treeLoaded['docs:' + s.name] = true;
-    });
+    TREE_KEYS.forEach(function (k) { S.treeOpen[k] = true; });
+    LIVE.refs('ServiceDesc').forEach(function (s) { S.treeOpen['sys:' + s.name] = true; });
     render();
   };
   ACTIONS['tree-collapse'] = function () { S.treeOpen = {}; render(); };
-  /* ================= 屏 3：系统详情 ================= */
-  var SYS_TABS = [
-    { id: 'docs', label: '文档' }, { id: 'res', label: '资源' }, { id: 'status', label: '状态' },
-    { id: 'agents', label: 'Agent' }, { id: 'cross', label: '跨系统申请' }, { id: 'events', label: '事件' }
-  ];
-  function sysHeaderActions(sys) {
-    return '<div class="dh-actions">' +
-      '<button class="btn primary" data-act="go" data-go="chat/' + esc(sys.agent) + '"><svg class="ic"><use href="#cc-i-chat"/></svg>与该系统 Agent 对话</button>' +
-      '<button class="btn" data-act="edit-desc" data-sys="' + esc(sys.name) + '">编辑声明</button>' +
-      '<button class="btn" data-act="reconcile" data-sys="' + esc(sys.name) + '"><svg class="ic"><use href="#cc-i-refresh"/></svg>触发对账</button>' +
-      '</div>';
-  }
-  ACTIONS['reconcile'] = function (el) { toast('已入队', esc(el.dataset.sys) + ' 对账请求已提交（reason: manual:console）', 'ok'); };
-  ACTIONS['edit-desc'] = function (el) {
-    var sd = M.docs.filter(function (d) { return d.kind === 'ServiceDesc' && d.scope === 'systems/' + el.dataset.sys; })[0];
-    if (sd) go('doc/' + sd.name);
-    else toast('未找到 ServiceDesc', el.dataset.sys, 'warn');
-  };
+  /* ================= 屏 3：系统详情（E2：cored 读面真数据最小面，console-ui.md 屏幕 3） =================
+   * 声明/清单全部来自读面（ServiceDesc 正文 + scope 对象枚举）；六 tab 与场景面四页=E7 落地
+   * （此处只留场景面入口占位，不渲染 mock——宁可空态不可假数据，console-adoption §5 规则 2）。
+   * 「与该系统 Agent 对话」入口=agent 详情（E2 为对象 viewer；E5 换会话屏）。 */
   function sysCrumb(sys, extra) {
     var c = [{ label: 'Welcome', go: 'welcome' }, { label: sys.name, go: 's/' + sys.name }];
     return extra ? c.concat(extra) : c;
   }
-  function screenSystem(view) {
-    var sys = sysByName(S.params.name);
-    if (!sys) { view.innerHTML = emptyBox('系统不存在', S.params.name); setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '404' }]); return; }
-    var tab = S.sysTab[sys.name] || 'docs';
-    setCrumbs(sysCrumb(sys, tab === 'docs' ? null : [{ label: SYS_TABS.filter(function (t) { return t.id === tab; })[0].label }]));
-    var drifts = openDrifts().filter(function (d) { return d.scope === 'systems/' + sys.name; });
-    var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(sys.name) + '</h1>' + phaseChip(sys.phase) +
-      '<span class="chip kind">ServiceDesc</span>' + draftDot(sysDocs(sys.name).some(function (d) { return docHasDraft(d.name); })) + '</div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(sys.scope) + '</span><span class="mono">gen ' + sys.observedGeneration + '/' + sys.generation + '</span>' +
-      '<span>' + esc(sys.desc) + '</span></div>' +
-      '<div class="dh-sub" style="margin-top:8px">场景面：<span class="chip click acc" data-act="go" data-go="s/' + esc(sys.name) + '/docs">文档面（tag 过滤）</span>' +
-      '<span class="chip click acc" data-act="go" data-go="s/' + esc(sys.name) + '/metrics">指标面</span>' +
-      '<span class="chip click acc" data-act="go" data-go="s/' + esc(sys.name) + '/permissions">权限面</span>' +
-      '<span class="chip click acc" data-act="go" data-go="s/' + esc(sys.name) + '/events">事件面</span></div>' +
-      '</div>' + sysHeaderActions(sys) + '</div>';
-    var tabs = '<div class="tabs">' + SYS_TABS.map(function (t) {
-      return '<div class="tab' + (t.id === tab ? ' active' : '') + '" data-act="sys-tab" data-t="' + t.id + '">' + t.label + '</div>';
-    }).join('') + '</div>';
-    var body = '';
-    if (tab === 'docs') body = sysTabDocs(sys);
-    else if (tab === 'res') body = sysTabRes(sys);
-    else if (tab === 'status') body = sysTabStatus(sys, drifts);
-    else if (tab === 'agents') body = sysTabAgents(sys);
-    else if (tab === 'cross') body = sysTabCross(sys);
-    else if (tab === 'events') body = sysTabEvents(sys);
-    view.innerHTML = '<div class="view-inner">' + head + tabs + body + '</div>';
+  function hydrate(elId, path, paint) {
+    // 异步内容注水：现渲染骨架行，读面返回后原位替换（路由已变=丢弃，不跨屏串数据）。
+    var el = $('#' + elId);
+    if (!el) return;
+    var stamp = S.route + '|' + S.segs.join('/');
+    el.innerHTML = liveSkeletonRows(1, 0);
+    LIVE.get(path).then(function (b) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      paint(el, b);
+    }).catch(function (e) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      el.innerHTML = '<div class="small faint" style="padding:6px 0">读面暂不可达（' + esc(String((e && e.message) || e)) + '）——恢复后重进即现读</div>';
+    });
   }
-  ACTIONS['sys-tab'] = function (el) { S.sysTab[S.params.name] = el.dataset.t; render(); };
-  function docRowsHtml(docs) {
-    return docs.map(function (d) {
-      return '<tr class="row-click" data-act="go" data-go="doc/' + esc(d.name) + '">' +
-        '<td class="mono">' + esc(d.name) + draftDot(docHasDraft(d.name)) + '</td>' +
-        '<td>' + kindBadge(d.kind) + '</td>' +
-        '<td>' + d.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join(' ') + '</td>' +
-        '<td class="mono num">r' + d.revision + '</td>' +
-        '<td>' + (docHasDraft(d.name) ? '<span class="chip warn small">● 未 Apply</span>' : '<span class="faint">—</span>') + '</td>' +
-        '<td>' + statusChip(d.kind === 'DriftReport' ? (d.status === 'Closed' ? 'InSync' : d.status) : 'InSync') + '</td>' +
-        '<td class="mono faint">' + fmtAgo(d.updated) + '</td></tr>';
-    }).join('');
+  // scheme 引用词 → 路由（内容里出现的标识符全可点：硬性验收 console-adoption §5 规则 6）
+  function refRoute(prefix, rest) {
+    if (prefix === 'system' || prefix === 'systems') return 's/' + encodeURIComponent(rest.split('/')[0]);
+    if (prefix === 'agent') return 'agent/' + encodeURIComponent(rest.split('/')[0]);
+    if (prefix === 'ops') return 'connector/' + encodeURIComponent(rest.split('/')[0]);
+    if (prefix === 'provider') return 'provider/' + encodeURIComponent(rest.split('/')[0]);
+    if (prefix === 'ws') return 'ws/' + encodeURIComponent(rest.split('/')[0]);
+    return null;
   }
-  function sysTabDocs(sys) {
-    var docs = sysDocs(sys.name);
-    var th = '<div class="card"><div class="card-h"><span class="h-title">文档（' + docs.length + '）· 该 scope 全部对象</span>' +
-      '<span class="h-right lk small" data-act="go" data-go="s/' + esc(sys.name) + '/docs">展开完整视图（tag 过滤）→</span>' +
-      '<button class="btn sm primary" data-act="new-goal" data-sys="' + esc(sys.name) + '">+ 新建文档</button></div>' +
-      '<div style="max-height:520px;overflow-y:auto"><table class="tbl"><thead><tr><th>名称</th><th>kind</th><th>tags</th><th>revision</th><th>草稿</th><th>状态</th><th>更新</th></tr></thead><tbody>' +
-      docRowsHtml(docs) + '</tbody></table></div></div>';
-    return th;
-  }
-  function sysTabRes(sys) {
-    var insts = sysInstances(sys.name);
-    var instCards = insts.map(function (i) {
-      return '<div class="syscard" data-act="go" data-go="s/' + esc(sys.name) + '/i/' + esc(i.name) + '">' +
-        '<div class="sc-top"><span class="sc-name">' + esc(i.name) + '</span>' + phaseChip(i.phase) + '</div>' +
-        '<div class="sc-meta"><span><span class="k">gen:</span> <span class="mono">' + i.observedGeneration + '/' + i.generation + '</span></span>' +
-        '<span><span class="k">agents:</span> ' + i.agents.map(function (a) { return '<span class="lk mono" data-act="go" data-go="agent/' + esc(a) + '">' + esc(a) + '</span>'; }).join(' ') + '</span></div>' +
-        '<div class="sc-foot"><span class="chip kind">ServiceInstance</span><span class="faint small" style="margin-left:auto">详情 →</span></div></div>';
-    }).join('');
-    var sysWs = M.workservices.filter(function (w) { return w.scope.indexOf(sys.name) >= 0 || sys.name === 'connector'; });
-    var sysCops = M.connectorops.filter(function (c) { return sys.name === 'connector' || sys.name === 'storage-system' || sys.name === 'developer-system' || sys.name === 'deploy-system'; });
-    var sysRefs = M.refs.filter(function (r) { return r.to === sys.name || r.from === sys.name; });
-    var sysProv = M.providers.filter(function (p) { return p.scope.indexOf(sys.name) >= 0 || p.scope === 'global'; });
-    function linkList(items, routeFn) {
-      if (!items.length) return '<div class="empty" style="padding:18px"><div class="e-title">无</div></div>';
-      return items.map(function (x) {
-        return '<div class="mini-row" data-act="go" data-go="' + routeFn(x) + '"><div class="mr-main"><div class="mono" style="font-weight:600">' + esc(x.name) + '</div><div class="mr-sub">' + esc(x.desc || '') + '</div></div>' + statusChip(x.status) + '</div>';
-      }).join('');
+  function refChips(content) {
+    var seen = {}, out = '';
+    var re = /([A-Za-z][A-Za-z0-9-]*):\/\/([A-Za-z0-9-_.\/]+)/g, m;
+    while ((m = re.exec(String(content))) !== null) {
+      var route = refRoute(m[1], m[2]);
+      if (!route || seen[route]) continue;
+      seen[route] = true;
+      out += '<span class="chip click mute small" data-act="go" data-go="' + esc(route) + '"><svg class="ic"><use href="#cc-i-link"/></svg>' + esc(m[0]) + '</span> ';
     }
-    return '<div class="grid" style="grid-template-columns:1fr 1fr;gap:14px">' +
-      '<div class="card"><div class="card-h"><span class="h-title">ServiceInstance（' + insts.length + '）</span></div><div class="grid" style="grid-template-columns:1fr;gap:10px;padding:12px">' + instCards + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">WorkService</span></div><div class="mini-list">' + linkList(sysWs, function (x) { return 'ws/' + x.name; }) + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">ConnectorOps 挂载</span></div><div class="mini-list">' + linkList(sysCops, function (x) { return 'connector/' + x.name; }) + '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">Ref / Provider</span></div>' +
-      '<div class="mini-list">' + sysRefs.map(function (r) { return '<div class="mini-row" data-act="go" data-go="ref/' + encodeURIComponent(r.name) + '"><div class="mr-main"><div class="mono">' + esc(r.name) + '</div><div class="mr-sub">Ref · ' + esc(r.from) + ' → ' + esc(r.to) + '</div></div><span class="chip ok small">' + esc(r.status) + '</span></div>'; }).join('') +
-      sysProv.map(function (p) { return '<div class="mini-row" data-act="go" data-go="provider/' + esc(p.name) + '"><div class="mr-main"><div class="mono">' + esc(p.name) + '</div><div class="mr-sub">' + esc(p.desc) + '</div></div>' + statusChip(p.status) + '</div>'; }).join('') +
-      '</div></div></div>';
+    return out;
   }
-  function sysTabStatus(sys, drifts) {
-    var conds = sysInstances(sys.name).map(function (i) {
-      return i.conditions.map(function (c) {
-        return '<tr><td class="mono">' + esc(i.name) + '</td><td>' + esc(c.type) + '</td><td>' + (c.status === 'True' ? '<span class="chip ok small">True</span>' : '<span class="chip danger small">False</span>') + '</td><td class="small muted">' + esc(c.reason) + '</td><td class="mono faint">' + fmtAgo(c.ts) + '</td></tr>';
-      }).join('');
-    }).join('');
-    var driftRows = drifts.length ? drifts.map(function (d) {
-      return '<div class="mini-row" data-act="go" data-go="doc/' + esc(d.name) + '"><div class="mr-main"><div class="mono">' + esc(d.name) + '</div><div class="mr-sub">' + esc((d.content.match(/observed: (.*)/) || ['', ''])[0].replace('observed: ', '')) + '</div></div>' + statusChip(d.status) + '</div>';
-    }).join('') : '<div class="empty" style="padding:18px"><svg class="ic"><use href="#cc-i-check"/></svg><div class="e-title">无未解决 drift</div></div>';
-    var lastDrift = drifts[0];
-    return '<div class="grid cols-2">' +
-      '<div class="card"><div class="card-h"><span class="h-title">Conditions</span><span class="h-right lk small" data-act="go" data-go="s/' + esc(sys.name) + '/metrics">指标面（曲线/阈值）→</span></div>' +
-      '<div style="max-height:300px;overflow-y:auto"><table class="tbl"><thead><tr><th>instance</th><th>type</th><th>status</th><th>reason</th><th>时间</th></tr></thead><tbody>' + conds + '</tbody></table></div></div>' +
-      '<div style="display:grid;gap:14px">' +
-      '<div class="card"><div class="card-h"><span class="h-title">Drift 摘要（' + drifts.length + '）</span></div><div class="mini-list">' + driftRows + '</div>' +
-      (lastDrift ? '<div class="card-b" style="border-top:1px solid var(--border);padding:10px 14px"><span class="lk small" data-act="go" data-go="doc/' + esc(lastDrift.name) + '">最新 DriftReport：' + esc(lastDrift.name) + ' →</span></div>' : '') + '</div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">趋势（mock sparkline · 24h）</span></div><div class="card-b" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">' +
-      '<div>' + sparkSVG(sys.name + ':tick', '#3b82f6', 120, 40) + '<div class="small faint" style="margin-top:4px">tick lag</div></div>' +
-      '<div>' + sparkSVG(sys.name + ':drift', '#f59e0b', 120, 40, 0.62) + '<div class="small faint" style="margin-top:4px">drift score</div></div>' +
-      '<div>' + sparkSVG(sys.name + ':run', '#22c55e', 120, 40, 0.45) + '<div class="small faint" style="margin-top:4px">run 成功率</div></div>' +
-      '</div></div></div></div>';
+  function objViewerHtml(kind, scope, name, ref) {
+    var path = encodeURIComponent(kind) + '/' + encodeURIComponent(scope) + '/' + encodeURIComponent(name);
+    var draft = !!treeDraftSet()[kind + '/' + scope + '/' + name];
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
+      { label: scope, go: scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + encodeURIComponent(scope) }, { label: name }]);
+    return '<div class="view-inner"><div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
+      (draft ? draftDot(true) + '<span class="chip warn small">● 未 Apply（草稿缓存）</span>' : '') + '</div>' +
+      '<div class="doc-meta-row"><span class="chip mute small">scope</span>' +
+      '<span class="chip click mute small" data-act="go" data-go="' + (scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + esc(encodeURIComponent(scope))) + '">' + esc(scope) + '</span>' +
+      '<span class="mono small">resourceVersion r' + (ref ? ref.resourceVersion : '?') + '</span>' +
+      '<span class="chip ok small">' + esc(kind) + ' 在册</span></div>' +
+      '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">对象正文（只读；编辑器=文档编辑 E4 落地，LLM 草稿→人点 Apply）</span></div>' +
+      '<div class="card-b" id="obj-content" style="padding:12px 16px">' + liveSkeletonRows(2, 0) + '</div></div>' +
+      '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">正文引用标识符（全可点）</span></div>' +
+      '<div class="card-b" id="obj-refs" style="padding:10px 16px"></div></div>' +
+      '<div class="small faint" style="margin-top:10px">对象键=(kind, scope, name) · 读面 GET /v1/objects/' + esc(kind) + '/' + esc(name) + '?scope=' + esc(scope) + '</div></div>';
   }
-  function sysTabAgents(sys) {
-    var agents = sysAgents(sys.name);
-    if (!agents.length) return '<div class="empty"><svg class="ic"><use href="#cc-i-bot"/></svg><div class="e-title">该系统暂无挂载 agent</div></div>';
-    var cards = agents.map(function (a) {
-      var gottySess = M.sessions.filter(function (s) { return s.agent === a.name && s.runner === 'gotty'; })[0];
-      return '<div class="card"><div class="card-h"><svg class="ic" style="color:#7fb0f9"><use href="#cc-i-bot"/></svg><span class="h-title mono">' + esc(a.name) + '</span>' + phaseChip(a.phase) +
-        '<span class="h-right"><button class="btn sm primary" data-act="go" data-go="chat/' + esc(a.name) + '">对话</button>' +
-        '<button class="btn sm" data-act="open-term" data-agent="' + esc(a.name) + '">终端</button></span></div>' +
-        '<div class="card-b" style="display:grid;gap:8px">' +
-        '<div class="kv"><span class="k">owner instance</span><span class="v"><span class="lk mono" data-act="go" data-go="s/' + esc(sys.name) + '/i/' + esc(a.instance.split('/')[1]) + '">' + esc(a.instance) + '</span></span></div>' +
-        '<div class="kv"><span class="k">当前 session</span><span class="v"><span class="lk mono" data-act="go" data-go="session/' + esc(a.currentSession) + '">' + esc(a.currentSession) + '</span></span></div>' +
-        '<div class="kv"><span class="k">最近任务</span><span class="v">' + esc(a.lastTask) + '</span></div>' +
-        '<div class="kv"><span class="k">权限面</span><span class="v">' + a.perms.connectorops.map(function (c) { return '<span class="chip mute small">' + esc(c) + '</span>'; }).join(' ') + '</span></div>' +
-        '</div></div>';
-    }).join('');
-    return '<div class="grid" style="grid-template-columns:1fr 1fr">' + cards + '</div>' +
-      '<div style="margin-top:10px"><span class="lk small" data-act="go" data-go="s/' + esc(sys.name) + '/permissions">展开完整权限面（role 挂载 / 权限矩阵）→</span></div>';
+  function screenObject(view, kindHint) {
+    LIVE.ensure();
+    var p = S.params;
+    var kind = kindHint || p.kind;
+    var name = p.name;
+    var scope = p.scope || '';
+    var st = LIVE.state;
+    if (st.status === 'loading' && !st.kinds.length) {
+      // 首装未完：按路由参数先出壳，注水兜底
+      if (kind && scope) { view.innerHTML = objViewerHtml(kind, scope, name, null); hydrateObjContent(view, kind, scope, name); return; }
+    }
+    var ref = null;
+    if (kind) {
+      ref = LIVE.refs(kind).filter(function (o) { return o.name === name && (!scope || o.scope === scope); })[0] || null;
+      if (!ref && !scope) {
+        // 未带 scope 的深链：全 kind 名字解析（唯一才取，歧义=空态并提示带 scope）
+        var cands = LIVE.refs(kind).filter(function (o) { return o.name === name; });
+        if (cands.length === 1) ref = cands[0];
+        else if (cands.length > 1) {
+          view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 scope 有歧义（' + cands.length + ' 个）——请从系统树进入', name) + '</div>';
+          return;
+        }
+      }
+    } else {
+      // doc/:name 兼容深链：跨 kind 名字解析
+      var all = [];
+      st.kinds.forEach(function (kd) {
+        LIVE.refs(kd.name).forEach(function (o) { if (o.name === name) all.push(o); });
+      });
+      if (all.length === 1) ref = all[0];
+      else if (all.length > 1) {
+        view.innerHTML = '<div class="view-inner">' + emptyBox('同名对象跨 kind/scope 有歧义（' + all.length + ' 个）——请从系统树进入', name) + '</div>';
+        return;
+      }
+    }
+    if (!ref) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
+      return;
+    }
+    view.innerHTML = objViewerHtml(ref.kind, ref.scope, ref.name, ref);
+    hydrateObjContent(view, ref.kind, ref.scope, ref.name);
   }
-  ACTIONS['open-term'] = function (el) {
-    var a = el.dataset.agent;
-    S.chatUi[a] = S.chatUi[a] || {};
-    var gs = M.sessions.filter(function (s) { return s.agent === a && s.runner === 'gotty'; })[0];
-    if (gs) { S.chatUi[a].sessionId = gs.id; S.chatUi[a].tab = 'term'; }
-    else { S.chatUi[a].forceTerm = true; }
-    go('chat/' + a);
-  };
-  function sysTabCross(sys) {
-    var rows = M.crossRequests.filter(function (r) { return r.from === sys.name || r.to === sys.name; });
-    if (!rows.length) return '<div class="empty"><svg class="ic"><use href="#cc-i-link"/></svg><div class="e-title">无跨系统申请流水</div><div>跨系统影响 = 对方文档 Apply 提案，默认进待审区</div></div>';
-    var trs = rows.map(function (r) {
-      var st = r.status === '待审' ? '<span class="chip warn small">待审</span>' : r.status === '已合入' ? '<span class="chip ok small">已合入</span>' : '<span class="chip danger small">驳回</span>';
-      return '<tr class="row-click" data-act="go" data-go="doc/' + esc(r.doc) + '"><td>' + (r.dir === 'in' ? '<span class="chip acc small">进</span>' : '<span class="chip mute small">出</span>') + '</td>' +
-        '<td class="mono">' + esc(r.from) + '</td><td class="mono">' + esc(r.to) + '</td><td>' + esc(r.topic) + '</td><td>' + st + '</td>' +
-        '<td class="mono faint">' + fmtAgo(r.ts) + '</td></tr>';
-    }).join('');
-    return '<div class="card"><div class="card-h"><span class="h-title">跨系统提案（Ref 解析 / A46）</span><span class="h-sub">点行进对应文档编辑器</span></div>' +
-      '<table class="tbl"><thead><tr><th>方向</th><th>from</th><th>to</th><th>主题</th><th>状态</th><th>时间</th></tr></thead><tbody>' + trs + '</tbody></table></div>';
+  function hydrateObjContent(view, kind, scope, name) {
+    hydrate('obj-content', 'v1/objects/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''),
+      function (el, b) {
+        var content = String(b.content || '');
+        el.innerHTML = '<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc(content) + '</pre>';
+        var refsEl = $('#obj-refs');
+        if (refsEl) {
+          var chips = refChips(content);
+          refsEl.innerHTML = chips || '<span class="faint small">无 scheme 引用词（system:// agent:// ops:// …）</span>';
+        }
+      });
   }
-  function sysTabEvents(sys) {
-    var evs = M.events.filter(function (e) { return e.system === sys.name; }).slice(0, 14);
-    var html = evs.map(function (e) {
-      var dot = e.level === 'fatal' || e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : 'acc';
-      return '<div class="mini-row" data-act="go" data-go="event/' + esc(e.id) + '">' +
-        '<span class="lamp ' + dot + '"></span><div class="mr-main"><div>' + esc(e.msg) + '</div><div class="mr-sub mono">' + esc(e.kind) + ' · ' + esc(e.lane) + '泳道 · ' + esc(e.object) + '</div></div>' +
-        '<span class="faint mono small">' + fmtAgo(e.ts) + '</span></div>';
-    }).join('');
-    return '<div class="card"><div class="card-h"><span class="h-title">该 scope 事件时间线</span><span class="h-right lk small" data-act="go" data-go="s/' + esc(sys.name) + '/events">展开完整事件面（过滤/虚拟滚动）→</span></div><div class="mini-list">' + html + '</div></div>';
+  ACTIONS['live-reload'] = function () { render(); }; // 重读=重渲染现读（读面 GET 幂等）
+  /* 事件详情（E2 真数据：event_log 归档行投影，Welcome/事件流点击落点；链路=event→involved→对象） */
+  function screenEventLive(view) {
+    LIVE.ensure();
+    var id = S.params.id;
+    var e = LIVE.state.events.filter(function (x) { return x.eventId === id; })[0] || null;
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '事件' }, { label: id }]);
+    if (!e) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('事件不在当前归档窗（最近 100 条）', id) + '</div>';
+      return;
+    }
+    var lvlCls = e.level === 'error' || e.level === 'fatal' ? 'danger' : e.level === 'warn' ? 'warn' : 'ok';
+    var involvedHtml = '';
+    if (e.involved) {
+      var segs = String(e.involved).split('/');
+      involvedHtml = '<span class="lk mono" data-act="go" data-go="doc/' +
+        esc(segs.slice(0, -1).map(encodeURIComponent).join('/')) + '/' + esc(encodeURIComponent(segs[segs.length - 1])) + '">' + esc(e.involved) + '</span>';
+    }
+    var kv = function (k, v) { return '<div class="kv"><span class="k mono">' + esc(k) + '</span><span class="v mono">' + (v || '<span class="faint">—</span>') + '</span></div>'; };
+    view.innerHTML = '<div class="view-inner"><div class="dh"><div class="dh-main"><div class="dh-title"><h1 style="font-size:18px">' + esc(e.type) + '</h1>' +
+      '<span class="chip ' + lvlCls + ' small">' + esc(e.level) + '</span><span class="chip mute small">source: ' + esc(e.source) + '</span></div>' +
+      '<div class="dh-sub"><span class="mono">' + esc(e.ts) + '</span></div></div></div>' +
+      '<div class="card" style="margin-top:12px"><div class="card-b" style="padding:10px 16px">' +
+      kv('eventId', e.eventId) + kv('type', e.type) + kv('source', e.source) +
+      kv('involved', involvedHtml) + kv('dedupKey', e.dedupKey) + kv('level', e.level) + kv('routedTo', e.routedTo) +
+      '</div></div>' +
+      '<div class="small faint" style="margin-top:10px">数据源=event_log 归档（/v1/events，最新优先投影）；involved 点击=对象详情（只读 viewer）</div></div>';
+  }
+  function screenSystem(view) {
+    LIVE.ensure();
+    var name = S.params.name;
+    var sd = LIVE.refs('ServiceDesc').filter(function (o) { return o.name === name; })[0];
+    if (!sd) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '404' }]);
+      return;
+    }
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' }, { label: name }]);
+    var set = treeDraftSet();
+    var sc = inScopeObjects(name);
+    var rows = function (k, depth) { return (sc.byKind[k] || []).map(function (o) { return treeObjRow(o, depth, set); }).join(''); };
+    var docRows = [];
+    LIVE.state.kinds.forEach(function (kd) {
+      if (kd.name === 'ServiceInstance' || kd.name === 'Workflow' || kd.name === 'WorkService' ||
+          kd.name === 'ConnectorOps' || kd.name === 'Provider' || kd.name === 'ServiceDesc') return;
+      docRows = docRows.concat(sc.byKind[kd.name] || []);
+    });
+    docRows.sort(function (a, b) { return (a.kind + a.name) < (b.kind + b.name) ? -1 : 1; });
+    var sec = function (t, inner) {
+      return '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">' + t + '</span></div><div class="card-b" style="padding:4px 8px 8px">' + (inner || '') + '</div></div>';
+    };
+    view.innerHTML = '<div class="view-inner">' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(name) + '</h1><span class="chip kind">ServiceDesc</span>' +
+      draftDot(set[sd.kind + '/' + sd.scope + '/' + sd.name]) + '</div>' +
+      '<div class="dh-sub"><span class="path-mono">' + esc(sd.scope) + '</span><span class="mono">r' + sd.resourceVersion + '</span>' +
+      '<span>声明/清单全部来自 cored 读面；对象详情=只读 viewer（E4 起升编辑器）</span></div>' +
+      '<div class="dh-sub" style="margin-top:8px">场景面（E7 落地，当前不渲染 mock）：<span class="chip mute small">事件面</span>' +
+      '<span class="chip mute small">指标面</span><span class="chip mute small">文档面（tag 过滤）</span><span class="chip mute small">权限面</span></div>' +
+      '<div class="dh-actions" id="sys-agents"></div></div></div>' +
+      sec('声明正文（ServiceDesc，现读）', '<div id="sys-spec">' + liveSkeletonRows(1, 0) + '</div>') +
+      sec('instances（ServiceInstance）', rows('ServiceInstance', 12) || '<div class="small faint" style="padding:4px 12px">暂无实例对象在册</div>') +
+      sec('workflows（系统层对象；builtin 全局同名 override 语义见 workflow.md）', rows('Workflow', 12) || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      sec('资源（WorkService / ConnectorOps / Provider）',
+        rows('WorkService', 12) + rows('ConnectorOps', 12) + rows('Provider', 12) ||
+        '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      sec('docs（文档与资源同规则，kind 徽章区分）',
+        docRows.map(function (o) { return treeObjRow(o, 12, set); }).join('') || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      '</div>';
+    hydrate('sys-spec', 'v1/objects/ServiceDesc/' + encodeURIComponent(sd.name) + '?scope=' + encodeURIComponent(sd.scope), function (el, b) {
+      var content = String(b.content || '');
+      el.innerHTML = '<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc(content) + '</pre>' +
+        (refChips(content) ? '<div style="margin-top:8px">' + refChips(content) + '</div>' : '');
+      // 与该系统 Agent 对话入口（agentRef 来自声明正文——E2 进 agent 对象详情，E5 换会话屏）
+      var ag = $('#sys-agents');
+      if (ag) {
+        var refs = (content.match(/agent:\/\/([A-Za-z0-9-_.]+)/g) || []).map(function (x) { return x.replace('agent://', ''); });
+        var uniq = refs.filter(function (v, i) { return refs.indexOf(v) === i; });
+        ag.innerHTML = uniq.map(function (a) {
+          return '<button class="btn primary" data-act="go" data-go="agent/' + esc(a) + '"><svg class="ic"><use href="#cc-i-chat"/></svg>与 ' + esc(a) + ' 对话</button>';
+        }).join('');
+      }
+    });
   }
   function emptyBox(title, sub) {
     return '<div class="empty" style="padding-top:10vh"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">' + esc(title) + '</div><div class="mono faint">' + esc(sub || '') + '</div><div class="e-act"><button class="btn primary" data-act="go" data-go="welcome">回 Welcome</button></div></div>';
@@ -4265,6 +4494,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   function ago2(min) { return new Date(Date.now() - min * 60000); }
 
   /* ================= 路由注册 & 启动 ================= */
+  // E2 路由换装：五屏真数据（Welcome/tree/s/:name/doc/object/event），其余屏保持 proto mock 待各自 E 轮
   route('welcome', screenWelcome);
   route('overview', screenOverview);
   route('tree', screenTree);
@@ -4275,21 +4505,22 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   route('s/:name/docs', screenSysDocs);
   route('s/:name/permissions', screenSysPermissions);
   route('workflows', screenWorkflows);
-  route('wf/:name', screenWorkflow);
+  route('wf/:name', function (v) { screenObject(v, 'Workflow'); }); // E3 起升运行管理（列表+详情+运行抽屉）
   route('wf/:name/r/:n', screenWfRun);
-  route('doc/:name', screenDoc);
+  route('doc/:name', function (v) { screenObject(v, null); });      // 名字解析（歧义=空态引导回系统树）
+  route('doc/:kind/:scope/:name', function (v) { screenObject(v); }); // 对象键直链（kind/scope/name）
   route('docs', screenDocsGlobal);
   route('chat/:agent', screenChat);
   route('connectors', screenConnectors);
-  route('connector/:name', screenConnector);
-  route('ws/:name', screenWorkService);
-  route('provider/:name', screenProvider);
-  route('ref/:name', screenRef);
-  route('role/:name', screenRole);
-  route('agent/:name', screenAgent);
+  route('connector/:name', function (v) { screenObject(v, 'ConnectorOps'); });
+  route('ws/:name', function (v) { screenObject(v, 'WorkService'); });
+  route('provider/:name', function (v) { screenObject(v, 'Provider'); });
+  route('ref/:name', function (v) { screenObject(v, 'Ref'); });
+  route('role/:name', function (v) { screenObject(v, 'Role'); });
+  route('agent/:name', function (v) { screenObject(v, 'Agent'); }); // E5 起升会话屏（运行器四选+终端 tab）
   route('session/:id', screenSession);
   route('events', screenEvents);
-  route('event/:id', screenEvent);
+  route('event/:id', screenEventLive);
   route('approvals', screenApprovals);
 
   function boot() {
@@ -4352,6 +4583,11 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     __CC.conn = __CC.createConnMonitor({ onChange: function (st) { applyConnState(st, {}); } });
     __CC.conn.start();
     applyConnState(__CC.conn.state(), { silent: true });
+    // E2 真数据层回调：装载完成即重渲染真数据屏（welcome/tree/s/doc——其余屏不受 LIVE 影响）
+    __CC.live.onChange = function () {
+      if (!ROOT) return;
+      if (['welcome', 'tree', 's', 'doc', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event'].indexOf(S.route) >= 0) render();
+    };
     boot();
   }
   function unmountConsole() {
@@ -4359,6 +4595,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     clearTimers();
     stopFollowTimers();
     if (__CC.conn) { __CC.conn.stop(); __CC.conn = null; }
+    if (__CC.live) __CC.live.onChange = null;
     if (ROOT) ROOT.innerHTML = '';
     ROOT = null;
   }

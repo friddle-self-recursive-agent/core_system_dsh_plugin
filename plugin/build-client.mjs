@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // build-client.mjs —— 组装 dsh client bundle（lazy-CJS 工厂形，dsh-client-modules 契约）：
 //   window.__ModuleLoader__.load({id:<包名>, factory: require => {...返回 exports}})
-// 零外部构建依赖：源文件即普通 script 顺序拼接进同一闭包（data → app → monitor → entry）。
+// 零外部构建依赖：源文件即普通 script 顺序拼接进同一闭包（shell → data → live → app → monitor → entry）。
 // dist/client.js 随源入库——dsh 启动即读该文件（缺件=激活期响亮失败），构建必须先于 web 启动。
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(fileURLToPath(import.meta.url))
 const PKG_ID = 'dsh-plugin-core-system'
-const parts = ['console-shell.js', 'console-data.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
+const parts = ['console-shell.js', 'console-data.js', 'console-live.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
 const css = readFileSync(join(root, 'client/console.css'), 'utf8')
 
 const body = [
