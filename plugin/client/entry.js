@@ -44,17 +44,20 @@ function ConsolePanel() {
   return React.createElement('div', { className: 'cc-app cc-host', ref: consoleRef, style: { height: '100%' } })
 }
 
-exports.inject = ['slots', 'layout', 'sessions']
+exports.inject = ['slots', 'layout']
 exports.apply = function applyClient(ctx) {
   // E5 会话数据面（console-adoption.md §1.11；§3.7 裁决：数据源=dsh session store 不复制状态）：
   // ctx.sessions=宿主会话清单/创建/prompt 真通路 + retain 持有的事件窗（转录活体源——
   // binding.eventSource，不触 remote.* 命名空间护栏：E5 探针实证 remote.session 未声明即访问抛错）。
-  // faces 声明式注入（exports.inject——cordis 服务护栏）；缺席宿主读取抛错=chat 屏 ready()=false 诚实降级。
+  // faces 经回调式 inject 软出现（声明式 exports.inject 加名会让 apply 停等=面板缺席，E5 探针实证）；
+  // 缺席宿主回调不启动=chat 屏 ready()=false 诚实降级（不冒充数据）。
   try {
-    __CC.chatFaces = { sessions: ctx.sessions }
-  } catch (e) { /* 无该面的宿主：chat 降级 */ }
+    ctx.inject(['sessions'], function (sub) {
+      __CC.chatFaces = { sessions: Reflect.get(sub, 'sessions') }
+    })
+  } catch (e) { /* 无 inject 能力的极简宿主：chat 降级 */ }
   try {
-    // 终端 roster 面（可选能力）：回调式注入（不在 exports.inject 声明——缺席宿主不阻塞面板）
+    // 终端 roster 面（可选能力）：回调式注入（缺席宿主回调不启动=roster 诚实空态）
     ctx.inject(['webTerminals'], function (sub) {
       __CC.termFaces = { webTerminals: Reflect.get(sub, 'webTerminals') }
     })

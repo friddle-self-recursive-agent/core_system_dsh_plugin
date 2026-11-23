@@ -56,7 +56,7 @@ function runApply(exports, sandboxLocation, hash) {
 test('bundle 形态：ModuleLoader 工厂注册 + 依赖注入声明', () => {
   assert.ok(SRC.includes("window.__ModuleLoader__.load({ id: 'dsh-plugin-core-system', factory: function (require) {"), 'bundle 必须以 lazy-CJS 工厂形注册（dsh-client-modules 契约）')
   const { exports } = loadBundle()
-  assert.deepEqual(exports.inject, ['slots', 'layout', 'sessions'])
+  assert.deepEqual(exports.inject, ['slots', 'layout'])
   assert.equal(typeof exports.apply, 'function')
 })
 
