@@ -1620,7 +1620,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       }).then(function (r) { return r || { ok: false, error: 'rename 未返回' }; }, function (e) { return { ok: false, error: String((e && e.message) || e) }; });
     }
     /** 会话持有（sessions.retain——转录活体源）：ref.binding.eventSource=事件窗 ObservableSnapshot
-     *  （retain 自带初始历史开窗；订阅=活体更新，不轮询不复制状态）。faces 缺席/retain 抛错=诚实降级。 */
+     *  （retain 自带初始历史开窗；订阅=活体更新，不轮询不复制状态）。faces 缺席/retain 抛错=诚实降级。
+     *  冷会话开窗兜底：ready 后 loadOlder()（≤500 条/两 turn 对齐——dsh 既有拉史原语，E5 探针实证
+     *  冷 retain 开窗在 console 面板上下文可能空窗，loadOlder=显式补拉）。 */
     function hold(sessionId) {
       if (!ready() || typeof sessions.retain !== 'function') return null;
       var ref;
@@ -1636,6 +1638,13 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
         subscribe: function (fn) {
           if (!ref.binding.eventSource || typeof ref.binding.eventSource.subscribe !== 'function') return function () {};
           return ref.binding.eventSource.subscribe(fn) || function () {};
+        },
+        loadOlder: function () {
+          try {
+            var s = ref.binding.session;
+            if (s && typeof s.loadOlder === 'function') return Promise.resolve(s.loadOlder()).then(function () { return true; }, function () { return false; });
+          } catch (e) { /* 冷会话已离场 */ }
+          return Promise.resolve(false);
         },
         release: function () { try { ref.release(); } catch (e) { /* 已离场 */ } }
       };
@@ -4296,7 +4305,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       (mineHtml ? '<div class="sec-title small">本 agent 会话（' + groups.mine.length + '）</div>' + mineHtml : '') +
       '<div class="sec-title small faint">宿主全部会话（' + groups.host.length + '）——按 agent 归属证据过滤的投影，未归属行不冒充</div>' + hostHtml +
       '</div></div>';
-    // —— 中栏：视图开关 + 转录/终端 ——
+    // —— 中栏：视图开关 + 转录/终端（对话/终端切换恒在册——终端 tab 可达性，E5 探针教训） ——
     var cur = snap.rows.filter(function (r) { return r.id === u.sessionId; })[0] || null;
     var mode = S.chatMode[agentName] || 'queue';
     var center = '<div class="chat-main">' +
@@ -4311,6 +4320,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       '<div class="vs-opt' + (mode === 'queue' ? ' on' : '') + '" data-act="chat-mode" data-m="queue" title="queue=追加一 turns">queue</div>' +
       '<div class="vs-opt' + (mode === 'steer' ? ' on' : '') + '" data-act="chat-mode" data-m="steer" title="steer=打断当前 turn 插话">steer</div></div>' +
       '</div>' +
+      (cur ? '<div class="term-tabs">' +
+        '<div class="term-tab' + (u.tab === 'chat' ? ' active' : '') + '" data-act="chat-tab" data-t="chat">对话</div>' +
+        '<div class="term-tab' + (u.tab === 'term' ? ' active' : '') + '" data-act="chat-tab" data-t="term">终端</div></div>' : '') +
       (u.tab === 'term'
         ? chatTermTab(agentName, cur, ad)
         : '<div id="chat-body" data-sess="' + esc(u.sessionId || '') + '" data-agent="' + esc(agentName) + '">' + liveSkeletonRows(3) + '</div>') +
@@ -4379,8 +4391,12 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       h.handle.ready.then(function () {
         var cur = S.chatHold;
         if (!cur || cur.sessionId !== sessionId) return;
+        h.handle.subscribe(function () { paint(); }); // 先订阅（早帧不丢）
         paint();
-        h.handle.subscribe(function () { paint(); }); // 活体：新事件（含助手流式落定）即重绘
+        // 冷会话开窗兜底：空窗时显式补拉一页（dsh loadOlder 原语）
+        if (!h.handle.snapshot().entries.length) {
+          h.handle.loadOlder().then(function (pulled) { if (pulled) paint(); });
+        }
       }, function (e) {
         var el = $('#chat-body');
         if (el && el.dataset.sess === sessionId) {

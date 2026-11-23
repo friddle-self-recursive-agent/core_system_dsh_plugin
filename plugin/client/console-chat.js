@@ -159,7 +159,9 @@
       }).then(function (r) { return r || { ok: false, error: 'rename 未返回' }; }, function (e) { return { ok: false, error: String((e && e.message) || e) }; });
     }
     /** 会话持有（sessions.retain——转录活体源）：ref.binding.eventSource=事件窗 ObservableSnapshot
-     *  （retain 自带初始历史开窗；订阅=活体更新，不轮询不复制状态）。faces 缺席/retain 抛错=诚实降级。 */
+     *  （retain 自带初始历史开窗；订阅=活体更新，不轮询不复制状态）。faces 缺席/retain 抛错=诚实降级。
+     *  冷会话开窗兜底：ready 后 loadOlder()（≤500 条/两 turn 对齐——dsh 既有拉史原语，E5 探针实证
+     *  冷 retain 开窗在 console 面板上下文可能空窗，loadOlder=显式补拉）。 */
     function hold(sessionId) {
       if (!ready() || typeof sessions.retain !== 'function') return null;
       var ref;
@@ -175,6 +177,13 @@
         subscribe: function (fn) {
           if (!ref.binding.eventSource || typeof ref.binding.eventSource.subscribe !== 'function') return function () {};
           return ref.binding.eventSource.subscribe(fn) || function () {};
+        },
+        loadOlder: function () {
+          try {
+            var s = ref.binding.session;
+            if (s && typeof s.loadOlder === 'function') return Promise.resolve(s.loadOlder()).then(function () { return true; }, function () { return false; });
+          } catch (e) { /* 冷会话已离场 */ }
+          return Promise.resolve(false);
         },
         release: function () { try { ref.release(); } catch (e) { /* 已离场 */ } }
       };

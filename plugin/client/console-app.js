@@ -2563,7 +2563,7 @@
       (mineHtml ? '<div class="sec-title small">本 agent 会话（' + groups.mine.length + '）</div>' + mineHtml : '') +
       '<div class="sec-title small faint">宿主全部会话（' + groups.host.length + '）——按 agent 归属证据过滤的投影，未归属行不冒充</div>' + hostHtml +
       '</div></div>';
-    // —— 中栏：视图开关 + 转录/终端 ——
+    // —— 中栏：视图开关 + 转录/终端（对话/终端切换恒在册——终端 tab 可达性，E5 探针教训） ——
     var cur = snap.rows.filter(function (r) { return r.id === u.sessionId; })[0] || null;
     var mode = S.chatMode[agentName] || 'queue';
     var center = '<div class="chat-main">' +
@@ -2578,6 +2578,9 @@
       '<div class="vs-opt' + (mode === 'queue' ? ' on' : '') + '" data-act="chat-mode" data-m="queue" title="queue=追加一 turns">queue</div>' +
       '<div class="vs-opt' + (mode === 'steer' ? ' on' : '') + '" data-act="chat-mode" data-m="steer" title="steer=打断当前 turn 插话">steer</div></div>' +
       '</div>' +
+      (cur ? '<div class="term-tabs">' +
+        '<div class="term-tab' + (u.tab === 'chat' ? ' active' : '') + '" data-act="chat-tab" data-t="chat">对话</div>' +
+        '<div class="term-tab' + (u.tab === 'term' ? ' active' : '') + '" data-act="chat-tab" data-t="term">终端</div></div>' : '') +
       (u.tab === 'term'
         ? chatTermTab(agentName, cur, ad)
         : '<div id="chat-body" data-sess="' + esc(u.sessionId || '') + '" data-agent="' + esc(agentName) + '">' + liveSkeletonRows(3) + '</div>') +
@@ -2646,8 +2649,12 @@
       h.handle.ready.then(function () {
         var cur = S.chatHold;
         if (!cur || cur.sessionId !== sessionId) return;
+        h.handle.subscribe(function () { paint(); }); // 先订阅（早帧不丢）
         paint();
-        h.handle.subscribe(function () { paint(); }); // 活体：新事件（含助手流式落定）即重绘
+        // 冷会话开窗兜底：空窗时显式补拉一页（dsh loadOlder 原语）
+        if (!h.handle.snapshot().entries.length) {
+          h.handle.loadOlder().then(function (pulled) { if (pulled) paint(); });
+        }
       }, function (e) {
         var el = $('#chat-body');
         if (el && el.dataset.sess === sessionId) {
