@@ -3824,6 +3824,18 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   function hydrateEditor(kind, scope, name) {
     var key = edKey(kind, scope, name);
     var stamp = S.route + '|' + S.segs.join('/');
+    if (kind === 'WorkService') {
+      // 读面缺口诚实守卫（E6 探针实证）：WorkService storage 模板=workservices/<name>/workservice.yaml
+      // 无 scope 段——单对象 GET 无可寻址分支恒 400（写入面同款闸=loop-41 deviation ④；declared 余量，
+      // cored 读面扩展轮收口）。不发 400 fetch（浏览器 console error=违 L42-06），诚实降级不冒充编辑器。
+      var ta0 = $('#doc-editor'); var rev0 = $('#ed-rev-chip'); var chip0 = $('#ed-draft-chip');
+      if (ta0) { ta0.value = ''; ta0.disabled = true; }
+      if (rev0) rev0.textContent = 'WorkService 单对象读面缺席';
+      if (chip0) { chip0.className = 'chip mute small'; chip0.textContent = '读面缺口（诚实空态）'; }
+      var wsn = $('#collab-body');
+      if (wsn) wsn.innerHTML = '<div class="small faint" style="padding:10px 4px">WorkService 对象在册（objects 枚举），但单对象读面缺席：storage 模板 <span class="mono">workservices/&lt;name&gt;/workservice.yaml</span> 无 scope 段——单对象 GET 无可寻址分支（恒 400，declared 余量）。连接页/枚举面照常；正文/草稿/Apply 待 cored 读面扩展轮收口。</div>';
+      return;
+    }
     var faceP = LIVE.fetchObject(kind, scope, name);
     var row = draftRowOf(kind, scope, name); // 草稿存在性=清单判别（无稿零请求——404 fetch 会进浏览器 console error，违 L36-06）
     var draftP = row ? LIVE.get('v1/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
