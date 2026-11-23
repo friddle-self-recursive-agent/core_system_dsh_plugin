@@ -163,13 +163,18 @@
      *  faces 缺席/读面失败=诚实降级（ok:false+error），不冒充空转录。 */
     function page(sessionId, opt) {
       opt = opt || {};
-      if (!remote || !remote.session || typeof remote.session.page !== 'function') {
-        return Promise.resolve({ ok: false, error: '宿主转录读面缺席（ctx.remote.session 未在册）' });
+      if (!remote || typeof remote !== 'object') {
+        return Promise.resolve({ ok: false, error: '宿主转录读面缺席（ctx.remote 未在册）' });
       }
       var arg = { address: { sessionId: String(sessionId) }, maxMessages: opt.maxMessages || 200 };
       if (opt.throughSeq !== undefined) arg.throughSeq = opt.throughSeq;
       var p;
-      try { p = remote.session.page(arg, undefined); } catch (e) { return Promise.resolve({ ok: false, error: String(e) }); }
+      try {
+        if (!remote.session || typeof remote.session.page !== 'function') {
+          return Promise.resolve({ ok: false, error: '宿主转录读面缺席（remote.session 未在册）' });
+        }
+        p = remote.session.page(arg, undefined);
+      } catch (e) { return Promise.resolve({ ok: false, error: '转录读面不可用: ' + String((e && e.message) || e) }); }
       return Promise.resolve(p).then(
         function (result) {
           if (!result || !result.ok) return { ok: false, error: String((result && result.error && (result.error.message || result.error.code)) || 'page 读面失败') };

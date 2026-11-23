@@ -2619,21 +2619,28 @@
     view.innerHTML = '<div class="chat-layout">' + left + center + right + '</div>';
     if (u.tab !== 'term' && u.sessionId) loadTranscript(agentName, u.sessionId, u.view);
   }
-  /** 转录装载+注水（session 事件页读面 → projectTranscript → chat-body）。 */
+  /** 转录装载+注水（session 事件页读面 → projectTranscript → chat-body）。调用链 throw-safe：
+   *  faces 护栏/读面异常折为降级注记（骨架不停挂——E5 探针实证的停挂教训）。 */
   function loadTranscript(agentName, sessionId, viewType) {
-    var ad = chatAd();
     var declaredOps = agentDeclaredOps(agentName);
-    ad.page(sessionId, {}).then(function (res) {
+    Promise.resolve().then(function () { return chatAd().page(sessionId, {}); }).then(function (res) {
       var body = $('#chat-body');
       if (!body || body.dataset.sess !== sessionId) return; // 路由/选择已变=丢弃
-      if (!res.ok) {
+      if (!res || !res.ok) {
         body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录读面暂不可达</div><div class="small faint">' +
-          esc(res.error) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
+          esc(String((res && res.error) || '未知')) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
         bindChatInput(agentName, sessionId);
         return;
       }
       S.chatTranscript[sessionId] = { at: Date.now(), items: CHAT().projectTranscript(res.records, declaredOps), records: res.records.length };
       paintTranscript(agentName, sessionId, viewType);
+    }).catch(function (e) {
+      var body = $('#chat-body');
+      if (body && body.dataset.sess === sessionId) {
+        body.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录装载异常</div><div class="small faint">' +
+          esc(String((e && e.message) || e)) + '</div></div></div>' + chatInputBar(agentName);
+        bindChatInput(agentName, sessionId);
+      }
     });
   }
   function paintTranscript(agentName, sessionId, viewType) {
@@ -2813,11 +2820,11 @@
         closeModal();
         var u = S.chatUi[agentName] = S.chatUi[agentName] || {};
         u.sessionId = res.id; u.tab = 'chat'; u.view = 'chat';
+        // 归属锚先落（rename/回填先于路由重渲染——渲染链异常不吞归属证据，E5 探针实证教训）
+        ad.rename(res.id, 'console · ' + agentName).catch(function () {});
+        backfillCurrentSession(agentName, res.id);
         go('chat/' + agentName);
         toast('会话已创建（内嵌 dsh）', 'SessionId=' + res.id + ' · status.currentSession 回填中');
-        backfillCurrentSession(agentName, res.id);
-        // 显式命名锚：console 发起会话可识别（探针/审计双链锚）
-        ad.rename(res.id, 'console · ' + agentName);
       });
     });
   };

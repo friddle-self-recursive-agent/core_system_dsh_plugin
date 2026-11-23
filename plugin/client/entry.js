@@ -44,21 +44,17 @@ function ConsolePanel() {
   return React.createElement('div', { className: 'cc-app cc-host', ref: consoleRef, style: { height: '100%' } })
 }
 
-exports.inject = ['slots', 'layout']
+exports.inject = ['slots', 'layout', 'sessions', 'remote', 'remote.session']
 exports.apply = function applyClient(ctx) {
   // E5 会话数据面（console-adoption.md §1.11；§3.7 裁决：数据源=dsh session store 不复制状态）：
-  // ctx.sessions=宿主会话清单/创建/prompt 真通路；ctx.remote.session=转录事件页读面；
-  // ctx.webTerminals=终端 roster（内置 PTY 为主）。三面都经 inject 回调软出现——
-  // 缺席宿主回调不启动，chat 屏按 __CC.chat.adapter.ready() 诚实降级（不冒充数据）。
+  // ctx.sessions=宿主会话清单/创建/prompt 真通路；ctx.remote.session=转录事件页读面。
+  // faces 声明式注入（exports.inject——cordis 服务护栏：未声明即访问抛 without inject，E5 探针实证）；
+  // 缺席宿主读取抛错=chat 屏 ready()=false 诚实降级（不冒充数据）。
   try {
-    ctx.inject(['sessions', 'remote'], function (sub) {
-      __CC.chatFaces = {
-        sessions: Reflect.get(sub, 'sessions'),
-        remote: Reflect.get(sub, 'remote'),
-      }
-    })
-  } catch (e) { /* 无 inject 能力的极简宿主：chat 屏走 ready()=false 降级 */ }
+    __CC.chatFaces = { sessions: ctx.sessions, remote: ctx.remote }
+  } catch (e) { /* 无该面的宿主：chat 降级 */ }
   try {
+    // 终端 roster 面（可选能力）：回调式注入（不在 exports.inject 声明——缺席宿主不阻塞面板）
     ctx.inject(['webTerminals'], function (sub) {
       __CC.termFaces = { webTerminals: Reflect.get(sub, 'webTerminals') }
     })
