@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node build-client.mjs",
-    "test": "node --test test/bridge.test.ts test/e2e.test.ts test/client-shell.test.ts test/proxy.test.ts test/live.test.ts test/chat.test.ts test/agent-comm.test.ts"
+    "test": "node --test test/bridge.test.ts test/e2e.test.ts test/client-shell.test.ts test/proxy.test.ts test/live.test.ts test/chat.test.ts test/agent-comm.test.ts test/scenario.test.ts"
   },
   "dsh": {
     "bundle": {

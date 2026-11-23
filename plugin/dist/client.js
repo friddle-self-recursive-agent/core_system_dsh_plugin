@@ -1353,6 +1353,12 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       });
   }
 
+  /** 事件窗向后翻页（E7 虚拟滚动大列表：until 游标=严格早于，半开窗 [since,until)——
+   *  cored v0.39 读面六参；limit=500 收敛口径（opslog.MaxEventLimit 同值）；返回 {count,events}）。 */
+  function eventsPage(until) {
+    return jget('v1/events?limit=500' + (until ? '&until=' + encodeURIComponent(until) : ''));
+  }
+
   /** 草稿弃稿（E6 审批驳回=弃稿：DELETE /core-console/drafts/{kind}/{name}?scope=
    *  ——写路径仍唯一经宿主路由；零文档面动作，不发明反向写路径）。 */
   function draftDelete(kind, name, scope) {
@@ -1423,7 +1429,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
           jget('v1/workflows/runs').then(function (r) { state.runs = r.runs || []; state.runMeta = r; }),
           jget('v1/workflows').then(function (r) { state.wfAgg = r; }),
           jget('v1/triggers').then(function (r) { state.triggers = r; }),
-          jget('v1/events?limit=100').then(function (r) { state.events = r.events || []; }),
+          jget('v1/events?limit=500').then(function (r) { state.events = r.events || []; }),
           jget('v1/drafts').then(function (r) { state.drafts = r.drafts || []; }),
           jget('v1/notifications/deliveries').then(function (r) { state.deliveries = r; }).catch(function () { state.deliveries = null; }),
           jget('v1/agents/wakes').then(function (r) { state.wakes = r; }).catch(function () { state.wakes = null; }),
@@ -1478,12 +1484,134 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     apply: apply,
     draftDelete: draftDelete,
     comm: comm,
+    eventsPage: eventsPage,
     get: jget,
     refs: refList,
     docContent: docContent,
     refByName: refByName,
     onChange: null
   };
+})();
+
+// console-scenario.js —— E7 场景面纯函数层（console-adoption.md §1.14）：
+// tag 现读解析 / involved scope 匹配 / 归档窗游标合并 / 合成压测窗——零 DOM 零 fetch，
+// 入参全部来自调用方（live 读面快照/对象正文原文）；渲染数据无双源红线不受影响
+// （本层只是投影函数，不持有状态不落库）。node --test 可直接沙箱执行（挂 __CC.scenario）。
+(function () {
+  'use strict';
+  var SC = {};
+
+  /** tagsOf 对象正文检索元数据现读（scheme.yaml conventions.tags：spec.metadata.tags "?[]string"；
+   *  fallback metadata.tags）。支持 flow [a, b] 与 block 列表两种 YAML 形态 + 内联 map {tags: [..]}。
+   *  非声明即空集（docsRoot 现状零 tag=诚实空集，不冒充）。去重保序；引号/空白剥离。 */
+  function tagsOf(content) {
+    var text = String(content || '');
+    var raw = [];
+    var m = /(^|\n)\s*tags:\s*\[([^\]]*)\]/.exec(text) || /tags:\s*\[([^\]]*)\]/.exec(text);
+    if (m) {
+      // 引号感知分词（引号内逗号不切——"q, x" 是一个 token；简单 token 口径的无引号项照常）
+      raw = (m[2] || m[1]).match(/"[^"]*"|'[^']*'|[^,]+/g) || [];
+    } else {
+      var b = /(^|\n)\s*tags:\s*\n((?:[ \t]*-[^\n]*(?:\n|$))+)/.exec(text);
+      if (b) raw = b[2].split(/\n/).map(function (l) { return l.replace(/^\s*-\s*/, ''); });
+    }
+    var out = [];
+    (raw || []).forEach(function (x) {
+      var t = String(x == null ? '' : x).replace(/^["'\s]+/, '').replace(/["'\s,]+$/, '');
+      if (t && out.indexOf(t) < 0) out.push(t);
+    });
+    return out;
+  }
+
+  /** scopeOfInvolved 归档行 involved（"Kind/scope/name" 三段）中段=scope；非三段=空串
+   *  （involved 未标注的事件不归属任何系统——场景面如实排除，不猜）。 */
+  function scopeOfInvolved(inv) {
+    var segs = String(inv || '').split('/');
+    return segs.length >= 3 ? segs[segs.length - 2] : '';
+  }
+
+  /** evInScope 归档行是否属于系统（scope=系统裸名或 systems/<name> 前缀形——
+   *  inScopeObjects 同一匹配口径，场景面与系统树不两套真相）。 */
+  function evInScope(e, sysName) {
+    if (!e || !sysName) return false;
+    var sc = scopeOfInvolved(e.involved);
+    return !!sc && (sc === sysName || sc === 'systems/' + sysName);
+  }
+
+  /** mergeEvents 相邻页合并：按 eventId 去重保序（base=最新优先，page=更早一页——
+   *  游标语义下理论零重叠，幂等去重为防御面）。 */
+  function mergeEvents(base, page) {
+    var seen = {};
+    (base || []).forEach(function (e) { if (e && e.eventId) seen[e.eventId] = true; });
+    var out = (base || []).slice();
+    (page || []).forEach(function (e) {
+      if (e && e.eventId && !seen[e.eventId]) { seen[e.eventId] = true; out.push(e); }
+    });
+    return out;
+  }
+
+  /** mountsOf Agent 声明正文挂载现读：词表前缀（connector-ops/providers/refs）→ kind 映射。
+   *  返回 [{kind, name, ref}]（ref=声明原文引用形，溯源=声明正文行）；正文缺席=空集。 */
+  function mountsOf(content) {
+    var vocab = { 'connector-ops': 'ConnectorOps', 'provider': 'Provider', 'providers': 'Provider', 'ref': 'Ref', 'refs': 'Ref' };
+    var out = [], seen = {};
+    var re = /([A-Za-z][A-Za-z0-9-]*)\/([A-Za-z0-9-_.]+)/g, m;
+    var text = String(content || '');
+    while ((m = re.exec(text)) !== null) {
+      var kind = vocab[m[1]];
+      if (!kind) continue;
+      var key = kind + '/' + m[2];
+      if (seen[key]) continue;
+      seen[key] = true;
+      out.push({ kind: kind, name: m[2], ref: m[0] });
+    }
+    return out;
+  }
+
+  /** agentMountsKind Agent 是否挂载某对象（挂载行现读命中）。 */
+  function agentMountsKind(content, kind, name) {
+    var ms = mountsOf(content);
+    for (var i = 0; i < ms.length; i++) if (ms[i].kind === kind && ms[i].name === name) return ms[i];
+    return null;
+  }
+
+  /** synEvents 合成压测窗（E7 千级虚拟滚动验收载荷——客户端合成展示层：
+   *  不入归档不入聚合面板，行带 synthetic 标记+「合成」tag+不可点；确定性种子=机械对账可复现）。
+   *  类型族取自真实归档在册类型（泳道配色同款）；involved=Synthetic/probe/<i>（非真实对象——
+   *  不与文档面键空间相交）。 */
+  function synEvents(n, seed) {
+    var types = ['DocApplied', 'Escalate', 'ApprovalNeeded', 'ExternalChanged', 'ReconcileTick'];
+    var levels = ['info', 'info', 'info', 'warn', 'error'];
+    var k = seed || 43;
+    function rnd() { k = (k * 1103515245 + 12345) & 0x7fffffff; return k / 0x7fffffff; }
+    var out = [];
+    var now = Date.now();
+    for (var i = 0; i < n; i++) {
+      var ti = types[(rnd() * types.length) | 0];
+      out.push({
+        eventId: 'syn-' + (seed || 43) + '-' + i,
+        type: ti,
+        source: 'synthetic',
+        involved: 'Synthetic/probe/' + i,
+        dedupKey: 'synthetic:probe:' + i,
+        level: levels[(rnd() * levels.length) | 0],
+        routedTo: 'synthetic-window',
+        ts: new Date(now - i * 1500 - (rnd() * 900 | 0)).toISOString(),
+        synthetic: true
+      });
+    }
+    return out;
+  }
+
+  SC.tagsOf = tagsOf;
+  SC.scopeOfInvolved = scopeOfInvolved;
+  SC.evInScope = evInScope;
+  SC.mergeEvents = mergeEvents;
+  SC.mountsOf = mountsOf;
+  SC.agentMountsKind = agentMountsKind;
+  SC.synEvents = synEvents;
+  SC.EV_PAGE_LIMIT = 500; // cored opslog.MaxEventLimit 收敛口径同值（读面防拖库）
+  __CC.scenario = SC;
 })();
 
 // console-chat.js —— E5 Agent 会话适配层（console-adoption.md §1.11）。
@@ -1775,6 +1903,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   'use strict';
   var M = __CC.MOCK;
   var LIVE = __CC.live; // E2 真数据层（console-live.js：cored 读面快照 + ensure/fetchObject）
+  var SCN = __CC.scenario; // E7 场景面纯函数层（console-scenario.js：tag 现读/scope 匹配/游标合并/合成窗）
   var ROOT = null; // 容器根（挂载时由 mountConsole 指定；$/委托/键盘一律收进容器，不触宿主全局）
 
   /* ================= 全局状态 ================= */
@@ -1790,7 +1919,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     chatUi: {},          // agent -> {sessionId, view:'chat'|'traj', tab:'chat'|'term', filter:'all', search:''}
     term: {},            // sessionId -> {lines:[], demoIdx, userMode}
     evFilter: { kinds: {}, level: "", range: "24h", q: "", lane: "" },
+    evWin: {},           // E7 事件窗（'global' | 'sys:<name>' -> {rows, exhausted, busy}——until 游标已装更早页）
+    evSyn: { on: false, n: 1200 }, // E7 合成压测窗（客户端合成展示层——不入归档不入聚合）
     docFilter: { tags: {}, kind: '', draft: '', q: '' },
+    docTags: {},         // E7 tag 现读缓存（docKey@rv -> tags[]——渲染层缓存，读面权威不变）
     trFilter: { phase: '' },
     wImpLevel: 'all',
     follow: {},          // runKey -> bool
@@ -1832,21 +1964,16 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     return out;
   }
   function byId(arr, key, val) { for (var i = 0; i < arr.length; i++) if (arr[i][key] === val) return arr[i]; return null; }
-  function sysByName(n) { return byId(M.systems, 'name', n); }
-  function docByName(n) { return byId(M.docs, 'name', n); }
-  function wfByName(n) { return byId(M.workflows, 'name', n); }
-  function agentByName(n) { return M.agents[n] || null; }
-  function instByName(sys, inst) {
-    return M.instances.filter(function (i) { return i.system === sys && i.name === inst; })[0] || null;
+  /* E7 收口清扫：sysByName/docByName/wfByName/agentByName/instByName/sysDocs/sysInstances/
+   * sysAgents mock finder 摘除——渲染面读面化后零引用（场景面归属=inScopeObjects 同一口径）。 */
+  /* E7 收口清扫：顶栏事件计数=归档窗实数（LIVE 快照 24h 过滤）——mock evCount24h 摘除 */
+  function evCount24h() {
+    var evs = (LIVE.state && LIVE.state.events) || [];
+    return evs.filter(function (e) {
+      var t = Date.parse(e.ts || '');
+      return !isNaN(t) && (Date.now() - t) < 86400000;
+    }).length;
   }
-  function sysDocs(sys) { return M.docs.filter(function (d) { return d.scope === 'systems/' + sys; }); }
-  function sysInstances(sys) { return M.instances.filter(function (i) { return i.system === sys; }); }
-  function sysAgents(sys) {
-    var names = [];
-    sysInstances(sys).forEach(function (i) { i.agents.forEach(function (a) { if (names.indexOf(a) < 0) names.push(a); }); });
-    return names.map(agentByName).filter(Boolean);
-  }
-  function evCount24h() { return M.events.filter(function (e) { return (Date.now() - e.ts.getTime()) < 86400000; }).length; }
   /* E6 审批待审区（console-adoption.md §1.13）=草稿缓存 ∪ ApprovalNeeded 归档行——
    * 数据源=cored 读面（LIVE 快照；读面未装=空数组诚实，不读 mock）。 */
   function approvalNeededObjects() {
@@ -1861,8 +1988,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     return out;
   }
   function pendingApprovals() { return approvalNeededObjects(); }
-  function openDrifts() { return M.docs.filter(function (d) { return d.kind === 'DriftReport' && d.status !== 'Closed'; }); }
-  function runningWfs() { return M.workflows.filter(function (w) { return w.phase !== 'Idle' && w.enabled; }); }
+  /* E7 收口清扫：openDrifts/runningWfs/healthScore mock 聚合摘除（渲染面已归零——
+   * liveHealth()=真数据聚合唯一口径）；addEvent mock 事件入栈摘除（审计账=cored 归档唯一权威）。 */
+  function openDrifts() { return LIVE.refs('DriftReport'); }
+  function runningWfs() { return []; }
 
   var PHASE_CLS = { InSync: 'ok', Drifting: 'warn', Remediating: 'acc', Failed: 'danger', Escalated: 'esc',
     Idle: 'mute', Analyzing: 'acc', Planning: 'acc', AwaitingApproval: 'warn', Executing: 'acc', Verifying: 'acc', Reporting: 'acc', Paused: 'warn', Ready: 'ok', Degraded: 'warn' };
@@ -1972,35 +2101,16 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   }
 
   /* ================= 草稿 / Apply 引擎 ================= */
-  function docState(name) {
-    var doc = docByName(name);
-    if (!doc) return null;
-    if (!S.drafts[name]) {
-      if (doc.draft) {
-        S.drafts[name] = { working: doc.draft, base: doc.content, entries: [{ source: doc.draftSource || 'llm', summary: doc.draftSource === 'manual' ? '手动编辑' : 'LLM 提案', ts: doc.updated }] };
-      } else {
-        S.drafts[name] = { working: doc.content, base: doc.content, entries: [] };
-      }
-    }
-    var st = S.drafts[name];
-    st.base = doc.content;
-    return st;
-  }
+  /* E7 收口清扫：docState mock 草稿引擎摘除；docHasDraft=草稿缓存（/v1/drafts）按名命中
+   * （真数据源——palette 草稿圆点与场景面文档行同一判据）。 */
   function docHasDraft(name) {
-    var st = docState(name);
-    return !!(st && st.working !== st.base);
+    var drafts = (LIVE.state && LIVE.state.drafts) || [];
+    for (var i = 0; i < drafts.length; i++) if (drafts[i].name === name) return true;
+    return false;
   }
-  function addEvent(lane, kind, level, system, object, msg, link) {
-    M.events.unshift({ id: 'ev-live-' + Date.now(), lane: lane, kind: kind, level: level, system: system, object: object, msg: msg, ts: new Date(), link: link || null });
-  }
-  function healthScore() {
-    var insync = M.systems.filter(function (s) { return s.phase === 'InSync'; }).length;
-    var esc = M.instances.filter(function (i) { return i.phase === 'Escalated'; }).length;
-    var drift = openDrifts().length;
-    var pend = pendingApprovals().length;
-    var score = 100 - esc * 4 - drift * 2 - pend * 1 - (6 - insync) * 2;
-    return { score: Math.max(0, Math.min(100, score)), insync: insync, esc: esc, drift: drift, pend: pend };
-  }
+  /* E7 收口清扫：addEvent mock 事件入栈与 healthScore mock 聚合摘除——事件唯一来源=
+   * cored /v1/events 归档（审计账保真，客户端不造事件；合成压测窗走 SCN.synEvents 展示层
+   * 专用通道）；健康聚合唯一口径=liveHealth()（真数据）。 */
   /* ================= 路由 ================= */
   var ROUTES = [];
   function route(pattern, fn) { ROUTES.push({ segs: pattern.split('/'), fn: fn }); }
@@ -2133,34 +2243,35 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     var rootAgent = liveChatAgents()[0] || 'core-headless'; // 文档面在册 agent（缺省=builtin root 名）
     add('动作', '与 root（' + rootAgent + '）对话', '#/chat/' + rootAgent, 'chat/' + rootAgent, 'i-chat');
     add('动作', '打开审批页', pendingApprovals().length + ' 条待审', 'approvals', 'i-check');
-    add('动作', '打开事件流', evCount24h() + ' events/24h', 'events', 'i-pulse');
+    add('动作', '打开事件流', (liveHealth().events24) + ' events/24h（归档窗）', 'events', 'i-pulse');
     // 导航
     M.nav.forEach(function (n) { add('导航', n.label, navRouteOf(n.route), navRouteOf(n.route).replace('#/', ''), n.icon); });
-    // 系统
-    M.systems.forEach(function (s) { add('系统', s.name, s.phase + ' · ' + s.scope, 's/' + s.name, 'i-grid'); });
-    // workflows
-    M.workflows.forEach(function (w) { add('Workflows', w.name, (w.enabled ? 'enabled' : 'disabled') + ' · ' + w.phase + ' · ' + w.runsTotal + ' runs', 'wf/' + w.name, 'i-flow'); });
+    // 系统（E7 收口清扫：读面枚举——M 静态锚摘除，M 名落空路由不再出现）
+    LIVE.refs('ServiceDesc').forEach(function (s) { add('系统', s.name, 'ServiceDesc · r' + s.resourceVersion, 's/' + s.name, 'i-grid'); });
+    // workflows（E3 聚合面真数据；读面未装=不列 mock——palette 诚实缩容）
+    (LIVE.state.wfAgg && LIVE.state.wfAgg.workflows ? LIVE.state.wfAgg.workflows : []).forEach(function (w) {
+      add('Workflows', w.name, (w.effective ? 'effective' : 'absent') + ' · ' + (w.runsTotal || 0) + ' runs', 'wf/' + w.name, 'i-flow');
+    });
     // agents（E5 起文档面真数据；M.agents mock 行摘除——对话入口=chat/<agent>）
     liveChatAgents().forEach(function (a) { add('Agents', a, 'Agent@文档面 · 对话入口', 'chat/' + a, 'i-bot'); });
     // connectors（E6 真数据：cored objects 枚举；读面未装=不列 mock——palette 诚实缩容）
-    (LIVE.state.kinds.length ? LIVE.refs('WorkService') : M.workservices).forEach(function (w) { add('连接', w.name, 'WorkService · r' + w.resourceVersion, 'ws/' + w.name, 'i-plug'); });
-    (LIVE.state.kinds.length ? LIVE.refs('ConnectorOps') : M.connectorops).forEach(function (c) { add('连接', c.name, 'ConnectorOps · r' + c.resourceVersion, 'connector/' + c.name, 'i-plug'); });
-    (LIVE.state.kinds.length ? LIVE.refs('Provider') : M.providers).forEach(function (p) { add('连接', p.name, 'Provider · r' + p.resourceVersion, 'provider/' + p.name, 'i-key'); });
-    // docs（模糊搜索）
+    (LIVE.state.kinds.length ? LIVE.refs('WorkService') : []).forEach(function (w) { add('连接', w.name, 'WorkService · r' + w.resourceVersion, 'ws/' + w.name, 'i-plug'); });
+    (LIVE.state.kinds.length ? LIVE.refs('ConnectorOps') : []).forEach(function (c) { add('连接', c.name, 'ConnectorOps · r' + c.resourceVersion, 'connector/' + c.name, 'i-plug'); });
+    (LIVE.state.kinds.length ? LIVE.refs('Provider') : []).forEach(function (p) { add('连接', p.name, 'Provider · r' + p.resourceVersion, 'provider/' + p.name, 'i-key'); });
+    // docs（E7：读面对象枚举——模糊搜索=名称/kind/scope；草稿圆点=草稿缓存）
     var ql = (q || '').toLowerCase();
-    var docs = M.docs;
-    if (ql) docs = fuzzyFilter(docs, ql, function (d) { return d.name + ' ' + d.kind + ' ' + d.scope + ' ' + d.tags.join(' '); });
+    var docs = [];
+    LIVE.state.kinds.forEach(function (kd) { (LIVE.refs(kd.name) || []).forEach(function (o) { docs.push({ name: o.name, kind: o.kind, scope: o.scope || '', rv: o.resourceVersion }); }); });
+    if (ql) docs = fuzzyFilter(docs, ql, function (d) { return d.name + ' ' + d.kind + ' ' + d.scope; });
     docs.slice(0, 30).forEach(function (d) {
-      add('文档', d.name, d.kind + ' r' + d.revision + (docHasDraft(d.name) ? ' ●draft' : ''), 'doc/' + d.name, 'i-doc');
+      add('文档', d.name, d.kind + ' r' + d.rv + (docHasDraft(d.name) ? ' ●draft' : ''), 'doc/' + encodeURIComponent(d.kind) + '/' + encodeURIComponent(d.scope) + '/' + encodeURIComponent(d.name), 'i-doc');
     });
-    // 运行轮次（活跃 + 匹配）
-    var runs = [];
-    M.workflows.forEach(function (w) {
-      (w.runs || []).slice(0, 3).forEach(function (r) { runs.push({ w: w, r: r }); });
-    });
-    if (ql) runs = fuzzyFilter(runs, ql, function (x) { return x.w.name + ' #' + x.r.no + ' ' + x.r.phase; });
+    // 运行轮次（E7：runs 面投影——M 假轮次摘除）
+    var runs = (LIVE.state.runs || []).slice(0, 8);
+    if (ql) runs = fuzzyFilter(runs, ql, function (x) { return (x.workflow || '') + ' #' + (x.run || x.triggerSeq || ''); });
     runs.slice(0, 8).forEach(function (x) {
-      add('运行轮次', '#' + x.r.no + ' · ' + x.w.name, x.r.phase + (x.r.trigger ? ' · ' + x.r.trigger : ''), 'wf/' + x.w.name + '/r/' + x.r.no, 'i-clock');
+      var no = x.run || x.triggerSeq || '';
+      add('运行轮次', '#' + no + ' · ' + (x.workflow || 'core-workflow'), (x.status || '') + (x.phase ? ' · ' + x.phase : ''), 'wf/' + encodeURIComponent(x.workflow || 'core-workflow') + '/r/' + no, 'i-clock');
     });
     if (!ql) return items.filter(function (it, i) { return i < 14; });
     return fuzzyFilter(items, ql, function (it) { return it.label + ' ' + it.sec + ' ' + it.sub; }).slice(0, 24);
@@ -2212,26 +2323,17 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   }
   ACTIONS['pal-pick'] = function (el) { palPick(parseInt(el.dataset.i, 10)); };
   ACTIONS['open-palette'] = function () { openPalette(); };
+  /* E7 收口清扫：manual tick=诚实提示（触发面=cored 写面余量——不画假回执不推 mock 事件库） */
   function manualTick() {
-    addEvent('event', 'ManualTick', 'info', 'self-recursive-core', 'workflow/core-workflow', '手动触发一轮（manual: root）→ 轮次 #130 入队', '#/wf/core-workflow');
-    toast('已入队', 'core-workflow #130 · reason: manual:root', 'ok');
+    toast('手动触发=触发面余量', '写路径唯一入口=POST /v1/apply（--allow-apply）；触发执行面=cored 触发器接线（declared 余量）——不画假回执', 'warn');
   }
   ACTIONS['manual-tick'] = function () { manualTick(); };
-  function newGoalDraft(scope) {
-    var name = 'new-goal-' + (Date.now() % 100000);
-    var sys = scope === 'global' ? 'global' : scope;
-    var doc = {
-      name: name, kind: 'Goal', scope: sys === 'global' ? 'global' : 'systems/' + sys, revision: 1, generation: 1,
-      status: 'Active', updated: new Date(), fieldManager: 'root', ownerRefs: [], tags: ['goal'], draft: null, draftSource: null,
-      history: [{ rev: 1, author: 'root', ts: new Date(), summary: '新建（未 Apply；首次 Apply 才会落库）' }],
-      content: 'apiVersion: core/v1\nkind: Goal\nmetadata:\n  name: ' + name + '\n  scope: ' + (sys === 'global' ? 'global' : 'systems/' + sys) + '\nspec:\n  intent: |\n    （写下目标意图；LLM 可在右侧协助完善）\n  slo:\n    metric: target',
-      machineWrite: false
-    };
-    if (sys !== 'global') M.docs.push(doc); else M.docs.push(doc);
-    toast('已创建草稿文档', name + '（未 Apply，不落库不发事件）');
-    go('doc/' + name);
+  /* E7 收口清扫：新建 Goal=诚实提示（新建=落稿经 Apply；编辑器 new-draft 模式=declared 余量——
+   * 不推 mock 文档库不发假 toast）。 */
+  function newGoalDraft() {
+    toast('新建文档=declared 余量', '草稿通道挂在既有对象上（编辑器→草稿→Apply）；新建对象稿模式未接线——不画假草稿', 'warn');
   }
-  ACTIONS['new-goal'] = function (el) { newGoalDraft(el.dataset.scope || 'global'); };
+  ACTIONS['new-goal'] = function () { newGoalDraft(); };
 
   /* ================= 快捷键注册表 ================= */
   var SHORTCUTS = [
@@ -2292,7 +2394,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   }
 
   /* ================= 虚拟滚动 ================= */
-  function vlist(container, items, rowH, rowHtml) {
+  /* opts（E7 大列表）：{onLoadMore: () => Promise<bool>（近底加载更早一页，返回 true=有追加需重绘）,
+   *                      exhausted: () => bool（游标到底=不再触发）}——常量行高虚拟列表组件本体不变。 */
+  function vlist(container, items, rowH, rowHtml, opts) {
     var H = Math.min(items.length * rowH, 560);
     container.style.height = H + 'px';
     container.classList.add('vlist');
@@ -2309,9 +2413,19 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       container.innerHTML = buf;
     }
     var raf = null;
+    var moreBusy = false;
     container.addEventListener('scroll', function () {
       if (raf) return;
       raf = requestAnimationFrame(function () { raf = null; paint(); });
+      if (opts && typeof opts.onLoadMore === 'function' && !moreBusy &&
+          !(opts.exhausted && opts.exhausted()) &&
+          container.scrollTop + container.clientHeight >= items.length * rowH - 240) {
+        moreBusy = true;
+        Promise.resolve(opts.onLoadMore()).then(function (appended) {
+          moreBusy = false;
+          if (appended) paint();
+        }, function () { moreBusy = false; });
+      }
     });
     paint();
     return { repaint: paint };
@@ -2442,7 +2556,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       systems: systems, instances: instances, insyncCount: insyncCount, drifts: drifts.length, events24: events24,
       approvals: approvals, started: started, failed: failed,
       failedRate: started ? Math.round(failed / started * 100) : null,
-      truncated: st.events.length >= 100
+      truncated: st.events.length >= 500 // 归档窗满窗标记（E7 起窗=500 收敛口径——until 游标可再装更早页）
     };
   }
   function welcomeStageStrip() {
@@ -2597,54 +2711,61 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     toast('新建 Goal 由文档编辑器落地（E4）', 'LLM 草稿 → 人点 Apply → Revision+1 全链路（apply.md §1/§6）', 'warn');
   };
 
-  /* ================= 屏 1：总览（服务关注区） ================= */
+  /* ================= 屏 1：总览（E7 真数据换装——mock 渲染面归零，console-adoption.md §1.14 收口清扫） =================
+   * 数据源=cored 读面（ServiceDesc 枚举+instanceStatus 相位投影+runs 面+归档窗）——liveHealth
+   * 同一口径（Welcome 屏幕 0 复用），无双源。 */
   function screenOverview(view) {
+    LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '总览' }]);
-    var h = healthScore();
+    var h = liveHealth();
+    var set = treeDraftSet();
     var stat = '<div class="statbar">' +
-      '<div class="stat"><div class="st-num">' + h.insync + '<span class="dim">/6</span></div><div class="st-label"><span class="lamp ok pulse-ok"></span>系统 InSync</div></div>' +
-      '<div class="stat"><div class="st-num">' + runningWfs().length + '</div><div class="st-label"><span class="lamp acc"></span>运行中 workflow</div></div>' +
-      '<div class="stat"><div class="st-num">' + evCount24h() + '</div><div class="st-label"><span class="lamp acc"></span>24h 事件数</div></div>' +
-      '<div class="stat"><div class="st-num">' + h.pend + '</div><div class="st-label"><span class="lamp warn"></span>待审批</div></div>' +
-      '<div class="stat' + (h.esc ? ' alert' : '') + '"><div class="st-num">' + h.esc + '</div><div class="st-label"><span class="lamp esc pulse-danger"></span>Escalated</div></div>' +
+      '<div class="stat"><div class="st-num">' + h.systems.length + '</div><div class="st-label"><span class="lamp ok pulse-ok"></span>系统（ServiceDesc）</div></div>' +
+      '<div class="stat"><div class="st-num">' + (h.instances.length ? Math.round(h.insyncCount / h.instances.length * 100) + '%' : 'n/a') + '</div><div class="st-label"><span class="lamp acc"></span>InSync 率' + (h.instances.length ? '' : '（零实例在册不冒充）') + '</div></div>' +
+      '<div class="stat"><div class="st-num">' + h.events24 + '</div><div class="st-label"><span class="lamp acc"></span>24h 归档事件</div></div>' +
+      '<div class="stat"><div class="st-num">' + h.approvals + '</div><div class="st-label"><span class="lamp warn"></span>ApprovalNeeded 归档</div></div>' +
+      '<div class="stat"><div class="st-num">' + h.failed + '</div><div class="st-label"><span class="lamp esc"></span>failed run</div></div>' +
       '</div>';
-    var cards = M.systems.map(function (s) {
-      var insts = sysInstances(s.name);
-      var drifts = openDrifts().filter(function (d) { return d.scope === 'systems/' + s.name; }).length;
-      return '<div class="syscard" data-act="go" data-go="s/' + s.name + '">' +
-        '<div class="sc-top"><span class="lamp ' + PHASE_CLS[s.phase] + ' ' + (PHASE_PULSE[s.phase] || '') + '" style="width:10px;height:10px"></span>' +
-        '<span class="sc-name">' + esc(s.name) + '</span>' + phaseChip(s.phase) + '</div>' +
+    var cards = h.systems.map(function (s) {
+      var sc = inScopeObjects(s.name);
+      var insts = sc.byKind.ServiceInstance || [];
+      var phase = 'n/a';
+      if (insts.length) {
+        var row = LIVE.state.instanceStatus['ServiceInstance/' + (insts[0].scope || '') + '/' + insts[0].name];
+        phase = (row && row.phase) ? row.phase : 'n/a';
+      }
+      var draftN = sc.rows.filter(function (o) { return set[o.kind + '/' + (o.scope || '') + '/' + o.name]; }).length;
+      return '<div class="syscard" data-act="go" data-go="s/' + esc(s.name) + '">' +
+        '<div class="sc-top"><span class="lamp ' + (insts.length ? (PHASE_CLS[phase] || 'mute') : 'mute') + '" style="width:10px;height:10px"></span>' +
+        '<span class="sc-name">' + esc(s.name) + '</span>' + (insts.length ? phaseChip(phase) : '<span class="chip mute small">无实例在册</span>') + '</div>' +
         '<div class="sc-meta">' +
-          '<span><span class="k">gen:</span> <span class="mono">' + s.observedGeneration + '/' + s.generation + '</span></span>' +
-          '<span><span class="k">24h 运行:</span> <span class="mono">' + s.runs24h + '</span></span>' +
-          '<span><span class="k">未解决 drift:</span> <span class="mono">' + drifts + '</span></span>' +
-          '<span><span class="k">待审批:</span> <span class="mono">' + s.pending + '</span></span>' +
+          '<span><span class="k">ServiceDesc:</span> <span class="mono">r' + esc(s.resourceVersion) + '</span></span>' +
+          '<span><span class="k">instances:</span> <span class="mono">' + insts.length + '</span></span>' +
+          '<span><span class="k">workflows:</span> <span class="mono">' + (sc.byKind.Workflow || []).length + '</span></span>' +
+          '<span><span class="k">对象:</span> <span class="mono">' + sc.rows.length + '</span></span>' +
+          '<span><span class="k">草稿:</span> <span class="mono">' + draftN + '</span></span>' +
         '</div>' +
-        '<div class="sc-foot"><span class="chip mute"><svg class="ic"><use href="#cc-i-bot"/></svg>' + esc(s.agent) + '</span>' +
-        '<span class="faint small" style="margin-left:auto">' + insts.length + ' 实例 →</span></div>' +
+        '<div class="sc-foot"><span class="faint small" style="margin-left:auto">' + sc.rows.length + ' 对象在册 →</span></div>' +
         '</div>';
-    }).join('');
-    // 进行中的运行
-    var runs = [];
-    M.workflows.forEach(function (w) {
-      var r = w.runs[0];
-      if (r && (r.status === 'running' || r.status === 'waiting')) runs.push({ w: w, r: r });
-    });
-    var runsHtml = runs.map(function (x) {
-      return '<div class="mini-row" data-act="go" data-go="wf/' + x.w.name + '/r/' + x.r.no + '">' +
-        '<span class="mono" style="color:#7fb0f9;font-weight:700">#' + x.r.no + '</span>' +
-        '<div class="mr-main"><div>' + esc(x.w.name) + '</div><div class="mr-sub">' + esc(x.r.trigger) + ' · ' + fmtAgo(x.r.start) + '</div></div>' +
-        phaseChip(x.r.phase) + '</div>';
-    }).join('');
-    if (!runs.length) runsHtml = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">没有进行中的运行</div></div>';
-    // 最近事件
-    var evs = M.events.slice(0, 8).map(function (e) {
+    }).join('') || '<div class="empty" style="padding:20px"><div class="e-title">零系统在册（cored 读面）</div></div>';
+    // 进行中的运行（runs 面投影：triggered|running|suspended=进行中语义——终态推进不冒充）
+    var runs = (LIVE.state.runs || []).filter(function (r) { return r.status === 'running' || r.status === 'triggered' || r.status === 'suspended'; }).slice(0, 8);
+    var runsHtml = runs.map(function (r) {
+      var wf = r.workflow || 'core-workflow';
+      var no = r.run || r.triggerSeq || '';
+      return '<div class="mini-row" data-act="go" data-go="wf/' + encodeURIComponent(wf) + '/r/' + esc(String(no)) + '">' +
+        '<span class="mono" style="color:#7fb0f9;font-weight:700">#' + esc(String(no)) + '</span>' +
+        '<div class="mr-main"><div>' + esc(wf) + '</div><div class="mr-sub mono">' + esc(r.eventId || r.involved || '') + '</div></div>' +
+        '<span class="chip mute small">' + esc(r.status || '') + '</span></div>';
+    }).join('') || '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">runs 面无进行中轮次</div></div>';
+    // 最近事件（归档窗头 8 行——/v1/events 最新优先投影）
+    var evs = (LIVE.state.events || []).slice(0, 8).map(function (e) {
       var dot = e.level === 'fatal' || e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : 'acc';
-      return '<div class="mini-row" data-act="go" data-go="event/' + e.id + '">' +
-        '<span class="lamp ' + dot + '" style="background:var(--' + (dot === 'danger' ? 'danger' : dot === 'warn' ? 'warn' : 'accent') + ')"></span>' +
-        '<div class="mr-main"><div>' + esc(e.msg) + '</div><div class="mr-sub mono">' + esc(e.kind) + ' · ' + esc(e.object) + '</div></div>' +
-        '<span class="faint mono small">' + fmtTime(e.ts) + '</span></div>';
-    }).join('');
+      return '<div class="mini-row" data-act="go" data-go="event/' + encodeURIComponent(e.eventId) + '">' +
+        '<span class="lamp ' + dot + '"></span>' +
+        '<div class="mr-main"><div>' + esc(e.type) + '</div><div class="mr-sub mono">' + esc(e.involved || '—') + '</div></div>' +
+        '<span class="faint mono small">' + esc(String(e.ts || '').slice(11, 19)) + '</span></div>';
+    }).join('') || '<div class="empty" style="padding:14px"><div class="e-title">归档窗内暂无事件</div></div>';
     view.innerHTML = '<div class="view-inner">' + stat +
       '<div class="sec-title">系统（ServiceDesc）· 点击进详情</div>' +
       '<div class="syscards">' + cards + '</div>' +
@@ -2981,8 +3102,11 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       draftDot(set[sd.kind + '/' + sd.scope + '/' + sd.name]) + '</div>' +
       '<div class="dh-sub"><span class="path-mono">' + esc(sd.scope) + '</span><span class="mono">r' + sd.resourceVersion + '</span>' +
       '<span>声明/清单全部来自 cored 读面；对象详情=只读 viewer（E4 起升编辑器）</span></div>' +
-      '<div class="dh-sub" style="margin-top:8px">场景面（E7 落地，当前不渲染 mock）：<span class="chip mute small">事件面</span>' +
-      '<span class="chip mute small">指标面</span><span class="chip mute small">文档面（tag 过滤）</span><span class="chip mute small">权限面</span></div>' +
+      '<div class="dh-sub" style="margin-top:8px">场景面（E7 真数据）：' +
+      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/events">事件面 →</span> ' +
+      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/metrics">指标面 →</span> ' +
+      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/docs">文档面（tag 过滤）→</span> ' +
+      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/permissions">权限面 →</span></div>' +
       '<div class="dh-actions" id="sys-agents"></div></div></div>' +
       sec('声明正文（ServiceDesc，现读）', '<div id="sys-spec">' + liveSkeletonRows(1, 0) + '</div>') +
       sec('instances（ServiceInstance）', rows('ServiceInstance', 12) || '<div class="small faint" style="padding:4px 12px">暂无实例对象在册</div>') +
@@ -3066,241 +3190,272 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
 
   /* ================= 场景面：#/:sys/events ================= */
   function scenarioHead(sys, title, sub, backTab) {
-    return '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(sys.name) + ' <span style="color:var(--text-2)">' + esc(title) + '</span></h1>' + phaseChip(sys.phase) + '</div>' +
+    return '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(sys.name) + ' <span style="color:var(--text-2)">' + esc(title) + '</span></h1>' +
+      (sys.phase ? phaseChip(sys.phase) : '') + '</div>' +
       '<div class="dh-sub">' + esc(sub) + '</div></div>' +
       '<div class="dh-actions"><button class="btn" data-act="go" data-go="s/' + esc(sys.name) + '">← 返回系统详情' + (backTab ? '（' + backTab + ' tab）' : '') + '</button></div></div>';
   }
+  /* E7 场景事件面=全局事件流共用核（过滤条/行渲染/until 游标全同款——§1.14 L43-01）；
+   * 场景差异=involved scope 过滤（inScopeObjects 同一口径）+ 归属系统面包屑。 */
   function screenSysEvents(view) {
-    var sys = sysByName(S.params.name);
-    if (!sys) { view.innerHTML = emptyBox('系统不存在', S.params.name); return; }
-    setCrumbs(sysCrumb(sys, [{ label: '事件面' }]));
-    var f = S.evFilter;
-    var kinds = [];
-    M.events.forEach(function (e) { if (e.system === sys.name && kinds.indexOf(e.kind) < 0) kinds.push(e.kind); });
-    kinds.sort();
-    var ranges = M.TIME_RANGES;
-    view.innerHTML = '<div class="view-inner">' + scenarioHead(sys, '事件面', '类型多选 / 级别 / 时间范围 / 对象搜索 · 虚拟滚动（数据 ' + M.events.length + ' 条）· 行点击进事件详情', '事件') +
-      '<div class="filter-bar">' +
-      '<svg class="ic" style="color:var(--text-3)"><use href="#cc-i-filter"/></svg>' +
-      '<span class="fchip' + (Object.keys(f.kinds).length === 0 ? ' on' : '') + '" data-act="ev-kind" data-k="">全部类型</span>' +
-      kinds.map(function (k) { return '<span class="fchip' + (f.kinds[k] ? ' on' : '') + '" data-act="ev-kind" data-k="' + esc(k) + '">' + esc(k) + '</span>'; }).join('') +
-      '<select id="ev-level"><option value="">全部级别</option><option value="info">info</option><option value="warn">warn</option><option value="error">error</option><option value="fatal">fatal</option></select>' +
-      '<select id="ev-range">' + ranges.map(function (r) { return '<option value="' + r.id + '">' + r.label + '</option>'; }).join('') + '</select>' +
-      '<input type="search" id="ev-q" placeholder="对象/消息搜索…" style="width:200px">' +
-      '<span class="count-note" id="ev-count-note"></span></div>' +
-      '<div id="ev-vlist"></div></div>';
-    $('#ev-level').value = f.level; $('#ev-range').value = f.range; $('#ev-q').value = f.q;
-    paintSysEvents(sys);
-    $('#ev-level').addEventListener('change', function () { f.level = this.value; paintSysEvents(sys); });
-    $('#ev-range').addEventListener('change', function () { f.range = this.value; paintSysEvents(sys); });
-    var deb;
-    $('#ev-q').addEventListener('input', function () {
-      var v = this.value; clearTimeout(deb);
-      deb = setTimeout(function () { f.q = v; paintSysEvents(sys); }, 160);
-    });
+    screenEventsCore(view, S.params.name);
   }
-  function applyEvFilter(sys) {
-    var f = S.evFilter;
-    var range = byId(M.TIME_RANGES, 'id', f.range) || M.TIME_RANGES[3];
-    var kinds = Object.keys(f.kinds).filter(function (k) { return f.kinds[k]; });
-    var ql = f.q.toLowerCase();
-    return M.events.filter(function (e) {
-      if (sys && e.system !== sys.name) return false;
-      if (kinds.length && kinds.indexOf(e.kind) < 0) return false;
-      if (f.level && e.level !== f.level) return false;
-      if ((Date.now() - e.ts.getTime()) > range.min * 60000) return false;
-      if (ql && (e.object + ' ' + e.msg + ' ' + e.kind).toLowerCase().indexOf(ql) < 0) return false;
-      return true;
-    });
-  }
-  function paintSysEvents(sys) {
-    var items = applyEvFilter(sys);
-    $('#ev-count-note').textContent = items.length + ' / ' + M.events.length + ' events';
-    vlist($('#ev-vlist'), items, 36, function (e) {
-      var dot = e.level === 'fatal' || e.level === 'error' ? 'var(--danger)' : e.level === 'warn' ? 'var(--warn)' : 'var(--accent)';
-      return '<span class="vc" style="width:8px;height:8px;border-radius:50%;background:' + dot + '"></span>' +
-        '<span class="vc mono faint" style="width:52px">' + fmtTime(e.ts) + '</span>' +
-        '<span class="vc"><span class="tag">' + esc(e.lane) + '</span></span>' +
-        '<span class="vc mono" style="width:130px;color:#7fb0f9">' + esc(e.kind) + '</span>' +
-        '<span class="vc mono faint" style="width:200px;overflow:hidden;text-overflow:ellipsis">' + esc(e.object) + '</span>' +
-        '<span class="grow">' + esc(e.msg) + '</span>' +
-        '<span class="vc chip mute small">' + esc(e.level) + '</span>';
-    });
-    $('#ev-vlist').onclick = function (ev) {
-      var row = ev.target.closest('.vrow');
-      if (!row) return;
-      var idx = Math.floor((row.offsetTop + this.scrollTop) / 36);
-      var it = items[idx];
-      if (it) go('event/' + it.id);
-    };
-  }
-  /* 场景面：metrics */
+  /* ================= 场景面：metrics（E7 真数据换装，§1.14 L43-02） =================
+   * 数据源=/v1/metrics 数据面投影（关断口径=空投影诚实空态——loop-43 实测 {"metrics":[],"total":0}，
+   * 不冒充曲线不冒充指标名）+ /v1/metrics/query 即席查询（404=无投影结果如实标注）；
+   * 越线事件=归档 MetricThreshold 行（系统 scope 过滤，行可点→事件详情）。 */
   function screenSysMetrics(view) {
-    var sys = sysByName(S.params.name);
-    if (!sys) { view.innerHTML = emptyBox('系统不存在', S.params.name); return; }
-    setCrumbs(sysCrumb(sys, [{ label: '指标面' }]));
-    var insts = sysInstances(sys.name);
-    var charts = insts.map(function (i) {
-      var rows = i.metrics.map(function (m2) {
-        var thr = parseFloat((m2.target.match(/[\d.]+/) || ['1'])[0]);
-        return '<div style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">' +
-          '<span class="mono" style="font-weight:650">' + esc(m2.q) + '</span><span class="chip mute small">target ' + esc(m2.target) + '</span>' +
-          '<span class="chip ok small">current ' + esc(m2.current) + '</span></div>' +
-          bigChart(i.system + '/' + i.name + ':' + m2.q, thr, 560, 120) + '</div>';
+    LIVE.ensure();
+    var name = S.params.name;
+    if (!LIVE.refByName('ServiceDesc', name)) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      return;
+    }
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '指标面' }]);
+    var mets = LIVE.state.metrics || [];
+    var thr = (LIVE.state.events || []).filter(function (e) { return e.type === 'MetricThreshold' && SCN.evInScope(e, name); });
+    var thrHtml = thr.length ? thr.slice(0, 8).map(function (e) {
+      return '<div class="mini-row" data-act="go" data-go="event/' + encodeURIComponent(e.eventId) + '"><span class="lamp warn"></span>' +
+        '<div class="mr-main"><div>' + esc(e.type) + '（' + esc(e.level) + '）</div><div class="mr-sub mono">' + esc(e.involved || '—') + '</div></div>' +
+        '<span class="faint mono small">' + esc(String(e.ts || '').replace('T', ' ').slice(5, 16)) + '</span></div>';
+    }).join('') : '<div class="empty" style="padding:16px"><div class="e-title">归档窗内无越线事件</div>' +
+      '<div class="small faint">MetricThreshold 归档行（系统 scope 过滤）缺席=无越线记录，不画 mock</div></div>';
+    var bodyHtml;
+    if (!mets.length) {
+      bodyHtml = '<div class="empty" style="padding:28px"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
+        '<div class="e-title">数据面未装配（/v1/metrics 空投影=关断口径可见）</div>' +
+        '<div class="small faint">查询声明清单 / 曲线 / 阈值线的数据本体在 TSDB，不入 console（ops-log 同规则）——数据面装配=declared 余量（不冒充指标名不画 mock 曲线）</div></div>';
+    } else {
+      var rows = mets.map(function (m2) {
+        return '<tr><td class="mono">' + esc(m2.name) + '</td><td class="mono" style="text-align:right">' + esc(String(m2.samples != null ? m2.samples : '—')) + '</td>' +
+          '<td class="mono small" id="mq-' + esc(cssId(m2.name)) + '"><span class="faint">即席查询中…</span></td></tr>';
       }).join('');
-      return '<div class="card"><div class="card-h"><span class="h-title mono">' + esc(i.name) + '</span>' + phaseChip(i.phase) +
-        '<span class="h-right lk small" data-act="go" data-go="s/' + esc(i.system) + '/i/' + esc(i.name) + '">实例详情 →</span></div><div class="card-b">' + rows + '</div></div>';
-    }).join('');
-    var thrEvents = M.events.filter(function (e) { return e.kind === 'MetricThreshold' && e.system === sys.name; }).slice(0, 8);
-    var thrHtml = thrEvents.length ? thrEvents.map(function (e) {
-      return '<div class="mini-row" data-act="go" data-go="event/' + esc(e.id) + '"><span class="lamp warn"></span><div class="mr-main"><div>' + esc(e.msg) + '</div><div class="mr-sub mono">' + esc(e.object) + '</div></div><span class="faint mono small">' + fmtAgo(e.ts) + '</span></div>';
-    }).join('') : '<div class="empty" style="padding:16px"><div class="e-title">24h 内无越线事件</div></div>';
-    view.innerHTML = '<div class="view-inner">' + scenarioHead(sys, '指标面', '查询声明表 + mock 曲线（SVG path 自绘）+ 阈值线 + 最近越线事件', '状态') +
-      '<div class="grid" style="grid-template-columns:1fr 320px">' +
-      '<div style="display:grid;gap:14px">' + charts + '</div>' +
-      '<div class="card" style="align-self:start"><div class="card-h"><span class="h-title">最近越线事件（MetricThreshold）</span></div><div class="mini-list">' + thrHtml + '</div></div>' +
+      bodyHtml = '<div class="card"><div class="card-h"><span class="h-title">指标声明清单（/v1/metrics 投影）</span><span class="h-sub">样本计数=数据面在册实数</span></div>' +
+        '<table class="tbl"><thead><tr><th>metric</th><th style="text-align:right">samples</th><th>即席查询（window=1h · avg/max）</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '指标面', '数据面投影实数（TSDB 本体不入 console）· 越线事件=归档行现读', '状态') +
+      '<div class="grid" style="grid-template-columns:1fr 340px">' + bodyHtml +
+      '<div class="card" style="align-self:start"><div class="card-h"><span class="h-title">最近越线事件（MetricThreshold）</span><span class="h-sub">归档窗内 · 系统 scope 过滤</span></div><div class="mini-list">' + thrHtml + '</div></div>' +
       '</div></div>';
+    if (mets.length) hydrateMetricQueries(mets);
   }
-  /* 场景面：docs（tag 过滤完整视图） */
-  function allTags(docs) {
-    var t = [];
-    docs.forEach(function (d) { d.tags.forEach(function (x) { if (t.indexOf(x) < 0) t.push(x); }); });
-    return t.sort();
+  /* 即席查询注水（404=无投影结果如实标注——不冒充零值） */
+  function hydrateMetricQueries(mets) {
+    var stamp = S.route + '|' + S.segs.join('/');
+    mets.slice(0, 12).forEach(function (m2) {
+      ['avg', 'max'].forEach(function (agg) {
+        LIVE.get('v1/metrics/query?metric=' + encodeURIComponent(m2.name) + '&window=1h&agg=' + agg)
+          .then(function (res) {
+            if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+            var cur = $('#mq-' + cssId(m2.name));
+            if (cur) cur.innerHTML += ' <span class="tag mono">' + esc(agg) + ' ' + esc(String(res.value)) + '</span>';
+          }, function () {
+            if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+            var cur = $('#mq-' + cssId(m2.name));
+            if (cur && cur.innerHTML.indexOf('无投影结果') < 0) cur.innerHTML = '<span class="faint small">无投影结果（404=未知聚合或无同键样本——如实标注）</span>';
+          });
+      });
+    });
+  }
+  /* 场景面：docs（E7 真数据换装，§1.14 L43-03/05）——tag 过滤为一等过滤器：
+   * tags=对象正文 spec.metadata.tags（scheme conventions 检索元数据；fallback metadata.tags）
+   * 现读解析（SCN.tagsOf，hydrate 注水，rv 键缓存）；chips=当前面 base 集合实读并集；
+   * 全局 #/docs 与单系统 #/s/:name/docs 同一 paintDocsScreen 同款过滤器（文档与资源同规则）。 */
+  function docBaseRows(scopeSys) {
+    var rows = [];
+    LIVE.state.kinds.forEach(function (kd) {
+      (LIVE.refs(kd.name) || []).forEach(function (o) {
+        if (scopeSys && !(o.scope === scopeSys || o.scope === 'systems/' + scopeSys)) return;
+        rows.push({ kind: o.kind, scope: o.scope || '', name: o.name, resourceVersion: o.resourceVersion });
+      });
+    });
+    rows.sort(function (a, b) { return (a.kind + a.scope + a.name) < (b.kind + b.scope + b.name) ? -1 : 1; });
+    return rows;
+  }
+  function docKey(row) { return row.kind + '/' + (row.scope || '') + '/' + row.name; }
+  function docTagsOfRow(row) { return S.docTags[docKey(row) + '@' + row.resourceVersion] || []; }
+  function docTagsUnion(baseRows) {
+    var u = [];
+    baseRows.forEach(function (r) { docTagsOfRow(r).forEach(function (t) { if (u.indexOf(t) < 0) u.push(t); }); });
+    return u.sort();
+  }
+  function hydrateDocTags(baseRows, done) {
+    var stamp = S.route + '|' + S.segs.join('/');
+    var jobs = baseRows.filter(function (r) { return !S.docTags[docKey(r) + '@' + r.resourceVersion]; });
+    if (!jobs.length) { done(false); return; }
+    Promise.all(jobs.map(function (r) {
+      return LIVE.fetchObject(r.kind, r.scope, r.name).then(function (b) {
+        S.docTags[docKey(r) + '@' + r.resourceVersion] = SCN.tagsOf(b.content);
+      }).catch(function () {
+        // 单对象正文不可读（如 WorkService 单对象读面缺口——L42 挂账）=tag 空集，不放大为整轮退化
+        S.docTags[docKey(r) + '@' + r.resourceVersion] = [];
+      });
+    })).then(function () { if ((S.route + '|' + S.segs.join('/')) === stamp) done(true); },
+      function () { if ((S.route + '|' + S.segs.join('/')) === stamp) done(true); });
   }
   function screenSysDocs(view) {
-    var sys = sysByName(S.params.name);
-    if (!sys) { view.innerHTML = emptyBox('系统不存在', S.params.name); return; }
-    setCrumbs(sysCrumb(sys, [{ label: '文档面' }]));
-    paintDocsScreen(view, sysDocs(sys.name), 's/' + sys.name, 'systems/' + sys.name);
+    LIVE.ensure();
+    var name = S.params.name;
+    if (!LIVE.refByName('ServiceDesc', name)) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      return;
+    }
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '文档面' }]);
+    paintDocsScreen(view, docBaseRows(name), 's/' + encodeURIComponent(name), 'systems/' + name);
   }
   function screenDocsGlobal(view) {
+    LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '文档' }]);
-    paintDocsScreen(view, M.docs, 'overview', '全部 scope（global + systems/*）');
+    paintDocsScreen(view, docBaseRows(null), 'overview', '全部 scope（global + systems/*）');
   }
-  function paintDocsScreen(view, baseDocs, backGo, scopeLabel) {
+  function paintDocsScreen(view, baseRows, backGo, scopeLabel) {
     var f = S.docFilter;
-    var tags = allTags(baseDocs);
-    var kinds = M.DOC_KINDS;
+    var set = treeDraftSet();
+    var kinds = [];
+    baseRows.forEach(function (r) { if (kinds.indexOf(r.kind) < 0) kinds.push(r.kind); });
+    kinds.sort();
+    var tags = docTagsUnion(baseRows);
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>文档面</h1><span class="chip kind">' + esc(scopeLabel) + '</span></div>' +
-      '<div class="dh-sub">tag chips 多选 × kind 过滤 × 草稿过滤 × 搜索 组合生效 · 虚拟滚动 · 共 ' + baseDocs.length + ' 文档对象（文档与资源同规则）</div></div>' +
-      '<div class="dh-actions"><button class="btn primary" data-act="new-goal">+ 新建文档</button>' +
-      (backGo ? '<button class="btn" data-act="go" data-go="' + esc(backGo) + '">← 返回</button>' : '') + '</div></div>' +
+      '<div class="dh-sub">tag chips 多选 × kind × 草稿 × 搜索 组合生效（tag=对象正文 spec.metadata.tags 现读——scheme conventions 检索元数据）· 虚拟滚动 · 共 ' + baseRows.length + ' 对象（文档与资源同规则）</div></div>' +
+      '<div class="dh-actions">' + (backGo ? '<button class="btn" data-act="go" data-go="' + esc(backGo) + '">← 返回</button>' : '') + '</div></div>' +
       '<div class="filter-bar">' +
       '<span class="fchip' + (Object.keys(f.tags).every(function (k) { return !f.tags[k]; }) ? ' on' : '') + '" data-act="doc-tag" data-t="">全部 tags</span>' +
-      tags.map(function (t) { return '<span class="fchip' + (f.tags[t] ? ' on' : '') + '" data-act="doc-tag" data-t="' + esc(t) + '">#' + esc(t) + '</span>'; }).join('') +
+      (tags.length ? tags.map(function (t) { return '<span class="fchip' + (f.tags[t] ? ' on' : '') + '" data-act="doc-tag" data-t="' + esc(t) + '">#' + esc(t) + '</span>'; }).join('')
+        : '<span class="faint small" id="df-tags-note">对象暂无 spec.metadata.tags 声明——tag 过滤器空集（不冒充；声明经 Apply 落库后此处现读）</span>') +
       '</div>' +
       '<div class="filter-bar">' +
-      '<select id="df-kind"><option value="">全部 kind</option>' + kinds.map(function (k) { return '<option>' + k + '</option>'; }).join('') + '</select>' +
+      '<select id="df-kind"><option value="">全部 kind</option>' + kinds.map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('') + '</select>' +
       '<select id="df-draft"><option value="">全部草稿态</option><option value="has">仅未 Apply 草稿 ●</option><option value="none">无草稿</option></select>' +
-      '<input type="search" id="df-q" placeholder="名称 / 内容搜索…" style="width:220px">' +
+      '<input type="search" id="df-q" placeholder="名称 / kind / scope / tag 搜索…" style="width:220px">' +
       '<span class="count-note" id="df-note"></span></div>' +
       '<div id="df-vlist"></div></div>';
     $('#df-kind').value = f.kind; $('#df-draft').value = f.draft; $('#df-q').value = f.q;
-    paintDocsList(baseDocs);
-    $('#df-kind').addEventListener('change', function () { f.kind = this.value; paintDocsList(baseDocs); });
-    $('#df-draft').addEventListener('change', function () { f.draft = this.value; paintDocsList(baseDocs); });
+    var repaintList = function () { paintDocsList(baseRows, set); };
+    repaintList();
+    $('#df-kind').addEventListener('change', function () { f.kind = this.value; repaintList(); });
+    $('#df-draft').addEventListener('change', function () { f.draft = this.value; repaintList(); });
     var deb;
-    $('#df-q').addEventListener('input', function () { var v = this.value; clearTimeout(deb); deb = setTimeout(function () { f.q = v; paintDocsList(baseDocs); }, 160); });
+    $('#df-q').addEventListener('input', function () { var v = this.value; clearTimeout(deb); deb = setTimeout(function () { f.q = v; repaintList(); }, 160); });
+    // tag 现读注水（base 行未解析的并行现读；完成后整屏重渲染——chips 与行 tag 同步现读面）
+    hydrateDocTags(baseRows, function (changed) { if (changed) render(); });
   }
   ACTIONS['doc-tag'] = function (el) {
     var t = el.dataset.t;
     if (!t) S.docFilter.tags = {};
     else S.docFilter.tags[t] = !S.docFilter.tags[t];
-    if (S.route === 'docs') render(); else render();
+    render();
   };
-  function filterDocs(baseDocs) {
+  function filterDocs(baseRows) {
     var f = S.docFilter;
     var sel = Object.keys(f.tags).filter(function (k) { return f.tags[k]; });
-    var ql = f.q.toLowerCase();
-    return baseDocs.filter(function (d) {
-      if (sel.length && !sel.every(function (t) { return d.tags.indexOf(t) >= 0; })) return false;
+    var ql = (f.q || '').toLowerCase();
+    var set = treeDraftSet();
+    return baseRows.filter(function (d) {
+      var tags = docTagsOfRow(d);
+      if (sel.length && !sel.every(function (t) { return tags.indexOf(t) >= 0; })) return false;
       if (f.kind && d.kind !== f.kind) return false;
-      var has = docHasDraft(d.name);
+      var has = !!set[docKey(d)];
       if (f.draft === 'has' && !has) return false;
       if (f.draft === 'none' && has) return false;
-      if (ql && (d.name + ' ' + d.content).toLowerCase().indexOf(ql) < 0) return false;
+      if (ql && (d.name + ' ' + d.kind + ' ' + (d.scope || '') + ' ' + tags.join(' ')).toLowerCase().indexOf(ql) < 0) return false;
       return true;
     });
   }
-  function paintDocsList(baseDocs) {
-    var items = filterDocs(baseDocs);
-    $('#df-note').textContent = items.length + ' / ' + baseDocs.length + ' docs';
+  function paintDocsList(baseRows, set) {
+    var items = filterDocs(baseRows);
+    $('#df-note').textContent = items.length + ' / ' + baseRows.length + ' docs';
     vlist($('#df-vlist'), items, 36, function (d) {
+      var key = docKey(d);
+      var tags = docTagsOfRow(d);
       return '<svg class="ic" style="color:#5b6378"><use href="#cc-i-doc"/></svg>' +
-        '<span class="mono" style="width:230px;font-weight:600">' + esc(d.name) + '</span>' + draftDot(docHasDraft(d.name)) +
+        '<span class="mono" style="width:200px;font-weight:600">' + esc(d.name) + '</span>' + draftDot(set[key]) +
         '<span class="vc"><span class="chip kind">' + esc(d.kind) + '</span></span>' +
-        '<span class="vc" style="width:150px">' + d.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join(' ') + '</span>' +
-        '<span class="vc mono faint" style="width:44px">r' + d.revision + '</span>' +
-        (docHasDraft(d.name) ? '<span class="vc"><span class="chip warn small">● 未 Apply</span></span>' : '<span class="vc faint">—</span>') +
-        '<span class="grow faint">' + esc(d.fieldManager) + ' · ' + fmtAgo(d.updated) + '</span>';
+        '<span class="vc mono faint small" style="width:130px">' + esc(d.scope || '—') + '</span>' +
+        '<span class="vc" style="width:150px">' + tags.map(function (t) { return '<span class="tag">#' + esc(t) + '</span>'; }).join(' ') + '</span>' +
+        '<span class="vc mono faint" style="width:44px">r' + esc(d.resourceVersion) + '</span>' +
+        (set[key] ? '<span class="vc"><span class="chip warn small">● 未 Apply</span></span>' : '<span class="vc faint">—</span>');
     });
     $('#df-vlist').onclick = function (ev) {
       var row = ev.target.closest('.vrow');
       if (!row) return;
       var idx = Math.floor((row.offsetTop + this.scrollTop) / 36);
       var it = items[idx];
-      if (it) go('doc/' + it.name);
+      if (it) go('doc/' + encodeURIComponent(it.kind) + '/' + encodeURIComponent(it.scope || '') + '/' + encodeURIComponent(it.name));
     };
   }
   /* 场景面：permissions */
+  /* ================= 场景面：permissions（E7 真数据换装，console-adoption.md §1.14 L43-04） =================
+   * 权限矩阵：行=Agent 文档面对象（objects 枚举），列=ConnectorOps/Provider/Ref 对象 + 写路径列；
+   * 格=授权来源现读（Agent 声明正文 spec.connectorOps 等挂载行——SCN.mountsOf，溯源=声明行可点）；
+   * Role/Group=文档面枚举（docsRoot 零对象=诚实空态注记——角色面=declared 余量，不冒充矩阵）；
+   * 挂载反查表=ConnectorOps × 挂载者（Agent 声明现读，双可点）。写路径列=声明面缺席如实标注
+   * （Apply 准入=subject role 面 cored admit 判定，Agent 文档面无声明不冒充）。 */
   function screenSysPermissions(view) {
-    var sys = sysByName(S.params.name);
-    if (!sys) { view.innerHTML = emptyBox('系统不存在', S.params.name); return; }
-    setCrumbs(sysCrumb(sys, [{ label: '权限面' }]));
-    var agents = sysAgents(sys.name);
-    var roles = M.roles.filter(function (r) { return r.scope.indexOf(sys.name) >= 0 || r.scope === 'global'; });
-    var cops = M.connectorops;
-    var opsCols = cops.map(function (c) { return c.name; }).concat(['Apply 写路径', 'Status 直写']);
-    function cellFor(name, col) {
-      var a = agentByName(name);
-      var role = roles.filter(function (r) { return r.name === name; })[0];
-      var perms = a ? a.perms : (role ? { connectorops: cops.filter(function (c) { return c.name !== 'gotty-web' || role.name !== 'ci-verify'; }).map(function (c) { return c.name; }), refs: [], providers: ['llm-main'], roles: [role.name] } : null);
-      if (!perms) return ['✗', 'mute'];
-      if (col === 'Apply 写路径') {
-        if (name === 'builtinRoot' || role && role.name === 'approver') return ['部分', 'warn'];
-        return ['✗', 'mute'];
-      }
-      if (col === 'Status 直写') return ['✓', 'ok'];
-      if (perms.connectorops.indexOf(col) >= 0) {
-        var partial = (name === 'dep-1' && col === 'onedev-ci') || (name === 'ci-verify');
-        return [partial ? '部分' : '✓', partial ? 'warn' : 'ok'];
-      }
-      if (role && role.scope === 'global' && name.indexOf('root') >= 0) return ['✓', 'ok'];
-      return ['✗', 'mute'];
+    LIVE.ensure();
+    var name = S.params.name;
+    if (!LIVE.refByName('ServiceDesc', name)) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      return;
     }
-    var rows = agents.map(function (a) { return a.name; }).concat(roles.map(function (r) { return r.name; }));
-    var matrix = '<div class="card"><div class="card-h"><span class="h-title">权限矩阵（行 = agent / role，列 = ConnectorOps / 写路径）</span><span class="h-sub">✓ 全量 · 部分（受 scope/gate 约束） · ✗ 无权限</span></div>' +
-      '<div style="overflow-x:auto;max-height:420px;overflow-y:auto"><table class="tbl"><thead><tr><th style="min-width:140px">agent / role</th>' +
-      opsCols.map(function (c) { return '<th style="min-width:70px">' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      rows.map(function (r) {
-        var isAgent = !!agentByName(r);
-        return '<tr><td class="mono">' + (isAgent ? '<svg class="ic"><use href="#cc-i-bot"/></svg> ' : '<svg class="ic"><use href="#cc-i-key"/></svg> ') + esc(r) + '</td>' +
-        opsCols.map(function (c) {
-          var v = cellFor(r, c);
-          var color = v[1] === 'ok' ? '#4ade80' : v[1] === 'warn' ? '#fbbf24' : 'var(--text-3)';
-          return '<td class="mono" style="color:' + color + ';text-align:center">' + v[0] + '</td>';
-        }).join('') + '</tr>';
-      }).join('') + '</tbody></table></div></div>';
-    var mountRows = roles.map(function (r) {
-      var holders = Object.keys(M.agents).filter(function (a) { return M.agents[a].perms.roles.indexOf(r.name) >= 0; });
-      return '<tr><td class="mono">' + esc(r.name) + '</td><td><span class="path-mono">' + esc(r.scope) + '</span></td><td class="small muted">' + esc(r.desc) + '</td>' +
-        '<td>' + (holders.length ? holders.map(function (h) { return '<span class="lk mono small" data-act="go" data-go="agent/' + esc(h) + '">' + esc(h) + '</span>'; }).join(' ') : '<span class="faint">未挂载</span>') + '</td></tr>';
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '权限面' }]);
+    var agents = LIVE.refs('Agent');
+    var roles = LIVE.refs('Role');
+    var groups = LIVE.refs('Group');
+    var cols = LIVE.refs('ConnectorOps').map(function (o) { return { kind: 'ConnectorOps', name: o.name, scope: o.scope, route: 'connector/' + encodeURIComponent(o.name) }; })
+      .concat(LIVE.refs('Provider').map(function (o) { return { kind: 'Provider', name: o.name, scope: o.scope, route: 'provider/' + encodeURIComponent(o.name) }; }))
+      .concat(LIVE.refs('Ref').map(function (o) { return { kind: 'Ref', name: o.name, scope: o.scope, route: 'ref/' + encodeURIComponent(o.name) }; }));
+    var colKeys = cols.map(function (c) { return c.kind + '/' + c.name; });
+    function cellFor(agentName, col) {
+      var hit = SCN.agentMountsKind(LIVE.docContent('Agent', agentScopeOf(agentName), agentName), col.kind, col.name);
+      return hit;
+    }
+    function agentScopeOf(agentName) {
+      var ref = agents.filter(function (a) { return a.name === agentName; })[0];
+      return ref ? (ref.scope || '') : '';
+    }
+    var matrixRows = agents.map(function (a) { return a.name; });
+    var matrix = '<div class="card"><div class="card-h"><span class="h-title">权限矩阵（行=Agent 文档面，列=ConnectorOps / Provider / Ref 对象）</span>' +
+      '<span class="h-sub">格=授权来源现读（Agent 声明正文挂载行）；—=无挂载声明</span></div>' +
+      '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="min-width:150px">agent</th>' +
+      cols.map(function (c) { return '<th style="min-width:90px" title="' + esc(c.kind + '/' + c.scope + '/' + c.name) + '"><span class="lk mono small" data-act="go" data-go="' + esc(c.route) + '">' + esc(c.name) + '</span><div class="faint tiny">' + esc(c.kind) + '</div></th>'; }).join('') +
+      '<th style="min-width:90px">Apply 写路径</th></tr></thead><tbody>' +
+      (matrixRows.length ? matrixRows.map(function (r) {
+        return '<tr><td class="mono"><svg class="ic"><use href="#cc-i-bot"/></svg> <span class="lk" data-act="go" data-go="agent/' + esc(r) + '">' + esc(r) + '</span></td>' +
+          cols.map(function (c) {
+            var hit = cellFor(r, c);
+            return '<td class="mono" style="color:' + (hit ? '#4ade80' : 'var(--text-3)') + ';text-align:center" title="' +
+              esc(hit ? '授权来源：Agent/' + agentScopeOf(r) + '/' + r + ' 声明正文挂载行 ' + hit.ref : '声明正文无 ' + c.kind + ' 挂载') + '">' + (hit ? '✓' : '—') + '</td>';
+          }).join('') +
+          '<td class="mono" style="color:var(--text-3);text-align:center" title="Apply 准入=subject role 面（cored admit 判定）——Agent 文档面无声明，不冒充">—</td></tr>';
+      }).join('') : '<tr><td colspan="' + (colKeys.length + 2) + '" class="small faint">Agent 对象零在册（文档面）——矩阵空态</td></tr>') +
+      '</tbody></table></div></div>';
+    // 挂载反查表（ConnectorOps × 挂载者——Agent 声明现读，双可点）
+    var copRows = LIVE.refs('ConnectorOps').map(function (c) {
+      var holders = agents.filter(function (a) { return SCN.agentMountsKind(LIVE.docContent('Agent', a.scope || '', a.name), 'ConnectorOps', c.name); });
+      return '<tr><td class="mono"><span class="lk" data-act="go" data-go="connector/' + esc(c.name) + '">' + esc(c.name) + '</span></td>' +
+        '<td class="mono faint small">' + esc(c.scope || '—') + '</td>' +
+        '<td>' + (holders.length ? holders.map(function (h) {
+          return '<span class="lk mono small" data-act="go" data-go="agent/' + esc(h.name) + '">' + esc(h.name) + '</span>';
+        }).join(' ') : '<span class="faint">未挂载</span>') + '</td></tr>';
     }).join('');
-    var sens = [
-      { op: 'deploy-system prod 段发布', gate: 'ask（高危门禁）', who: 'dep-1 提案 → root 批' },
-      { op: 'global scope 文档 Apply', gate: 'approver role', who: 'root' },
-      { op: '跨系统提案（默认进对方待审区）', gate: '对方 workflow/人审', who: 'dev-1 → deploy-system（ap-4）' },
-      { op: 'Status 回写（机器直写）', gate: 'fieldManager 白名单', who: 'workflow/* · agent 回写' }
-    ];
-    var sensRows = sens.map(function (x) {
-      return '<tr><td>' + esc(x.op) + '</td><td><span class="chip warn small">' + esc(x.gate) + '</span></td><td class="small muted">' + esc(x.who) + '</td></tr>';
-    }).join('');
-    view.innerHTML = '<div class="view-inner">' + scenarioHead(sys, '权限面', 'role 挂载表 + 权限矩阵 + 高敏操作（上级委派=token 整包下发，子 ⊆ 父）', 'Agent') +
+    var rolesHtml;
+    if (!roles.length && !groups.length) {
+      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 文档面</span></div><div class="card-b">' +
+        '<div class="empty" style="padding:16px"><div class="e-title">Role / Group 对象零在册（docsRoot）</div>' +
+        '<div class="small faint">角色面=declared 余量（docsRoot 未建 Role/Group 对象）——矩阵行只呈现 Agent 声明面现读，不冒充 role 授权</div></div></div></div>';
+    } else {
+      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 文档面</span></div><table class="tbl"><thead><tr><th>kind</th><th>name</th><th>scope</th><th>rv</th></tr></thead><tbody>' +
+        roles.map(function (r) { return '<tr><td class="chip kind">Role</td><td class="mono"><span class="lk" data-act="go" data-go="role/' + esc(r.name) + '">' + esc(r.name) + '</span></td><td class="mono">' + esc(r.scope || '—') + '</td><td class="mono">r' + esc(r.resourceVersion) + '</td></tr>'; }).join('') +
+        groups.map(function (g) { return '<tr><td class="chip kind">Group</td><td class="mono">' + esc(g.name) + '</td><td class="mono">' + esc(g.scope || '—') + '</td><td class="mono">r' + esc(g.resourceVersion) + '</td></tr>'; }).join('') +
+        '</tbody></table></div>';
+    }
+    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '权限面', '行=Agent 文档面 · 列=ConnectorOps/Provider/Ref · 格=声明正文挂载行现读（溯源全可点）· Role/Group=文档面枚举', 'Agent') +
       '<div class="grid" style="grid-template-columns:1fr">' + matrix +
-      '<div class="card"><div class="card-h"><span class="h-title">Role 挂载表</span></div><table class="tbl"><thead><tr><th>role</th><th>scope</th><th>说明</th><th>挂载者</th></tr></thead><tbody>' + mountRows + '</tbody></table></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">高敏操作</span></div><table class="tbl"><thead><tr><th>操作</th><th>门禁</th><th>路径</th></tr></thead><tbody>' + sensRows + '</tbody></table></div>' +
-      '</div></div>';
+      '<div class="card"><div class="card-h"><span class="h-title">挂载反查（ConnectorOps × 挂载者——声明正文现读）</span></div>' +
+      '<table class="tbl"><thead><tr><th>ConnectorOps</th><th>scope</th><th>挂载者（Agent 文档面）</th></tr></thead><tbody>' +
+      (copRows || '<tr><td colspan="3" class="small faint">ConnectorOps 零在册</td></tr>') + '</tbody></table></div>' +
+      rolesHtml + '</div></div>';
   }
   /* ================= 屏 5：Workflow 运行管理（E3：cored 读面真数据，console-ui.md 屏幕 5） =================
    * 数据来源（无双源红线）：列表/详情=GET /v1/workflows 聚合投影（三源同投，cored-bridge.md §2
@@ -4968,9 +5123,31 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     go('chat/' + el.dataset.agent);
   };
 
-  /* ================= 屏 9：事件流（E6 真数据换装，console-adoption.md §1.13） =================
-   * 数据源=cored /v1/events 归档投影（LIVE 快照 limit=100——千级虚拟滚动=E7 余量如实标注）；
-   * 三泳道=eventLaneOf 类型族映射；聚合面板=归档窗内实数（成功率/token=n/a 不冒充）。 */
+  /* ================= 屏 9：事件流（E6 真数据换装；E7 全局/场景面共用核，console-adoption.md §1.13/§1.14） =================
+   * 数据源=cored /v1/events 归档窗投影（LIVE 快照 limit=500 单窗）+ until 游标滚动加载更早页
+   * （eventId 去重合并；页行数<500=到底 exhausted 如实标注）。
+   * 三泳道=eventLaneOf 类型族映射；聚合面板=归档窗内实数（成功率/token=n/a 不冒充）；
+   * 过滤条全局/单系统同款（screenEventsCore 同一函数同一状态）；合成压测窗=客户端合成展示层
+   * （syn- 前缀+「合成」tag+不可点，不入归档不入聚合——§1.14 裁决，KI-001 审计账保真）。 */
+  function evWindowOf(key) {
+    if (!S.evWin[key]) S.evWin[key] = { rows: null, exhausted: false, busy: false };
+    return S.evWin[key];
+  }
+  function evRowsOf(win) { return win.rows || (LIVE.state.events || []); }
+  function evLoadOlder(win) {
+    if (win.busy || win.exhausted || S.evSyn.on) return Promise.resolve(false);
+    var rows = evRowsOf(win);
+    var last = rows[rows.length - 1];
+    if (!last || last.synthetic || !last.ts) return Promise.resolve(false);
+    win.busy = true;
+    return LIVE.eventsPage(String(last.ts)).then(function (body) {
+      var page = body.events || [];
+      win.rows = SCN.mergeEvents(rows, page);
+      win.exhausted = page.length < SCN.EV_PAGE_LIMIT;
+      win.busy = false;
+      return true;
+    }, function () { win.busy = false; return false; });
+  }
   function eventLaneOf(type) {
     if (type === 'DocApplied') return 'phase';                      // 状态变迁=对象 rv 前进
     if (type === 'ExternalChanged' || type === 'MetricThreshold' ||
@@ -4978,96 +5155,150 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     return 'event';                                                  // 事件流=其余（缺省不丢行）
   }
   var LANE_VIEW = { event: { label: '事件流', color: '#7fb0f9' }, phase: { label: '状态变迁', color: '#a78bfa' }, data: { label: '数据事件', color: '#22c55e' } };
-  function screenEvents(view) {
-    LIVE.ensure();
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '事件流' }]);
+  /* 过滤条=全局/单系统同款（同一渲染函数：type chips + 压测窗 / level + range + lane + q + 加载更早） */
+  function evFilterBarHtml(types) {
     var f = S.evFilter;
-    var evs = LIVE.state.events || [];
-    var types = [];
-    evs.forEach(function (e) { if (types.indexOf(e.type) < 0) types.push(e.type); });
-    types.sort();
-    var apN = (LIVE.state.events || []).filter(function (e) { return e.type === 'ApprovalNeeded'; }).length;
-    var dead = evs.length ? Math.round(evs.filter(function (e) { return String(e.routedTo || '').indexOf('dead-letter') >= 0; }).length * 1000 / evs.length) / 10 : 0;
-    var typeCount = {};
-    evs.forEach(function (e) { typeCount[e.type] = (typeCount[e.type] || 0) + 1; });
-    var top5 = Object.keys(typeCount).sort(function (a, b) { return typeCount[b] - typeCount[a]; }).slice(0, 5);
-    view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>事件流</h1><span class="chip kind">三泳道混排 · 归档窗 ' + evs.length + ' 条</span></div>' +
-      '<div class="dh-sub">Event / 状态变迁 / 数据事件 · 点任意一条跳相关对象（event→run→workflow→doc 链路）。数据源=event_log 归档投影（/v1/events limit=100；千级虚拟滚动=E7 余量）。</div></div></div>' +
-      '<div class="grid" style="grid-template-columns:1fr 300px">' +
-      '<div>' +
-      '<div class="filter-bar"><svg class="ic" style="color:var(--text-3)"><use href="#cc-i-filter"/></svg>' +
+    return '<div class="filter-bar"><svg class="ic" style="color:var(--text-3)"><use href="#cc-i-filter"/></svg>' +
       '<span class="fchip' + (!Object.keys(f.kinds).some(function (k) { return f.kinds[k]; }) ? ' on' : '') + '" data-act="ev-kind" data-k="">全部类型</span>' +
-      types.map(function (k) { return '<span class="fchip' + (f.kinds[k] ? ' on' : '') + '" data-act="ev-kind" data-k="' + esc(k) + '">' + esc(k) + '</span>'; }).join('') + '</div>' +
+      types.map(function (k) { return '<span class="fchip' + (f.kinds[k] ? ' on' : '') + '" data-act="ev-kind" data-k="' + esc(k) + '">' + esc(k) + '</span>'; }).join('') +
+      '<span class="fchip' + (S.evSyn.on ? ' on' : '') + '" data-act="ev-syn" title="客户端合成压测窗（展示层不入归档——千级虚拟滚动验收载荷，§1.14 裁决）">压测窗×' + S.evSyn.n + '</span></div>' +
       '<div class="filter-bar">' +
       '<select id="ev-level"><option value="">全部级别</option><option>info</option><option>warn</option><option>error</option><option>fatal</option></select>' +
       '<select id="ev-range">' + M.TIME_RANGES.map(function (r) { return '<option value="' + r.id + '">' + r.label + '</option>'; }).join('') + '</select>' +
       '<select id="ev-lane"><option value="">全部泳道</option><option value="event">事件流</option><option value="phase">状态变迁</option><option value="data">数据事件</option></select>' +
       '<input type="search" id="ev-q" placeholder="对象/类型搜索…" style="width:200px">' +
-      '<span class="count-note" id="ev-count-note"></span></div>' +
-      '<div id="ev-vlist2"></div></div>' +
-      '<div style="display:grid;gap:12px;align-self:start">' +
-      '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span><span class="h-sub">归档窗内实数</span></div><div class="card-b" style="display:grid;gap:10px">' +
-      '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (apN ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + apN + '</span></span></div>' +
-      '<div class="kv"><span class="k">死信率</span><span class="v mono">' + dead + '%</span></div>' +
-      '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">n/a</span><span class="small faint">run 终态事件未落归档（declared 余量，不冒充）</span></div>' +
-      '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据面余量</span></div>' +
-      '<div class="kv"><span class="k">类型分布</span><span class="v small">' + (top5.length ? top5.map(function (t) { return '<span class="tag mono">' + esc(t) + '×' + typeCount[t] + '</span>'; }).join(' ') : '<span class="faint">—</span>') + '</span></div>' +
-      '</div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">泳道图例</span></div><div class="card-b small faint">' +
-      Object.keys(LANE_VIEW).map(function (k) { return '<div style="margin:3px 0"><span class="tag" style="color:' + LANE_VIEW[k].color + ';border-color:' + LANE_VIEW[k].color + '44">' + LANE_VIEW[k].label + '</span> ' +
-        (k === 'phase' ? 'DocApplied（对象 rv 前进）' : k === 'data' ? 'ExternalChanged / MetricThreshold / DriftFixed / ReconcileTick' : '其余（ApprovalNeeded / Escalate / HeartbeatLost…）') + '</div>'; }).join('') + '</div></div>' +
-      '</div></div></div>';
-    $('#ev-level').value = f.level; $('#ev-range').value = f.range; $('#ev-q').value = (f.q || '');
-    if (f.lane) $('#ev-lane').value = f.lane;
-    paintGlobalEvents();
-    $('#ev-level').addEventListener('change', function () { f.level = this.value; paintGlobalEvents(); });
-    $('#ev-range').addEventListener('change', function () { f.range = this.value; paintGlobalEvents(); });
-    $('#ev-lane').addEventListener('change', function () { f.lane = this.value; paintGlobalEvents(); });
-    var deb;
-    $('#ev-q').addEventListener('input', function () { var v = this.value; clearTimeout(deb); deb = setTimeout(function () { f.q = v; paintGlobalEvents(); }, 160); });
+      '<button class="btn sm" data-act="ev-older" id="ev-older-btn">' + (S.evSyn.on ? '合成窗不停靠游标' : '加载更早（until 游标）') + '</button>' +
+      '<span class="count-note" id="ev-count-note"></span></div>';
   }
-  function paintGlobalEvents() {
+  function evFiltered(base, sysName) {
     var f = S.evFilter;
     var range = byId(M.TIME_RANGES, 'id', f.range) || M.TIME_RANGES[2];
     var kinds = Object.keys(f.kinds).filter(function (k) { return f.kinds[k]; });
     var ql = (f.q || '').toLowerCase();
-    var evs = LIVE.state.events || [];
-    var items = evs.filter(function (e) {
+    var rows = S.evSyn.on ? SCN.synEvents(S.evSyn.n) : base;
+    return rows.filter(function (e) {
+      if (sysName && !S.evSyn.on && !SCN.evInScope(e, sysName)) return false;
       if (kinds.length && kinds.indexOf(e.type) < 0) return false;
       if (f.level && e.level !== f.level) return false;
       if (f.lane && eventLaneOf(e.type) !== f.lane) return false;
       var t = Date.parse(e.ts || '');
-      if (!isNaN(t) && (Date.now() - t) > range.min * 60000) return false;
+      if (!S.evSyn.on && !isNaN(t) && (Date.now() - t) > range.min * 60000) return false;
       if (ql && ((e.involved || '') + ' ' + e.type + ' ' + (e.source || '')).toLowerCase().indexOf(ql) < 0) return false;
       return true;
     });
+  }
+  function evRowHtml(e) {
+    var dot = e.level === 'fatal' || e.level === 'error' ? 'var(--danger)' : e.level === 'warn' ? 'var(--warn)' : 'var(--accent)';
+    var lane = LANE_VIEW[eventLaneOf(e.type)] || LANE_VIEW.event;
+    return '<span class="vc" style="width:8px;height:8px;border-radius:50%;background:' + dot + '"></span>' +
+      '<span class="vc mono faint" style="width:52px">' + esc(String(e.ts || '').slice(11, 19)) + '</span>' +
+      '<span class="vc"><span class="tag" style="color:' + lane.color + ';border-color:' + lane.color + '44">' + lane.label + '</span></span>' +
+      '<span class="vc mono" style="width:130px;color:' + lane.color + '">' + esc(e.type) + '</span>' +
+      '<span class="vc mono faint" style="width:190px;overflow:hidden;text-overflow:ellipsis">' + esc(e.involved || '—') + '</span>' +
+      '<span class="grow faint small mono">' + esc(String(e.dedupKey || '').slice(0, 60)) + '</span>' +
+      (e.synthetic ? '<span class="vc"><span class="tag" style="color:var(--text-3)">合成</span></span>' : '') +
+      '<span class="vc chip mute small">' + esc(e.level) + '</span>';
+  }
+  function paintEvRows(container, base, sysName, win) {
+    var items = evFiltered(base, sysName);
     var note = $('#ev-count-note');
-    if (note) note.textContent = items.length + ' / ' + evs.length + ' events';
-    vlist($('#ev-vlist2'), items, 36, function (e) {
-      var dot = e.level === 'fatal' || e.level === 'error' ? 'var(--danger)' : e.level === 'warn' ? 'var(--warn)' : 'var(--accent)';
-      var lane = LANE_VIEW[eventLaneOf(e.type)] || LANE_VIEW.event;
-      return '<span class="vc" style="width:8px;height:8px;border-radius:50%;background:' + dot + '"></span>' +
-        '<span class="vc mono faint" style="width:52px">' + esc(String(e.ts || '').slice(11, 19)) + '</span>' +
-        '<span class="vc"><span class="tag" style="color:' + lane.color + ';border-color:' + lane.color + '44">' + lane.label + '</span></span>' +
-        '<span class="vc mono" style="width:130px;color:' + lane.color + '">' + esc(e.type) + '</span>' +
-        '<span class="vc mono faint" style="width:190px;overflow:hidden;text-overflow:ellipsis">' + esc(e.involved || '—') + '</span>' +
-        '<span class="grow faint small mono">' + esc(String(e.dedupKey || '').slice(0, 60)) + '</span>' +
-        '<span class="vc chip mute small">' + esc(e.level) + '</span>';
+    if (note) note.textContent = S.evSyn.on
+      ? '合成压测窗 ' + items.length + ' 行（客户端合成展示层——不入归档不入聚合）· 真实窗 ' + base.length + ' 行'
+      : items.length + ' / ' + base.length + ' events（归档窗）' + (win && win.exhausted ? ' · 游标到底' : '');
+    vlist(container, items, 36, evRowHtml, {
+      onLoadMore: function () {
+        return evLoadOlder(win).then(function (appended) {
+          if (appended) {
+            var fresh = evFiltered(evRowsOf(win), sysName);
+            items.length = 0;
+            fresh.forEach(function (e) { items.push(e); });
+          }
+          return appended;
+        });
+      },
+      exhausted: function () { return win.exhausted || S.evSyn.on; }
     });
-    $('#ev-vlist2').onclick = function (ev) {
+    container.onclick = function (ev) {
       var row = ev.target.closest('.vrow');
       if (!row) return;
       var idx = Math.floor((row.offsetTop + this.scrollTop) / 36);
       var it = items[idx];
-      if (it) go('event/' + encodeURIComponent(it.eventId));
+      if (it && !it.synthetic) go('event/' + encodeURIComponent(it.eventId));
     };
+    return items;
   }
+  /* 全局（sysName=null）与场景面（sysName=系统名）同一屏核——过滤条/行渲染/游标加载全同款 */
+  function screenEventsCore(view, sysName) {
+    LIVE.ensure();
+    var isSys = !!sysName;
+    if (isSys && !LIVE.refByName('ServiceDesc', sysName)) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', sysName) + '</div>';
+      return;
+    }
+    if (isSys) setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: sysName, go: 's/' + encodeURIComponent(sysName) }, { label: '事件面' }]);
+    else setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '事件流' }]);
+    var win = evWindowOf(isSys ? 'sys:' + sysName : 'global');
+    var base = evRowsOf(win);
+    var scoped = isSys ? base.filter(function (e) { return SCN.evInScope(e, sysName); }) : base;
+    var types = [];
+    scoped.forEach(function (e) { if (types.indexOf(e.type) < 0) types.push(e.type); });
+    types.sort();
+    var apN = base.filter(function (e) { return e.type === 'ApprovalNeeded'; }).length;
+    var dead = base.length ? Math.round(base.filter(function (e) { return String(e.routedTo || '').indexOf('dead-letter') >= 0; }).length * 1000 / base.length) / 10 : 0;
+    var typeCount = {};
+    base.forEach(function (e) { typeCount[e.type] = (typeCount[e.type] || 0) + 1; });
+    var top5 = Object.keys(typeCount).sort(function (a, b) { return typeCount[b] - typeCount[a]; }).slice(0, 5);
+    var head = isSys
+      ? scenarioHead({ name: sysName }, '事件面', '归档窗真数据（involved scope 过滤）· 过滤条=全局事件流同款 · until 游标滚动加载更早页 · 行点击进事件详情', '事件')
+      : '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>事件流</h1><span class="chip kind">三泳道混排 · 归档窗 ' + base.length + ' 条</span></div>' +
+        '<div class="dh-sub">Event / 状态变迁 / 数据事件 · 点任意一条跳相关对象（event→run→workflow→doc 链路）。数据源=event_log 归档投影（/v1/events limit=500 + until 游标滚动加载）。</div></div></div>';
+    var sidePanel = '';
+    if (!isSys) {
+      sidePanel = '<div style="display:grid;gap:12px;align-self:start">' +
+        '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span><span class="h-sub">归档窗内实数</span></div><div class="card-b" style="display:grid;gap:10px">' +
+        '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (apN ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + apN + '</span></span></div>' +
+        '<div class="kv"><span class="k">死信率</span><span class="v mono">' + dead + '%</span></div>' +
+        '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">n/a</span><span class="small faint">run 终态事件未落归档（declared 余量，不冒充）</span></div>' +
+        '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据面余量</span></div>' +
+        '<div class="kv"><span class="k">类型分布</span><span class="v small">' + (top5.length ? top5.map(function (t) { return '<span class="tag mono">' + esc(t) + '×' + typeCount[t] + '</span>'; }).join(' ') : '<span class="faint">—</span>') + '</span></div>' +
+        '</div></div>' +
+        '<div class="card"><div class="card-h"><span class="h-title">泳道图例</span></div><div class="card-b small faint">' +
+        Object.keys(LANE_VIEW).map(function (k) { return '<div style="margin:3px 0"><span class="tag" style="color:' + LANE_VIEW[k].color + ';border-color:' + LANE_VIEW[k].color + '44">' + LANE_VIEW[k].label + '</span> ' +
+          (k === 'phase' ? 'DocApplied（对象 rv 前进）' : k === 'data' ? 'ExternalChanged / MetricThreshold / DriftFixed / ReconcileTick' : '其余（ApprovalNeeded / Escalate / HeartbeatLost…）') + '</div>'; }).join('') + '</div></div>' +
+        '</div>';
+    }
+    view.innerHTML = '<div class="view-inner">' + head +
+      '<div class="grid" style="grid-template-columns:' + (isSys ? '1fr' : '1fr 300px') + '">' +
+      '<div>' + evFilterBarHtml(types) + '<div id="ev-vlist2"></div></div>' + sidePanel + '</div></div>';
+    var f = S.evFilter;
+    $('#ev-level').value = f.level; $('#ev-range').value = f.range; $('#ev-q').value = (f.q || '');
+    if (f.lane) $('#ev-lane').value = f.lane;
+    var listEl = $('#ev-vlist2');
+    var repaintList = function () { paintEvRows(listEl, base, sysName, win); };
+    repaintList();
+    $('#ev-level').addEventListener('change', function () { f.level = this.value; repaintList(); });
+    $('#ev-range').addEventListener('change', function () { f.range = this.value; repaintList(); });
+    $('#ev-lane').addEventListener('change', function () { f.lane = this.value; repaintList(); });
+    var deb;
+    $('#ev-q').addEventListener('input', function () { var v = this.value; clearTimeout(deb); deb = setTimeout(function () { f.q = v; repaintList(); }, 160); });
+  }
+  function screenEvents(view) { screenEventsCore(view, null); }
   ACTIONS['ev-kind'] = function (el) {
     var k = el.dataset.k;
     if (!k) S.evFilter.kinds = {};
     else S.evFilter.kinds[k] = !S.evFilter.kinds[k];
     render();
+  };
+  /* E7：合成压测窗 toggle（人点为准——客户端合成展示层，不入归档不入聚合，§1.14 裁决） */
+  ACTIONS['ev-syn'] = function () {
+    S.evSyn.on = !S.evSyn.on;
+    render();
+  };
+  /* E7：until 游标显式翻页（滚动近底自动加载为主路径，按钮=短列表兜底入口） */
+  ACTIONS['ev-older'] = function () {
+    var key = S.route === 'events' ? 'global' : 'sys:' + (S.params.name || '');
+    var win = evWindowOf(key);
+    evLoadOlder(win).then(function (appended) { if (appended) render(); });
   };
 
   /* 事件详情 */
@@ -5284,10 +5515,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
     }).join('');
     openModal('<div class="modal-h"><span class="m-title">关于本原型</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
       '<div class="modal-b"><div class="settings-cards">' +
-      '<div class="set-card"><div class="set-card-h">说明</div><div class="set-card-sub">本页为前端交互原型（mock 数据）</div>' +
+      '<div class="set-card"><div class="set-card-h">说明</div><div class="set-card-sub">core console v2（E0–E7 全收口——渲染数据全部来自 cored 读面 + ops DB）</div>' +
       '<div class="set-row"><span class="sr-label">设计文档</span><span class="sr-val mono">core_system_instance/runtime/console-ui.md</span></div>' +
       '<div class="set-row"><span class="sr-label">概念对齐</span><span class="sr-val mono">core_design/concepts/apply.md · workflow.md</span></div>' +
-      '<div class="set-row"><span class="sr-label">数据</span><span class="sr-val">全部本地 mock（' + M.docs.length + ' docs · ' + M.events.length + ' events · ' + M.transitions.length + ' 流转行），零后端零外链</span></div></div>' +
+      '<div class="set-row"><span class="sr-label">数据</span><span class="sr-val">cored 读面（/v1/* 只读投影 + Apply/草稿写通路）——渲染数据无双源，console 不自建持久状态</span></div></div>' +
       '<div class="set-card"><div class="set-card-h">核心语义</div>' +
       '<div class="set-row"><span class="sr-label">Apply</span><span class="sr-val">编辑与发布分离：改动先进草稿，Apply 才落库（Revision+1 · DocApplied 必发）；LLM 只提案，Apply 必须人点</span></div>' +
       '<div class="set-row"><span class="sr-label">一切皆文档</span><span class="sr-val">文档与资源同规则渲染（同 kind 徽章 / revision / 草稿圆点 / 状态灯）</span></div>' +
@@ -5297,21 +5528,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   }
   ACTIONS['open-help'] = function () { openHelp(); };
 
-  /* ================= workflow spec docs 兜底 ================= */
-  function ensureWorkflowDocs() {
-    M.workflows.forEach(function (w) {
-      var dn = w.specDoc || w.name + '-spec';
-      if (docByName(dn)) { w.specDoc = dn; return; }
-      M.docs.push({
-        name: dn, kind: 'Workflow', scope: w.scope, revision: 2, generation: 2, status: 'Active',
-        updated: ago2(600), fieldManager: 'builtinRoot', ownerRefs: [w.name], tags: ['spec', 'impl'],
-        draft: null, draftSource: null, machineWrite: false,
-        history: [{ rev: 2, author: 'builtinRoot', ts: ago2(600), summary: 'builtin spec 固化为本 scope 文档（可 override）' }, { rev: 1, author: 'builtinRoot', ts: ago2(3000), summary: '初版' }],
-        content: 'apiVersion: core/v1\nkind: Workflow\nmetadata:\n  name: ' + w.name + '\n  scope: ' + w.scope + (w.builtin ? '   # builtin（可同名 override）' : '') + '\nspec:\n  enabled: ' + w.enabled + '\n  services:\n    involved: [' + w.services.involved.join(', ') + ']\n    mode: ' + w.services.mode + '\n    llm: {provider: ' + w.services.llm.provider + ', model: ' + w.services.llm.model + '}\n  dataflow:\n    inputs:\n      - events: [' + (w.dataflow.inputs[0].events || ['ExternalChanged']).join(', ') + ']\n    outputs:\n      - status: self\n        notify: [bind-role]\n  triggers: ' + w.triggers + '\n  phases: [' + M.FSM.join(', ') + ', ' + M.FSM_ABNORMAL.join(', ') + ']\n  brakes: ' + w.brakes + '\n  regression: ' + w.regression + '\n  onEscalate: ' + w.onEscalate
-      });
-      w.specDoc = dn;
-    });
-  }
+  /* E7 收口清扫：workflow spec docs 兜底 mock 播种摘除（boot 不再向 M.docs 推 mock 文档——
+   * 文档面唯一来源=cored objects 枚举）。 */
   function ago2(min) { return new Date(Date.now() - min * 60000); }
 
   /* ================= 路由注册 & 启动 ================= */
@@ -5345,7 +5563,6 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   route('approvals', screenApprovals);
 
   function boot() {
-    ensureWorkflowDocs();
     // 侧栏折叠 / 帮助 / 铃铛 / 搜索
     $('#btn-side-collapse').addEventListener('click', toggleSide);
     $('#side-rail').addEventListener('click', toggleSide);

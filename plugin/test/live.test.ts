@@ -15,7 +15,9 @@ test('live 层在 bundle：/core-console/api 代理前缀 + __CC.live 挂载', (
   assert.ok(SRC.includes('/core-console/api'), 'live 层必须经宿主代理路由（同源 fetch）')
   assert.ok(SRC.includes('__CC.live = {'), 'live 层挂 __CC.live')
   assert.ok(SRC.includes("jget('v1/scheme/kinds')"), 'scheme kinds 装载在册')
-  assert.ok(SRC.includes("jget('v1/events?limit=100')"), '事件归档读面在册（Welcome 最近重要事件持久源）')
+  assert.ok(SRC.includes("jget('v1/events?limit=500')"), '事件归档读面在册（E7 千级窗收敛口径——limit≤500 防拖库同值）')
+  assert.ok(SRC.includes("function eventsPage"), 'until 游标翻页通路在册（E7 向后分页）')
+  assert.ok(liveSrc.includes("'&until='"), 'eventsPage 游标参数在册（严格早于——半开窗分页）')
 })
 
 test('live 层写纪律（E3 起）：写方法=apply() POST /core-console/apply（宿主转发 cored 唯一写入口，主体宿主注入）+ drafts 弃稿 DELETE（E6 驳回=弃稿）；零其他写方法', () => {

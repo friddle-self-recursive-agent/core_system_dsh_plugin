@@ -68,6 +68,12 @@
       });
   }
 
+  /** 事件窗向后翻页（E7 虚拟滚动大列表：until 游标=严格早于，半开窗 [since,until)——
+   *  cored v0.39 读面六参；limit=500 收敛口径（opslog.MaxEventLimit 同值）；返回 {count,events}）。 */
+  function eventsPage(until) {
+    return jget('v1/events?limit=500' + (until ? '&until=' + encodeURIComponent(until) : ''));
+  }
+
   /** 草稿弃稿（E6 审批驳回=弃稿：DELETE /core-console/drafts/{kind}/{name}?scope=
    *  ——写路径仍唯一经宿主路由；零文档面动作，不发明反向写路径）。 */
   function draftDelete(kind, name, scope) {
@@ -138,7 +144,7 @@
           jget('v1/workflows/runs').then(function (r) { state.runs = r.runs || []; state.runMeta = r; }),
           jget('v1/workflows').then(function (r) { state.wfAgg = r; }),
           jget('v1/triggers').then(function (r) { state.triggers = r; }),
-          jget('v1/events?limit=100').then(function (r) { state.events = r.events || []; }),
+          jget('v1/events?limit=500').then(function (r) { state.events = r.events || []; }),
           jget('v1/drafts').then(function (r) { state.drafts = r.drafts || []; }),
           jget('v1/notifications/deliveries').then(function (r) { state.deliveries = r; }).catch(function () { state.deliveries = null; }),
           jget('v1/agents/wakes').then(function (r) { state.wakes = r; }).catch(function () { state.wakes = null; }),
@@ -193,6 +199,7 @@
     apply: apply,
     draftDelete: draftDelete,
     comm: comm,
+    eventsPage: eventsPage,
     get: jget,
     refs: refList,
     docContent: docContent,
