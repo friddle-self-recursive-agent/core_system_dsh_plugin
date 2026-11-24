@@ -113,3 +113,12 @@ test('R-6 静态面：授权面 Role/Group 现读 + Role 授权矩阵（console-
   assert.ok(appSrc.includes('绑定 role（user→group→role'), 'group→role 绑定反查在册（permission.md 骨架 3）')
   assert.ok(appSrc.includes('Role / Group 对象零在册'), '零对象诚实空态保留（零在册分支不删——docsRoot 零对象时不冒充）')
 })
+
+test('R-7 静态面：执行绑定 chip（决策面 execution 投影——console-adoption.md §1.21 L50-07 测试核）', () => {
+  assert.ok(appSrc.includes('function wfExecChip'), 'wfExecChip 在册（bound 骨架/unbound 三态渲染核）')
+  assert.ok(appSrc.includes("ex.state === 'bound'"), 'bound 判定在册（可点落 ConnectorOps 编辑器）')
+  assert.ok(appSrc.includes('>unbound</span>'), 'unbound warn chip 在册（connector.md 规则 6 缺口可见不静默）')
+  assert.ok(appSrc.includes('apply 即实现骨架物化'), '骨架=物化面注记在册（实现代码=apply-workflow agent 余量口径）')
+  assert.ok(appSrc.includes('<th>执行绑定</th>'), 'workflows 列表「执行绑定」列在册')
+  assert.ok(appSrc.includes("wfExecChip(row.execution)"), '详情头/配置 tab 执行绑定 chip 复用在册')
+})

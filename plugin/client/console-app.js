@@ -1658,6 +1658,19 @@
       encodeURIComponent(o.scope) + '/' + encodeURIComponent(name) + '" title="对象详情（本体/override 同构）">' +
       esc(o.scope) + ' r' + o.resourceVersion + '</span>';
   }
+  // 执行绑定 chip（v0.49 R-7——workflow-runtime.md §11.1 决策面 execution 投影；connector.md 规则 6 缺口不静默）：
+  // bound+实现=ok chip 可点落 ConnectorOps 编辑器；bound+skeleton=骨架（实现代码未落）mute chip；
+  // unbound=warn chip（缺同名 ConnectorOps 对象——缺口可见）；execution 缺席=—（面缺省不冒充）。
+  function wfExecChip(ex) {
+    if (!ex || !ex.state) return '<span class="faint small" title="执行绑定面缺席（旧代/枚举失败——不冒充）">—</span>';
+    if (ex.state === 'bound') {
+      var tt = '执行绑定：ConnectorOps/' + ex.connectorScope + '/' + ex.connector + (ex.skeleton
+        ? '（骨架=apply 即实现物化面；实现代码=apply-workflow agent 余量）' : '（实现已在册）');
+      return '<span class="chip click ' + (ex.skeleton ? 'mute' : 'ok') + ' small" data-act="go" data-go="connector/' +
+        encodeURIComponent(ex.connector) + '" title="' + tt + '">' + (ex.skeleton ? '骨架·' : '') + esc(ex.connector) + '</span>';
+    }
+    return '<span class="chip warn small" title="未绑定：缺 ' + esc(ex.connector || '(同名)') + ' ConnectorOps 对象——workflow apply 即实现骨架物化（apply-workflow agent 写实现；缺口可见不静默）">unbound</span>';
+  }
   function involvedDocChip(involved) {
     var segs = String(involved || '').split('/');
     if (segs.length >= 3) {
@@ -1757,15 +1770,16 @@
           '<td class="mono" style="font-weight:650">' + esc(w.name) + ' <span class="chip mute tiny" style="font-size:9px">' + esc(w.specSource || 'builtin') + '</span></td>' +
           '<td>' + scopeCell + '</td>' +
           '<td>' + switchCell + '</td>' +
+          '<td>' + wfExecChip(w.execution) + '</td>' +
           '<td>' + (w.latest ? runStatusChip(w.latest.status, w.latest.phase) : '<span class="faint small">无现势 run</span>') + '</td>' +
           '<td class="mono num">' + w.runsTotal + ' <span class="faint">/ ' + w.runs24h + 'h</span></td>' +
           '<td><span class="faint small" title="成功率不投影：run 终态事件未落归档（declared 余量）——n/a 不冒充">n/a</span></td>' +
           '<td class="mono faint">' + (w.latest ? fmtAgo(new Date(w.latest.startedAt)) : '—') + '</td>' +
           '<td style="max-width:280px">' + docsChips + '</td></tr>';
       }).join('');
-      inner = '<div class="card"><table class="tbl"><thead><tr><th>名称</th><th>生效 scope</th><th>启用 (=Apply)</th><th>当前相位</th>' +
+      inner = '<div class="card"><table class="tbl"><thead><tr><th>名称</th><th>生效 scope</th><th>启用 (=Apply)</th><th>执行绑定</th><th>当前相位</th>' +
         '<th>运行次数 总/24h</th><th>成功率</th><th>最近运行</th><th>涉及文档</th></tr></thead><tbody>' + (rowsHtml || '') + '</tbody></table></div>' +
-        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）</div>';
+        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）；执行绑定=同名/spec.connector 覆写 ConnectorOps（apply 即实现骨架物化——unbound=缺口可见）</div>';
     }
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>Workflows</h1>' +
@@ -1794,6 +1808,7 @@
     var curEnabled = wfToggleTarget(row).target ? (wfToggleTarget(row).target.enabled === false ? false : true) : null;
     var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(row.name) + '</h1>' +
       '<span class="chip kind">Workflow</span><span class="chip mute">' + esc(row.specSource || 'builtin') + '</span>' +
+      wfExecChip(row.execution) +
       (row.effective ? '<span class="chip mute">override · ' + esc(row.effective.scope) + '</span>' : '') +
       (curEnabled === false ? '<span class="chip warn">已停用（override）</span>' : '') + '</div>' +
       '<div class="dh-sub"><span>' + (row.objects.length ? '对象 ' + row.objects.length + ' 份（本体/override 同构可点）' : '声明随 builtin 注册表（无文档本体）') +
@@ -1997,12 +2012,14 @@
     if (!tt.target) {
       return '<div class="card"><div class="card-h"><span class="h-title">spec（builtin 注册表——无文档本体）</span></div>' +
         '<div class="card-b"><div class="small faint" style="padding:4px 0">声明随运行时 builtin 注册表（相位词汇映射表同源，concepts/workflow.md §1）；override 编辑=E4 编辑器轮余量。</div>' +
-        '<div class="yaml-block">' + esc('phases: [' + (row.phases || []).join(', ') + ']\nspecSource: ' + row.specSource) + '</div></div></div>';
+        '<div class="yaml-block">' + esc('phases: [' + (row.phases || []).join(', ') + ']\nspecSource: ' + row.specSource) + '</div>' +
+        '<div class="small faint" style="padding:6px 0 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——apply 即实现骨架物化，workflow-runtime.md §11.1）</span></div></div></div>';
     }
     var obj = tt.target;
     return '<div class="card"><div class="card-h"><span class="h-title">spec yaml（' + esc(obj.scope) + ' r' + obj.resourceVersion + ' · origin ' + esc(obj.origin) + '）</span>' +
       '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '">编辑（→ 对象 viewer，E4 起 Apply 全链）</span></span></div>' +
-      '<div class="card-b" id="wf-config-yaml"><div class="skel-row"><div class="skel" style="width:220px"></div></div></div></div>';
+      '<div class="card-b" id="wf-config-yaml"><div class="skel-row"><div class="skel" style="width:220px"></div></div></div>' +
+      '<div class="card-b" style="border-top:1px solid var(--line)"><div class="small faint" style="padding:2px 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——骨架=apply 即实现物化面，实现代码=apply-workflow agent 余量）</span></div></div></div>';
   }
   function hydrateWfConfig(row) {
     var obj = wfToggleTarget(row).target;
