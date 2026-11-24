@@ -119,6 +119,14 @@ test('E6 审批屏：待审区=草稿∪ApprovalNeeded ∧ 批准=dry-run+fromDr
   assert.ok(liveSrc.includes("'/core-console/comm'"), 'comm 读面在册')
 })
 
+test('R-3 审批判定独立账：审批屏已决账面区块=GET /v1/approvals 现读（v0.46，ops-log.md §2）', () => {
+  assert.ok(SRC.includes('function hydrateApprovalLedger'), '已决账面注水函数在册')
+  assert.ok(SRC.includes("'v1/approvals?limit=20'"), 'approval_log 读面调用在册（现读不缓存）')
+  assert.ok(SRC.includes('id="ap-ledger"'), '已决账面区块容器在册')
+  assert.ok(SRC.includes('判定不再只靠 apply_log 字符串考古') || SRC.includes('已决账面'), '账面语义标注在册')
+  assert.ok(SRC.includes("r.decision === 'granted'"), 'granted/rejected chip 判别在册')
+})
+
 test('E6 连接页与运行面：三组=objects 枚举 ∧ ConnectorOps 第五 tab 运行面 ∧ agent-comm comm 落账活体', () => {
   assert.ok(SRC.includes("connCards('WorkService', 'ws/')"), 'WorkService 组=objects 枚举')
   assert.ok(SRC.includes("connCards('ConnectorOps', 'connector/')"), 'ConnectorOps 组=objects 枚举')

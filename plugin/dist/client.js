@@ -5299,7 +5299,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
    * 待审区=草稿缓存 ∪ ApprovalNeeded 归档行；diff=稿 content vs 文档面现值（渲染时现读）；
    * 批准=Apply 全流程复用（dry-run 三检查→人确认→fromDraft 落库，E4 通路零旁路）；
    * 驳回=DELETE 弃稿（零文档面动作）；批量=同 kind 多稿顺序 Apply（独立判别不中断）。
-   * ApprovalNeeded 无稿=只读待审卡（批准面缺席不冒充——深链 involved 对象编辑器）。 */
+   * ApprovalNeeded 无稿=只读待审卡（批准面缺席不冒充——深链 involved 对象编辑器）。
+   * 已决账面（v0.46）：approval_log 审批判定独立账 GET /v1/approvals 现读——批准 granted
+   * （rv=落库版本）/驳回 rejected（弃稿零文档面动作）判定行在册，审计不再只靠 apply_log 字符串考古。 */
   function apDiffHtml(diff, maxLines) { return renderDiff(diff, maxLines || 40); }
   function approvalItemHtml(it) {
     if (it.kind === 'draft') {
@@ -5346,9 +5348,41 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       '<div class="dh-sub">待审区=草稿缓存（代改代审的家）∪ ApprovalNeeded 归档行。批准/驳回均=人点（LLM 只提案）；diff=稿 vs 文档面现值现读。</div></div>' +
       '<div class="dh-actions"><button class="btn ok" data-act="ap-batch"' + (draftItems.length ? '' : ' disabled') + '>批量批准（' + draftItems.length + ' 稿）</button></div></div>' +
       draftItems.map(approvalItemHtml).join('') + evItems.map(approvalItemHtml).join('') +
+      '<div id="ap-ledger" style="margin-top:24px">' + liveSkeletonRows(2, 0) + '</div>' +
       (!items.length ? '<div class="empty" style="padding:10vh"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">待审区为空（草稿缓存与 ApprovalNeeded 归档均空）</div><div class="e-act"><button class="btn primary" data-act="go" data-go="welcome">回 Welcome</button></div></div>' : '') +
       '</div>';
+    hydrateApprovalLedger();
     draftItems.forEach(function (it) { hydrateApprovalDiff(it.draft); });
+  }
+  /* 已决账面（v0.46 审批独立账：GET /v1/approvals 现读不缓存——批准/驳回即决即见；
+   * 驳回=弃稿零文档面动作亦落行；读面缺席=诚实降级注记，零 console error 零 4xx 调用）。 */
+  function hydrateApprovalLedger() {
+    var stamp = S.route + '|' + S.segs.join('/');
+    LIVE.get('v1/approvals?limit=20').then(function (b) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var el = $('#ap-ledger');
+      if (!el) return;
+      var rows = (b && b.approvals) || [];
+      if (!rows.length) {
+        el.innerHTML = '<div class="small faint">已决账面暂无判定行（批准/驳回即决即见——approval_log 独立账：apply_log 承落库流水，本账承判定）。</div>';
+        return;
+      }
+      el.innerHTML = '<div class="dh" style="margin-bottom:8px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">已决账面</h2>' +
+        '<span class="chip mute small">' + rows.length + ' 行</span></div>' +
+        '<div class="dh-sub">approval_log 独立账（ops DB）：批准=granted（rv=落库版本，noop 照落）· 驳回=rejected（弃稿零文档面动作）。</div></div></div>' +
+        '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>时刻</th><th>判定</th><th>对象</th><th>判定主体</th><th>rv</th><th>来源</th></tr></thead><tbody>' +
+        rows.map(function (r) {
+          return '<tr><td class="mono small">' + esc(String(r.ts || '').replace('T', ' ').slice(0, 19)) + '</td>' +
+            '<td><span class="chip ' + (r.decision === 'granted' ? 'ok' : 'danger') + ' small">' + esc(r.decision || '') + '</span></td>' +
+            '<td class="mono small"><span class="lk" data-act="go" data-go="' + esc(involvedRoute(r.obj)) + '">' + esc(r.obj || '') + '</span></td>' +
+            '<td class="mono small">' + esc(r.judgedBy || 'anonymous') + '</td>' +
+            '<td class="mono small">' + (r.rv ? 'r' + r.rv : '—') + '</td>' +
+            '<td class="mono small faint">' + esc(r.fieldManager || '') + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }, function () {
+      var el = $('#ap-ledger');
+      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">审批账面读面暂不可达（/v1/approvals 缺席或超时）——判定留痕暂只=apply_log（fieldManager=console:approve）。</div>';
+    });
   }
   /* diff 注水：稿 content（GET /v1/drafts/{kind}/{name}）+ 面现值（GET /v1/objects）现读 */
   function hydrateApprovalDiff(d) {
