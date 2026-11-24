@@ -4060,6 +4060,7 @@
    * v0.52 能力 A；乐观锁基准=HEAD blob sha 现读）。 */
   function designDocApprovalApply(it) {
     var d = it.draft; // kind=DesignDoc, scope=<repo>, name=<path>
+    var key = apKeyOf(d);
     Promise.all([
       LIVE.designDoc(d.scope, d.name).then(null, function () { return null; }),
       LIVE.designDraft(d.scope, d.name).catch(function () { return null; }),
