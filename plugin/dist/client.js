@@ -3231,7 +3231,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
           '<td class="mono small" id="mq-' + esc(cssId(m2.name)) + '"><span class="faint">即席查询中…</span></td></tr>';
       }).join('');
       bodyHtml = '<div class="card"><div class="card-h"><span class="h-title">指标声明清单（/v1/metrics 投影）</span><span class="h-sub">样本计数=数据面在册实数</span></div>' +
-        '<table class="tbl"><thead><tr><th>metric</th><th style="text-align:right">samples</th><th>即席查询（window=1h · avg/max）</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        '<table class="tbl"><thead><tr><th>metric</th><th style="text-align:right">samples</th><th>即席查询（跨窗口全量 · avg/max）</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
     view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '指标面', '数据面投影实数（TSDB 本体不入 console）· 越线事件=归档行现读', '状态') +
       '<div class="grid" style="grid-template-columns:1fr 340px">' + bodyHtml +
@@ -3239,12 +3239,15 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       '</div></div>';
     if (mets.length) hydrateMetricQueries(mets);
   }
-  /* 即席查询注水（404=无投影结果如实标注——不冒充零值） */
+  /* 即席查询注水（R-2 数据面装配后实跑路径）：window 缺省=跨窗口全量（Query 面声明语义——
+   * 窗口标签由采样器部署决定，客户端不复制部署知识；404=无投影结果如实标注——不冒充零值）。
+   * 注：带窗口标签的即席查询在标签不匹配时 404——浏览器对 4xx 资源错误照记 console error
+   * （零 console error 硬线），故即席查询恒走全量口径。 */
   function hydrateMetricQueries(mets) {
     var stamp = S.route + '|' + S.segs.join('/');
     mets.slice(0, 12).forEach(function (m2) {
       ['avg', 'max'].forEach(function (agg) {
-        LIVE.get('v1/metrics/query?metric=' + encodeURIComponent(m2.name) + '&window=1h&agg=' + agg)
+        LIVE.get('v1/metrics/query?metric=' + encodeURIComponent(m2.name) + '&agg=' + agg)
           .then(function (res) {
             if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
             var cur = $('#mq-' + cssId(m2.name));
