@@ -570,6 +570,7 @@
     if (id === 'docs') return S.route === 'docs' || S.route === 'doc';
     if (id === 'events') return S.route === 'events' || S.route === 'event';
     if (id === 'approvals') return S.route === 'approvals';
+    if (id === 'proposals') return S.route === 'proposals' || S.route === 'proposal';
     if (id === 'connectors') return ['connectors', 'connector', 'ws', 'provider', 'ref'].indexOf(S.route) >= 0;
     if (id === 'chat-root') return S.route === 'chat';
     return false;
@@ -3734,6 +3735,231 @@
       });
   };
 
+  /* ================= 需求提案（能力 B——console-adoption.md §1.24） ================= */
+  /* 提交=草稿→Apply 全流程（fieldManager=console:propose）；批准/驳回=对象态翻转稿
+   * （console:approve/console:reject——approval_log 判定行+审批信号族事件随行，cored 侧）；批准落库
+   * 即 apply-workflow 派单受理投影（kind=proposal 行——受理≠拉起，诚实投影）。 */
+  var PROP_PRIORITIES = [
+    { id: 'low', label: 'low（低危）' }, { id: 'normal', label: 'normal' },
+    { id: 'high', label: 'high（高危）' }, { id: 'critical', label: 'critical（高危）' }
+  ];
+  var PROP_STATUS_CLS = { draft: 'mute', submitted: 'warn', approved: 'ok', rejected: 'danger', landed: 'ok' };
+  function propStatusChip(st, lg) {
+    var cls = PROP_STATUS_CLS[st] || 'mute';
+    return '<span class="chip ' + cls + (lg ? ' lg' : '') + '"><span class="lamp ' + cls + '"></span>' + esc(st || '?') + '</span>';
+  }
+  /* yaml 标量安全化（含 ": " / 前导特殊符 / 空串=双引号包裹——console 生成形态确定，解析权威在 cored 闸门） */
+  function propScalar(s) {
+    s = String(s == null ? '' : s).trim();
+    if (!s) return '""';
+    if (/[:#\-\?&*!>|%@`'"{[\],]/.test(s.charAt(0)) || /:\s/.test(s) || /\s$/.test(s)) {
+      return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+    }
+    return s;
+  }
+  function propYaml(f) {
+    var acc = (f.acceptance || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    return 'apiVersion: core/v1\nkind: Proposal\nmetadata: {name: ' + f.name + ', scope: ' + (f.scope || 'global') + '}\n' +
+      'spec:\n' +
+      '  title: ' + propScalar(f.title) + '\n' +
+      '  summary: ' + propScalar(f.summary) + '\n' +
+      (acc.length ? '  acceptance:\n' + acc.map(function (s) { return '    - ' + propScalar(s); }).join('\n') + '\n' : '') +
+      '  impact: ' + propScalar(f.impact) + '\n' +
+      '  priority: ' + (f.priority || 'normal') + '\n' +
+      '  proposer: ' + propScalar(f.proposer) + '\n' +
+      '  status: ' + f.status + '\n' +
+      '  landing: {target: ' + (f.landing || 'doc') + '}\n';
+  }
+  function propSlug(title) {
+    var s = String(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return s ? s.slice(0, 40) : '';
+  }
+  function screenProposals(view) {
+    LIVE.ensure();
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '提案' }]);
+    var props = (LIVE.state.proposals || []);
+    var loading = LIVE.state.status !== 'ok';
+    var form =
+      '<div class="settings-cards" style="margin-bottom:20px"><div class="set-card" style="grid-column:1/-1">' +
+      '<div class="set-card-h">提交需求提案</div><div class="set-card-sub">提交=草稿→Apply 全流程（对象入库 status=submitted）；高危=人审（ApprovalNeeded 自产→审批屏），低危可自动（部署侧分流配置 --proposal-auto-approve）。</div>' +
+      '<div class="prop-form" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:8px 16px 16px">' +
+      '<div><label class="small muted">名称（slug）</label><input id="pf-name" class="inp mono" style="width:100%" placeholder="add-dark-mode" autocomplete="off"></div>' +
+      '<div><label class="small muted">标题 *</label><input id="pf-title" class="inp" style="width:100%" placeholder="一句话说清做什么" autocomplete="off"></div>' +
+      '<div style="grid-column:1/-1"><label class="small muted">目标 *</label><textarea id="pf-summary" class="inp" rows="2" style="width:100%" placeholder="做什么/为什么（批准后随派单载荷交给执行体）"></textarea></div>' +
+      '<div style="grid-column:1/-1"><label class="small muted">验收标准 *（每行一条）</label><textarea id="pf-acceptance" class="inp" rows="3" style="width:100%" placeholder="可验证条目（Goal.acceptance 同词汇）"></textarea></div>' +
+      '<div style="grid-column:1/-1"><label class="small muted">影响面</label><input id="pf-impact" class="inp" style="width:100%" placeholder="涉及系统/对象/风险说明（禁真实 IP/凭据——R-PUB）" autocomplete="off"></div>' +
+      '<div><label class="small muted">优先级</label><select id="pf-priority" class="inp" style="width:100%">' +
+      PROP_PRIORITIES.map(function (p) { return '<option value="' + p.id + '">' + esc(p.label) + '</option>'; }).join('') + '</select></div>' +
+      '<div><label class="small muted">产物落点</label><select id="pf-landing" class="inp" style="width:100%">' +
+      '<option value="doc">doc（docsRoot 对象草稿）</option><option value="task">task（部署侧任务文件）</option></select></div>' +
+      '<div><label class="small muted">提出人</label><input id="pf-proposer" class="inp" style="width:100%" value="console-operator" autocomplete="off"></div>' +
+      '<div style="align-self:end"><button class="btn primary" data-act="prop-submit">提交提案（草稿→Apply）</button></div>' +
+      '</div></div></div>';
+    var rows = loading ? liveSkeletonRows(3, 0) : (props.length ?
+      '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>标题</th><th>状态</th><th>优先级</th><th>提出人</th><th>验收</th><th>rv</th><th>落点</th></tr></thead><tbody>' +
+      props.map(function (p) {
+        return '<tr><td><span class="lk" data-act="go" data-go="proposal/' + esc(encodeURIComponent(p.scope || '')) + '/' + esc(encodeURIComponent(p.name)) + '">' + esc(p.title || p.name) + '</span>' +
+          '<span class="mono faint small"> ' + esc(p.name) + '</span></td>' +
+          '<td>' + propStatusChip(p.status) + '</td>' +
+          '<td><span class="chip ' + (p.priority === 'low' ? 'mute' : (p.priority === 'normal' ? 'kind' : 'warn')) + ' small">' + esc(p.priority || '—') + '</span></td>' +
+          '<td class="mono small">' + esc(p.proposer || '—') + '</td>' +
+          '<td class="small">' + (p.acceptanceCount || 0) + ' 条</td>' +
+          '<td class="mono small">r' + (p.resourceVersion || 0) + '</td>' +
+          '<td class="mono small faint">' + esc((p.landing && p.landing.target) || '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div>'
+      : '<div class="empty" style="padding:6vh"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">提案库为空（提交第一条需求即入册）</div></div>');
+    view.innerHTML = '<div class="view-inner">' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>需求提案</h1><span class="chip ' + (props.length ? 'kind' : 'mute') + '">' + props.length + ' 条在册</span></div>' +
+      '<div class="dh-sub">需求先成为一等对象再成为工作（kind: Proposal）：标题/目标/验收/影响面/优先级/提出人入库 → 审批分流 → 批准即 apply-workflow 派单受理（受理≠拉起）→ 产物落盘回写 landed。</div></div>' +
+      '<div class="dh-actions"><button class="btn" data-act="go" data-go="approvals">审批屏 →</button></div></div>' +
+      form + '<div class="sec-title">提案库</div>' + rows + '</div>';
+    // 标题→slug 预填（名称留空时提交自动生成；手填优先）。
+    var tEl = $('#pf-title'), nEl = $('#pf-name');
+    if (tEl && nEl) tEl.addEventListener('input', function () {
+      if (nEl.dataset.touched) return;
+      var s = propSlug(tEl.value); if (s) nEl.value = s;
+    });
+    if (nEl) nEl.addEventListener('input', function () { nEl.dataset.touched = '1'; });
+  }
+  ACTIONS['prop-submit'] = function () {
+    var f = {
+      name: ($('#pf-name') || {}).value || '', title: ($('#pf-title') || {}).value || '',
+      summary: ($('#pf-summary') || {}).value || '', acceptance: ($('#pf-acceptance') || {}).value || '',
+      impact: ($('#pf-impact') || {}).value || '', priority: ($('#pf-priority') || {}).value || 'normal',
+      landing: ($('#pf-landing') || {}).value || 'doc', proposer: ($('#pf-proposer') || {}).value || 'console-operator',
+      scope: 'global', status: 'submitted'
+    };
+    f.name = (f.name || propSlug(f.title) || '').trim();
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(f.name)) { toast('名称不合法', 'slug 形态 [a-z0-9-]（标题留空自动生成）', 'warn'); return; }
+    if (!f.title.trim() || !f.summary.trim()) { toast('标题/目标必填', '需求先说清做什么', 'warn'); return; }
+    if (!f.acceptance.split('\n').some(function (s) { return s.trim(); })) { toast('验收标准至少一条', '可验证条目=Verify 相位的复测依据', 'warn'); return; }
+    var yaml = propYaml(f);
+    // 提交=草稿→Apply 全流程（E4 通路复用；对象键 Proposal/global/<name>）。
+    fetch('/core-console/drafts', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
+      body: JSON.stringify({ kind: 'Proposal', scope: 'global', name: f.name, content: yaml,
+        fieldManager: 'console:propose', reasonRef: 'console:propose', baseResourceVersion: 0 })
+    }).then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+      .then(function (d) {
+        if (!d.ok) { toast('落稿失败', String((d.body && d.body.error) || 'HTTP 错误'), 'danger'); return; }
+        return LIVE.apply({ kind: 'Proposal', scope: 'global', name: f.name, fromDraft: true,
+          fieldManager: 'console:propose', reasonRef: 'console:propose' });
+      })
+      .then(function (res) {
+        if (!res) return;
+        if (res.ok) {
+          toast('提案已提交（r' + res.data.rv + ' status=submitted）', f.name + ' · DocApplied 已归档' +
+            (f.priority === 'low' || f.priority === 'normal' ? ' · 低危视部署分流可自动' : ' · 高危待人审（ApprovalNeeded 已产）'), 'ok');
+          LIVE.load().then(function () { go('proposal/global/' + f.name); });
+        } else {
+          toast('提交失败（' + (res.status == null ? '传输层' : 'HTTP ' + res.status) + '）', String(res.error || ''), 'danger');
+        }
+      });
+  };
+  function screenProposalDetail(view) {
+    var scope = S.params.scope, name = S.params.name;
+    LIVE.ensure();
+    var stamp = S.route + '|' + S.segs.join('/');
+    view.innerHTML = '<div class="view-inner">' + liveSkeletonRows(3, 0) + '</div>';
+    LIVE.get('v1/proposals/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''))
+      .then(function (d) {
+        if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+        renderProposalDetail(view, d);
+      }, function (e) {
+        if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+        view.innerHTML = '<div class="view-inner"><div class="empty" style="padding:10vh"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
+          '<div class="e-title">提案读面不可达（' + esc(String((e && e.message) || e)) + '）</div>' +
+          '<div class="e-act"><button class="btn primary" data-act="go" data-go="proposals">回提案库</button></div></div></div>';
+      });
+  }
+  function renderProposalDetail(view, d) {
+    var scope = String(d.scope || 'global'), name = String(d.name || '');
+    var acc = (d.spec && d.spec.acceptance) || [];
+    var dispatchUrl = 'v1/agents/dispatches';
+    view.innerHTML = '<div class="view-inner">' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(d.title || name) + '</h1>' + propStatusChip(d.status, true) +
+      '<span class="chip kind">' + esc(d.priority || '—') + '</span></div>' +
+      '<div class="dh-sub mono small">' + esc('Proposal/' + scope + '/' + name) + ' · r' + (d.resourceVersion || 0) + ' · 提出人 ' + esc(d.proposer || '—') + '</div></div>' +
+      '<div class="dh-actions">' + (d.status === 'submitted' ?
+        '<button class="btn ok" data-act="prop-approve" data-scope="' + esc(scope) + '" data-name="' + esc(name) + '">批准</button>' +
+        '<button class="btn danger" data-act="prop-reject" data-scope="' + esc(scope) + '" data-name="' + esc(name) + '">驳回</button>'
+        : '<span class="small faint">状态=' + esc(d.status) + '（判定终态后无批准/驳回动作——状态机 proposal.md §4）</span>') + '</div></div>' +
+      '<div class="settings-cards" style="grid-template-columns:1fr 1fr">' +
+      '<div class="set-card"><div class="set-card-h">目标</div><div class="set-card-sub" style="white-space:pre-wrap">' + esc(d.summary || '—') + '</div></div>' +
+      '<div class="set-card"><div class="set-card-h">影响面</div><div class="set-card-sub" style="white-space:pre-wrap">' + esc(d.spec && d.spec.impact || '—（未声明）') + '</div></div>' +
+      '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">验收标准（' + acc.length + ' 条）</div>' +
+      (acc.length ? '<div class="set-card-sub"><ul style="margin:4px 0 0 18px;padding:0">' + acc.map(function (a) { return '<li class="small" style="padding:2px 0">' + esc(a) + '</li>'; }).join('') + '</ul></div>' : '<div class="set-card-sub faint">未声明验收标准</div>') + '</div>' +
+      '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">产物指针（landing）</div>' +
+      '<div class="set-card-sub mono">' + esc('target=' + ((d.landing && d.landing.target) || '—') + (d.landing && d.landing.ref ? ' ref=' + d.landing.ref : '')) + '</div>' +
+      '<div class="set-card-sub faint">产物真实落盘=apply-workflow agent 真实拉起段（declared-deferred）——落盘后状态回写 landed（本轮打通到派单受理+产物指针，不冒充产物已在）。</div></div>' +
+      '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">派单（apply-workflow）</div><div id="pd-dispatch" style="padding:6px 16px 14px">' + liveSkeletonRows(1, 0) + '</div></div>' +
+      '</div>' +
+      '<div class="dh" style="margin-top:18px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">对象原文</h2></div>' +
+      '<div class="dh-sub">git 权威现读（ Proposal 走 apply 管线——幂等/乐观锁/审计全量继承）。</div></div></div>' +
+      '<pre class="mono small" style="background:var(--bg2,#141a22);padding:12px 14px;border-radius:8px;overflow:auto;white-space:pre-wrap">' + esc(d.content || '') + '</pre></div>';
+    // 派单投影注水（受理≠拉起——环归零/缺席=如实标注）。
+    var dstamp = S.route + '|' + S.segs.join('/');
+    LIVE.get(dispatchUrl).then(function (b) {
+      if ((S.route + '|' + S.segs.join('/')) !== dstamp) return;
+      var el = $('#pd-dispatch'); if (!el) return;
+      var rows = ((b && b.dispatches) || []).filter(function (x) { return x.kind === 'proposal' && x.proposal === name; });
+      if (!rows.length) {
+        el.innerHTML = '<div class="small faint">暂无派单受理投影（status=' + esc(String(d.status)) + '——approved 落库即派单；受理≠agent 会话已拉起，真实拉起 deferred）。</div>';
+        return;
+      }
+      var r0 = rows[rows.length - 1];
+      el.innerHTML = '<div class="small" style="margin-bottom:6px"><span class="chip ok small">apply-workflow ×' + rows.length + '</span>' +
+        '<span class="chip mute small">autoLevel=' + esc(r0.autoLevel || '') + '</span>' +
+        '<span class="chip mute small">action=' + esc(r0.action || '') + '</span>' +
+        '<span class="chip mute small">rv=' + (r0.rv || 0) + '</span>' +
+        '<span class="chip mute small">eventId=' + esc(String(r0.eventId || '').slice(0, 28)) + '…</span></div>' +
+        '<div class="small faint">受理 ≠ agent 会话已拉起（诚实投影——真实拉起=dsh 会话挂载，declared-deferred）；载荷带提案名/目标/验收（执行体输入）。</div>';
+    }, function () {
+      var el = $('#pd-dispatch');
+      if (el) el.innerHTML = '<div class="small faint">派单投影读面暂不可达（/v1/agents/dispatches 缺席或超时）。</div>';
+    });
+  }
+  /* 批准/驳回=对象态翻转稿（submitted→approved|rejected）→ fromDraft Apply
+   * （console:approve|console:reject——cored 侧落判定行+审批信号族事件+派单受理）。 */
+  function proposalFlip(scope, name, to) {
+    var fm = to === 'approved' ? 'console:approve' : 'console:reject';
+    LIVE.get('v1/proposals/' + encodeURIComponent(name) + '?scope=' + encodeURIComponent(scope)).then(function (d) {
+      var flipped = propFlipStatus(String(d.content || ''), to);
+      if (flipped == null) { toast('状态行翻转失败', 'spec.status=submitted 未命中（对象形态漂移——读原文手改）', 'danger'); return; }
+      fetch('/core-console/drafts', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({ kind: 'Proposal', scope: scope, name: name, content: flipped,
+          fieldManager: fm, reasonRef: 'console:' + to, baseResourceVersion: d.resourceVersion })
+      }).then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+        .then(function (st) {
+          if (!st.ok) { toast('落稿失败', String((st.body && st.body.error) || ''), 'danger'); return; }
+          LIVE.apply({ kind: 'Proposal', scope: scope, name: name, fromDraft: true,
+            fieldManager: fm, reasonRef: 'console:' + to }).then(function (res) {
+            if (res.ok) {
+              toast(to === 'approved' ? '已批准（r' + res.data.rv + '）' : '已驳回（r' + res.data.rv + '）',
+                name + ' · ' + (to === 'approved' ? 'apply-workflow 派单受理已产（受理≠拉起）' : '无派单（rejected 不派单）'), to === 'approved' ? 'ok' : 'warn');
+              LIVE.load().then(function () { render(); });
+            } else if (res.status === 409) {
+              toast('乐观锁冲突（409）——稿保留', String(res.error || '') + '——重读后重试', 'danger');
+              LIVE.load().then(function () { render(); });
+            } else {
+              toast('判定失败（' + (res.status == null ? '传输层' : 'HTTP ' + res.status) + '）', String(res.error || ''), 'danger');
+            }
+          });
+        });
+    }, function (e) { toast('提案现读失败', String((e && e.message) || e), 'danger'); });
+  }
+  function propFlipStatus(content, to) {
+    var from = 'submitted';
+    var re = new RegExp('^(\\s+status:\\s*)' + from + '(\\s*)$', 'm');
+    if (!re.test(content)) return null;
+    return content.replace(re, '$1' + to + '$2');
+  }
+  ACTIONS['prop-approve'] = function (el) { proposalFlip(el.dataset.scope, el.dataset.name, 'approved'); };
+  ACTIONS['prop-reject'] = function (el) {
+    confirmModal('驳回提案',
+      '<div>驳回 <b class="mono">' + esc(el.dataset.name) + '</b>？——对象态写 rejected（fromDraft Apply fieldManager=console:reject）；approval_log rejected 行在账，<b>无派单</b>。</div>',
+      '确认驳回', function () { proposalFlip(el.dataset.scope, el.dataset.name, 'rejected'); }, true);
+  };
+
   /* ================= 帮助面板（dsh settings-card） ================= */
   function openHelp() {
     var rows = SHORTCUTS.slice(0, 6).map(function (s) {
@@ -3787,6 +4013,8 @@
   route('events', screenEvents);
   route('event/:id', screenEventLive);
   route('approvals', screenApprovals);
+  route('proposals', screenProposals); // 能力 B：需求提案屏（列表+提交表单——console-adoption.md §1.24）
+  route('proposal/:scope/:name', screenProposalDetail); // 详情（六要素+派单行+产物指针+批准/驳回）
 
   function boot() {
     // 侧栏折叠 / 帮助 / 铃铛 / 搜索
@@ -3852,7 +4080,7 @@
       if (!ROOT) return;
       // 'doc'（编辑器）不在列：编辑器自注水（屏加载即现读），live 轻刷新不重渲染（编辑态/textarea 焦点保真）；
       // Apply 成功后的重渲染走 apply 回调显式 LIVE.load().then(render)。
-      if (['welcome', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'connectors'].indexOf(S.route) >= 0) render();
+      if (['welcome', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'proposals', 'connectors'].indexOf(S.route) >= 0) render();
     };
     boot();
   }

@@ -26,6 +26,7 @@
     wfAgg: null,    // /v1/workflows 聚合面（v0.37 console 读面第二段——E3 运行管理数据面）
     deliveries: null,
     wakes: null,
+    proposals: [],  // /v1/proposals 需求提案读面（v0.51 能力 B——console-adoption.md §1.24）
     metrics: [],
     pending: false
   };
@@ -149,6 +150,7 @@
           jget('v1/drafts').then(function (r) { state.drafts = r.drafts || []; }),
           jget('v1/notifications/deliveries').then(function (r) { state.deliveries = r; }).catch(function () { state.deliveries = null; }),
           jget('v1/agents/wakes').then(function (r) { state.wakes = r; }).catch(function () { state.wakes = null; }),
+          jget('v1/proposals').then(function (r) { state.proposals = r.proposals || []; }).catch(function () { state.proposals = []; }),
           jget('v1/metrics').then(function (r) { state.metrics = r.metrics || []; }),
         ]);
       })

@@ -1236,6 +1236,7 @@
     { id: 'workflows', label: 'Workflows', route: '#/workflows', icon: 'flow' },
     { id: 'docs', label: '文档', route: '#/docs', icon: 'doc' },
     { id: 'events', label: '事件', route: '#/events', icon: 'pulse' },
+    { id: 'proposals', label: '提案', route: '#/proposals', icon: 'plus' }, // 需求提案（能力 B——console 提需求→审批→派工的一等对象）
     { id: 'approvals', label: '审批', route: '#/approvals', icon: 'check', badge: 'approvals' },
     { id: 'connectors', label: '连接', route: '#/connectors', icon: 'plug' },
     { id: 'chat-root', label: '会话', route: '#/chat/root-agent', icon: 'chat' } // root-agent=动态锚（renderNav/palItems 经 navRouteOf 解析文档面在册 agent）
