@@ -117,6 +117,16 @@ export const CONSOLE_APPLY_PATH = '/core-console/apply'
  *  缺主=宿主补缺省（无主稿 cored 侧 400 拒绝）。 */
 export const CONSOLE_DRAFTS_PATH = '/core-console/drafts'
 
+/** console 设计文档写路由（v0.52 能力 A——console 屏幕 6 直接编辑设计文档 md → Apply →
+ *  git commit；cored-bridge.md §2.4）。prefix 路由内按方法+路径分立：
+ *  POST /core-console/design-docs（exact 段）→ cored POST /v1/design-docs/apply（dry-run/
+ *  真落库；主体由宿主注入同 apply 路由）；POST /core-console/design-docs/draft → cored
+ *  POST /v1/design-docs/draft（落稿 upsert，fieldManager 客户端缺主=宿主补缺省）；
+ *  DELETE /core-console/design-docs/draft/{repo}/{path...} → cored DELETE 弃稿。
+ *  读面（清单/单文档/史/草稿读）不经本路由——走既有只读代理 /core-console/api/v1/*（GET
+ *  /v1/ 前缀已放行）。白名单/lint/乐观锁三闸门在 cored 侧，宿主零旁路。 */
+export const CONSOLE_DESIGN_DOCS_PATH = '/core-console/design-docs'
+
 /** 草稿 fieldManager 缺省（客户端缺主时宿主补——无主稿 cored 拒绝 400，兜底保 UX）。 */
 export const DEFAULT_DRAFT_FIELD_MANAGER = 'console:editor'
 
@@ -475,6 +485,130 @@ export function createDraftsHandler(opts: {
 export const AGENT_COMM_TOOL_NAMES = [...AGENT_COMM_KINDS]
 
 /**
+ * console 设计文档路由 handler（v0.52 能力 A 写通路，测试注入 fetch/bridge/reject 全独立）：
+ *   浏览器 POST /core-console/design-docs            → cored POST /v1/design-docs/apply（dry-run/真落库）
+ *   浏览器 POST /core-console/design-docs/draft      → cored POST /v1/design-docs/draft（落稿 upsert）
+ *   浏览器 DELETE /core-console/design-docs/draft/…  → cored DELETE /v1/design-docs/draft/{repo}/{path...}
+ * 栅栏缺席=fail-closed 拒全部（apply/drafts 路由同款 handler 内再锁一道）；方法/路径分立
+ * （exact 段只收 POST /draft 子段收 POST+DELETE，其余 405 allow: POST,DELETE）；体不可解析
+ * =400；cored 未就绪=503；上游不可达=502；apply 主体由宿主注入（浏览器不携带——写主体是宿主
+ * 断言，与 /core-console/apply 同款剥除客户端声明）；状态码/载荷透传（403 白名单/400 lint/
+ * 409 乐观锁照传——判据三件在 cored 侧）。
+ */
+export function createDesignDocsHandler(opts: {
+  bridge: { url: string }
+  reject?: (req: { headers: unknown }) => 401 | 403 | undefined
+  fetchImpl?: FetchLike
+  subject: ApplySubject
+  fieldManager?: string
+}) {
+  const fetchImpl = opts.fetchImpl ?? fetch
+  const defaultFM = opts.fieldManager ?? DEFAULT_DRAFT_FIELD_MANAGER
+  return async function designDocsHandler(req: HttpReqLike, res: HttpResLike): Promise<void> {
+    if (!opts.reject) {
+      res.statusCode = 401
+      res.end()
+      return
+    }
+    const rejection = opts.reject({ headers: req.headers })
+    if (rejection !== undefined) {
+      res.statusCode = rejection
+      res.end()
+      return
+    }
+    if (!opts.bridge.url) {
+      sendJson(res, 503, { error: 'cored 未就绪（桥接未完成）' })
+      return
+    }
+    const url = new URL(String(req.url ?? '/'), 'http://localhost')
+    const rest = url.pathname.slice(CONSOLE_DESIGN_DOCS_PATH.length)
+    const base = opts.bridge.url.replace(/\/+$/, '')
+    const forward = async (upstreamPath: string, init: { method: string; body?: string }) => {
+      let out: Awaited<ReturnType<FetchLike>>
+      try {
+        out = await fetchImpl(base + upstreamPath, {
+          method: init.method,
+          headers: { 'content-type': 'application/json' },
+          ...(init.body !== undefined ? { body: init.body } : {}),
+        })
+      } catch (e) {
+        sendJson(res, 502, { error: `cored 不可达: ${String((e as Error)?.message ?? e)}` })
+        return
+      }
+      const text = await out.text()
+      res.statusCode = out.status
+      res.setHeader('content-type', 'application/json; charset=utf-8')
+      res.setHeader('cache-control', 'no-store')
+      res.end(text)
+    }
+    if (rest === '' || rest === '/') {
+      // Apply（exact 段，主体宿主注入）：dry-run/真落库——三闸门（白名单/lint/乐观锁）+权限判定在 cored。
+      if ((req.method ?? 'GET') !== 'POST') {
+        res.statusCode = 405
+        res.setHeader('allow', 'POST, DELETE')
+        res.end()
+        return
+      }
+      let parsed: Record<string, unknown>
+      try {
+        parsed = JSON.parse((await readRequestBody(req)) || '{}')
+      } catch {
+        sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+        return
+      }
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+        return
+      }
+      delete parsed.subject
+      const upstream = { ...parsed, subject: opts.subject }
+      await forward('/v1/design-docs/apply', { method: 'POST', body: JSON.stringify(upstream) })
+      return
+    }
+    if (rest === '/draft') {
+      // 落稿 upsert：客户端缺主=宿主补缺省（无主稿 cored 400）。
+      if ((req.method ?? 'GET') !== 'POST') {
+        res.statusCode = 405
+        res.setHeader('allow', 'POST, DELETE')
+        res.end()
+        return
+      }
+      let parsed: Record<string, unknown>
+      try {
+        parsed = JSON.parse((await readRequestBody(req)) || '{}')
+      } catch {
+        sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+        return
+      }
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+        return
+      }
+      if (!parsed.fieldManager) parsed.fieldManager = defaultFM
+      await forward('/v1/design-docs/draft', { method: 'POST', body: JSON.stringify(parsed) })
+      return
+    }
+    if (rest.startsWith('/draft/')) {
+      // 弃稿（子路径）：DELETE /core-console/design-docs/draft/{repo}/{path...}
+      if ((req.method ?? 'GET') !== 'DELETE') {
+        res.statusCode = 405
+        res.setHeader('allow', 'POST, DELETE')
+        res.end()
+        return
+      }
+      if (rest.includes('..')) {
+        sendJson(res, 404, { error: 'not found（路径穿越拒绝）' })
+        return
+      }
+      await forward('/v1/design-docs/draft' + rest.slice('/draft'.length) + url.search, { method: 'DELETE' })
+      return
+    }
+    res.statusCode = 404
+    sendJson(res, 404, { error: 'not found（只收 apply 与 draft 子路径）' })
+  }
+}
+
+/**
  * agent-comm 四 op 工具装配（E5b；cross-agent.md §5 协议 v0.1）：
  *   ctx.tools.register 四工具（dispatch/query/interrupt/inbox）——工具宿主=本 plugin
  *   对 dsh 宿主工具面的贡献（R-ENG-3 归属裁决 2026-11-25：非 connector 驱动，不入
@@ -640,6 +774,12 @@ export function mountConsoleRoutes(ctx: {
       webServer.register({
         kind: 'prefix', path: CONSOLE_DRAFTS_PATH,
         handler: createDraftsHandler({ bridge, reject }),
+      }),
+      // 设计文档写通路（v0.52 能力 A）：apply 主体宿主注入 + draft 落稿/弃稿——
+      // 三闸门（白名单/lint/乐观锁）与权限判定在 cored 侧，宿主零旁路。
+      webServer.register({
+        kind: 'prefix', path: CONSOLE_DESIGN_DOCS_PATH,
+        handler: createDesignDocsHandler({ bridge, reject, subject: applySubject }),
       }),
       ...(comm ? [webServer.register({
         kind: 'exact', path: CONSOLE_COMM_PATH,

@@ -75,6 +75,60 @@
     return jget('v1/events?limit=500' + (until ? '&until=' + encodeURIComponent(until) : ''));
   }
 
+  /* ===== 设计文档面（v0.52 能力 A——console 屏幕 6 直接编辑设计文档 md → Apply → git commit；
+   *  cored-bridge.md §2.4。读面走既有只读代理 GET /v1/design-docs*（HEAD 权威零缓存）；
+   *  写面走宿主路由 /core-console/design-docs（apply 主体宿主注入+draft 落稿/弃稿——
+   *  白名单/lint/乐观锁三闸门在 cored 侧，客户端零旁路）。 ===== */
+  /** 设计文档清单（{count, repos:[{name,files:[…]}], docs:[…]}；未装配=503 → 诚实降级）。 */
+  function designDocs() { return jget('v1/design-docs'); }
+  /** 设计文档 URL 路径段（repo + 逐段转义——路径段含 '.' 等字符统一转义）。 */
+  function ddPath(repo, path) {
+    return 'v1/design-docs/' + encodeURIComponent(repo) + '/' +
+      String(path).split('/').map(encodeURIComponent).join('/');
+  }
+  /** 单文档现读：{repo, path, sha, bytes, content, lastCommit:{sha,subject,at}}（HEAD 权威，渲染即现读）。 */
+  function designDoc(repo, path) { return jget(ddPath(repo, path)); }
+  /** 应用史投影（apply_log 行——obj=DesignDoc/<repo>/<path>；result=ok|noop|denied|conflict）。 */
+  function designHistory(repo, path) { return jget(ddPath(repo, path).replace('v1/design-docs/', 'v1/design-docs/history/')); }
+  /** 草稿现读（kind=DesignDoc, scope=<repo>, name=<path>；无稿=404 → 判别联合）。 */
+  function designDraft(repo, path) {
+    return jget(ddPath(repo, path).replace('v1/design-docs/', 'v1/design-docs/draft/'))
+      .then(null, function (e) { if (e && e.status === 404) return null; throw e; });
+  }
+  /** 落稿 upsert（POST /core-console/design-docs/draft——fieldManager 客户端缺主=宿主补缺省）。 */
+  function designDraftPut(payload) {
+    return postJson('/core-console/design-docs/draft', payload);
+  }
+  /** 弃稿（DELETE /core-console/design-docs/draft/{repo}/{path...}）。 */
+  function designDraftDelete(repo, path) {
+    return fetch('/core-console/design-docs/draft/' + encodeURIComponent(repo) + '/' +
+      String(path).split('/').map(encodeURIComponent).join('/'),
+      { method: 'DELETE', credentials: 'same-origin' })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (body) {
+          if (!r.ok && r.status !== 404) return { ok: false, status: r.status, error: String(body && body.error || ('HTTP ' + r.status)) };
+          return { ok: true, status: r.status, data: body };
+        });
+      }, function (e) { return { ok: false, status: null, error: String((e && e.message) || e) }; });
+  }
+  /** 设计文档 Apply（POST /core-console/design-docs——dry-run/真落库；fromDraft=true 时
+   *  content 须缺省；返回判别联合，409/403/400 状态码照传=三闸门判定面）。 */
+  function designApply(payload) { return postJson('/core-console/design-docs', payload); }
+  /** POST 判别联合（不抛错——写通路统一返回形态，与 apply() 同款）。 */
+  function postJson(p, payload) {
+    return fetch(p, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify(payload || {})
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (body) {
+        if (!r.ok) return { ok: false, status: r.status, error: String(body && body.error || ('HTTP ' + r.status)), body: body };
+        return { ok: true, status: r.status, data: body };
+      });
+    }, function (e) {
+      return { ok: false, status: null, error: String((e && e.message) || e) };
+    });
+  }
+
   /** 草稿弃稿（E6 审批驳回=弃稿：DELETE /core-console/drafts/{kind}/{name}?scope=
    *  ——写路径仍唯一经宿主路由；零文档面动作，不发明反向写路径）。 */
   function draftDelete(kind, name, scope) {
@@ -203,6 +257,13 @@
     draftDelete: draftDelete,
     comm: comm,
     eventsPage: eventsPage,
+    designDocs: designDocs,
+    designDoc: designDoc,
+    designHistory: designHistory,
+    designDraft: designDraft,
+    designDraftPut: designDraftPut,
+    designDraftDelete: designDraftDelete,
+    designApply: designApply,
     get: jget,
     refs: refList,
     docContent: docContent,

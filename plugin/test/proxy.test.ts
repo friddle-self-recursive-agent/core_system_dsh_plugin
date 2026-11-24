@@ -9,7 +9,7 @@ import assert from 'node:assert/strict'
 import {
   CONSOLE_API_PREFIX, CONSOLE_APPLY_PATH, DEFAULT_APPLY_SUBJECT,
   createApplyHandler, createConsoleApiHandler, mountConsoleRoutes,
-  CONSOLE_COMM_PATH, createCommHandler, createCommState,
+  CONSOLE_COMM_PATH, CONSOLE_DESIGN_DOCS_PATH, createCommHandler, createCommState, createDesignDocsHandler,
   type FetchLike, type HttpReqLike, type HttpResLike,
 } from '../src/index.ts'
 import { makeErrorReply } from '../src/agent-comm.ts'
@@ -103,7 +103,8 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['prefix', CONSOLE_API_PREFIX],
     ['exact', CONSOLE_APPLY_PATH],
     ['prefix', CONSOLE_DRAFTS_PATH],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）三件成套注册')
+    ['prefix', CONSOLE_DESIGN_DOCS_PATH],
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）成套注册')
   assert.equal(disposed, 0)
 
   // 依赖缺席（headless）：回调体不注册、不抛错
@@ -290,4 +291,62 @@ test('comm 读路由：栅栏缺席=401 拒全部 ∧ 403 透传 ∧ 非 GET=405
   await createCommHandler({ state, reject: () => undefined })({ method: 'POST', url: '/core-console/comm', headers: {} }, r3)
   assert.equal(r3.statusCode, 405)
   assert.equal(r3.headers.allow, 'GET')
+})
+
+// ─────── v0.52 能力 A：/core-console/design-docs 写路由（cored-bridge.md §2.4）───────
+
+test('设计文档路由：apply 主体宿主注入剥除客户端声明；draft 缺主宿主补缺省；方法分立 405', async () => {
+  const f = okFetch({ action: 'dry-run', sha: 'abc' })
+  const res = makeRes()
+  await createDesignDocsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: f, subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'POST', url: CONSOLE_DESIGN_DOCS_PATH, headers: {}, body: JSON.stringify({ repo: 'core_design', path: 'a.md', content: 'x', subject: { user: 'evil' } }) }, res)
+  assert.equal(res.statusCode, 200)
+  const sent = JSON.parse(String((f as any).lastBody))
+  assert.equal(sent.subject.user, DEFAULT_APPLY_SUBJECT.user, '主体由宿主注入（客户端声明剥除）')
+  assert.equal(f.calls[0], 'http://127.0.0.1:9/v1/design-docs/apply')
+
+  const f2 = okFetch({ resource: 'DesignDoc/core_design/a.md', action: 'staged' })
+  const res2 = makeRes()
+  await createDesignDocsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: f2, subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'POST', url: CONSOLE_DESIGN_DOCS_PATH + '/draft', headers: {}, body: JSON.stringify({ repo: 'core_design', path: 'a.md', content: 'x' }) }, res2)
+  assert.equal(res2.statusCode, 200)
+  const sent2 = JSON.parse(String((f2 as any).lastBody))
+  assert.equal(sent2.fieldManager, 'console:editor', '客户端缺主=宿主补缺省')
+  assert.equal(f2.calls[0], 'http://127.0.0.1:9/v1/design-docs/draft')
+
+  const f3 = okFetch({ resource: 'DesignDoc/core_design/a.md', action: 'discarded' })
+  const res3 = makeRes()
+  await createDesignDocsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: f3, subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'DELETE', url: CONSOLE_DESIGN_DOCS_PATH + '/draft/core_design/concepts/a.md', headers: {} }, res3)
+  assert.equal(res3.statusCode, 200)
+  assert.equal(f3.calls[0], 'http://127.0.0.1:9/v1/design-docs/draft/core_design/concepts/a.md')
+
+  // 方法分立：exact 段 GET → 405；未知子路径 → 404。
+  const res4 = makeRes()
+  await createDesignDocsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: okFetch({}), subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'GET', url: CONSOLE_DESIGN_DOCS_PATH, headers: {} }, res4)
+  assert.equal(res4.statusCode, 405)
+  const res5 = makeRes()
+  await createDesignDocsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: okFetch({}), subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'POST', url: CONSOLE_DESIGN_DOCS_PATH + '/nope', headers: {}, body: '{}' }, res5)
+  assert.equal(res5.statusCode, 404)
+  // 状态码透传：409 乐观锁 / 400 lint 照传。
+  const f6 = okFetch({ error: '基线 sha 与仓内 HEAD 不一致', expected: 'a', current: 'b' }, 409)
+  const res6 = makeRes()
+  await createDesignDocsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: f6, subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'POST', url: CONSOLE_DESIGN_DOCS_PATH, headers: {}, body: '{}' }, res6)
+  assert.equal(res6.statusCode, 409)
+  assert.match(res6.body, /expected/)
+})
+
+test('设计文档路由：栅栏缺席 fail-closed 拒全部；cored 未就绪 503', async () => {
+  const res = makeRes()
+  await createDesignDocsHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: okFetch({}), subject: DEFAULT_APPLY_SUBJECT })(
+    { method: 'POST', url: CONSOLE_DESIGN_DOCS_PATH, headers: {}, body: '{}' }, res)
+  assert.equal(res.statusCode, 401)
+  const res2 = makeRes()
+  await createDesignDocsHandler({ bridge: { url: '' }, fetchImpl: okFetch({}), subject: DEFAULT_APPLY_SUBJECT,
+    reject: () => undefined })(
+    { method: 'POST', url: CONSOLE_DESIGN_DOCS_PATH, headers: {}, body: '{}' }, res2)
+  assert.equal(res2.statusCode, 503)
 })

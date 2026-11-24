@@ -26,6 +26,16 @@
     evSyn: { on: false, n: 1200 }, // E7 合成压测窗（客户端合成展示层——不入归档不入聚合）
     docFilter: { tags: {}, kind: '', draft: '', q: '' },
     docTags: {},         // E7 tag 现读缓存（docKey@rv -> tags[]——渲染层缓存，读面权威不变）
+    /* 设计文档工作台（v0.52 能力 A——console 屏幕 6「设计文档」页签）：
+     * ddTree=白名单仓树快照（/v1/design-docs）；ddSel=当前选中 {repo,path}；
+     * dd['repo|path']={working, base, sha, lastCommit, loaded}（base=HEAD 权威）；
+     * ddTab=右栏 tab；ddMode=编辑器屏「设计文档」页签态（页签路由双入口共用一工作台）。 */
+    ddTree: null,
+    ddSel: null,
+    dd: {},
+    ddTab: {},
+    ddFilter: '',
+    ddMode: false,
     trFilter: { phase: '' },
     wImpLevel: 'all',
     follow: {},          // runKey -> bool
@@ -2114,6 +2124,9 @@
 
   // —— 屏本体：对象键解析（E2 语义保留：#/doc/:kind/:scope/:name 直链 + #/doc/:name 名字解析）——
   function screenEditor(view, kindHint) {
+    // 设计文档页签（v0.52 能力 A）：选中态=整屏换设计文档工作台（文件树+编辑器+diff+Apply——
+    // 任务书屏幕 6 页签判据；与 #/designdoc 深链路由共用同一渲染核）。
+    if (S.ddMode) { screenDesignWorkspace(view); return; }
     LIVE.ensure();
     var p = S.params;
     var kind = kindHint || p.kind;
@@ -2157,11 +2170,11 @@
     var key = edKey(kind, scope, name);
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
       { label: scope, go: scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + encodeURIComponent(scope) }, { label: name }]);
-    // E6：ConnectorOps kind 专属第五 tab「运行面」（连接层运行态——缺省 tab=运行面；
-    // 其余 kind 四 tab 不变——文档与资源同规则 E4 既有）。
+    // E6：ConnectorOps kind 专属第五 tab「运行面」（连接层运行态——缺省 tab=运行面）；
+    // v0.52 能力 A：全 kind 增「设计文档」页签（整屏换设计文档工作台——文件树+编辑器+diff+Apply）。
     var tabs = kind === 'ConnectorOps'
-      ? [['ops', '运行面'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
-      : [['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
+      ? [['ops', '运行面'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
+      : [['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
     var tab = S.docTab[key] || (kind === 'ConnectorOps' ? 'ops' : 'llm');
     view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' +
       '<div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
@@ -2427,6 +2440,8 @@
     var ctx = edCtx();
     if (!ctx) return;
     S.docTab[edKey(ctx.kind, ctx.scope, ctx.name)] = el.dataset.t;
+    // 设计文档页签=整屏态（离开页签即还原对象编辑——页签路由双入口）。
+    S.ddMode = el.dataset.t === 'design';
     render();
   };
   // 当前编辑器对象的键上下文（优先 ED 在册态——doc/:name 深链时 params.kind 可能缺席）
@@ -2599,6 +2614,340 @@
       });
     });
   };
+  /* ================= 屏 6 页签/路由：设计文档工作台（v0.52 能力 A——cored-bridge.md §2.4） =================
+   * console 屏幕 6 直接编辑设计文档 md（core_design/concepts/*.md、core_system_instance/runtime/*.md）：
+   * 打开 → 编辑 → 草稿（本地暂存=cored 草稿缓存 kind=DesignDoc）→ dry-run（白名单/R-PUB-1 lint/乐观锁
+   * baseSha 三检查）→ Apply → git commit（权威=git 仓——读面=HEAD，路线②受限文件面：零对象化零同步器，
+   * 红线「权威必须唯一」的机械落点）。写面唯一入口=宿主路由 /core-console/design-docs（apply 主体宿主
+   * 注入）；事件=DocApplied（involved=DesignDoc/<repo>/<path>，与对象 apply 同一主干）；审计=apply_log
+   * 行（史面现读）。 */
+  function ddKey(repo, path) { return repo + '|' + path; }
+  function ddFM(repo, path) { return 'console:editor:designdoc/' + repo + '/' + path; }
+  function ddSelOf() {
+    if (S.ddSel) return S.ddSel;
+    if (S.params && S.params.repo && S.params.path) return { repo: S.params.repo, path: S.params.path };
+    var t = S.ddTree;
+    if (t && t.repos && t.repos.length) {
+      var f = (t.repos[0].files || [])[0];
+      if (f) return { repo: t.repos[0].name, path: f.path };
+    }
+    return null;
+  }
+  function screenDesignDoc(view) {
+    screenDesignWorkspace(view);
+  }
+  function screenDesignWorkspace(view) {
+    var sel = ddSelOf();
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' },
+      { label: '设计文档', go: sel ? 'designdoc/' + encodeURIComponent(sel.repo) + '/' + encodeURIComponent(sel.path) : 'docs' }]
+      .concat(sel ? [{ label: sel.repo }, { label: sel.path }] : [{ label: '设计文档' }]));
+    var stale = !S.ddTree || (Date.now() - S.ddTree.at > 15000);
+    view.innerHTML = '<div class="view-inner"><div class="dd-layout">' +
+      '<div class="dd-tree" id="dd-tree">' + liveSkeletonRows(4, 0) + '</div>' +
+      '<div class="doc-main"><div class="doc-headbar"><span class="doc-path mono">' +
+      (sel ? esc(sel.repo) + '/' + esc(sel.path) : '设计文档') + '</span><span id="dd-sha-chip"></span><span id="dd-draft-chip"></span></div>' +
+      '<div class="dd-commit-row" id="dd-commit-row"></div>' +
+      '<div class="doc-editor-wrap"><textarea class="doc-editor dd-editor" id="dd-editor" spellcheck="false" disabled placeholder="加载中（HEAD 权威正文——工作树未提交改动不进读面）…"></textarea></div>' +
+      '<div class="small faint">权威=git 仓（读面=HEAD 内容，未提交的工作树改动不进读面）；编辑即累积草稿（kind=DesignDoc 与对象草稿同一缓存）；Apply=白名单→R-PUB-1 lint→乐观锁 baseSha 三检查 → git commit（本地落盘不 push）。</div>' +
+      '</div>' +
+      '<div class="doc-collab"><div class="collab-tabs">' +
+      [['diff', '草稿 diff'], ['hist', '审计']].map(function (t) {
+        var tab = sel && (S.ddTab[ddKey(sel.repo, sel.path)] || 'diff');
+        return '<div class="collab-tab' + (tab === t[0] ? ' active' : '') + '" data-act="dd-tab" data-t="' + t[0] + '">' + t[1] + '<span class="ct-badge" id="dd-badge-' + t[0] + '" hidden></span></div>';
+      }).join('') + '</div><div class="collab-body" id="dd-collab-body"></div>' +
+      '<div class="apply-dock"><div class="hint">Apply = 唯一写路径：白名单（403）→ R-PUB-1 lint（400 携违规）→ 乐观锁 baseSha（409）→ 权限准入（人审档判定）→ git commit + DocApplied。</div>' +
+      '<button class="btn primary lg block" data-act="dd-apply" id="dd-dock-btn" disabled>Apply（无变更）</button>' +
+      '<button class="btn block" data-act="dd-discard" id="dd-discard-btn" style="margin-top:6px" disabled>弃稿（清空草稿，不落库）</button></div>' +
+      '</div></div></div>';
+    if (stale) hydrateDDTree(sel);
+    else paintDDTree();
+    if (sel) hydrateDesignDoc(sel.repo, sel.path);
+  }
+  function hydrateDDTree(sel) {
+    var stamp = S.route + '|' + S.segs.join('/');
+    LIVE.designDocs().then(function (b) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      S.ddTree = { repos: b.repos || [], docs: b.docs || [], at: Date.now() };
+      paintDDTree();
+    }, function (e) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var el = $('#dd-tree');
+      if (el) el.innerHTML = '<div class="small faint" style="padding:10px">设计文档面暂不可达（' + esc(String((e && e.message) || e)) + '）——未配置 --design-repo 或 cored 未就绪。</div>';
+    });
+  }
+  function paintDDTree() {
+    var el = $('#dd-tree');
+    if (!el || !S.ddTree) return;
+    var q = (S.ddFilter || '').toLowerCase();
+    var groups = (S.ddTree.repos || []).map(function (r) {
+      var files = (r.files || []).filter(function (f) { return !q || f.path.toLowerCase().indexOf(q) >= 0; });
+      if (!files.length) return '';
+      return '<div class="dd-group"><div class="dd-group-h"><span class="mono">' + esc(r.name) + '</span><span class="faint small">' + files.length + ' md</span></div>' +
+        files.map(function (f) {
+          var cur = S.ddSel && S.ddSel.repo === r.name && S.ddSel.path === f.path;
+          return '<div class="dd-file' + (cur ? ' sel' : '') + '" data-act="dd-open" data-repo="' + esc(r.name) + '" data-path="' + esc(f.path) + '">' +
+            '<span class="mono">' + esc(f.path) + '</span></div>';
+        }).join('') + '</div>';
+    }).join('');
+    el.innerHTML = '<div class="dd-search"><input id="dd-filter" type="search" placeholder="过滤文件…" value="' + esc(S.ddFilter || '') + '"></div>' +
+      (groups || '<div class="small faint" style="padding:10px">白名单仓暂无 .md 文档（或过滤无命中）。</div>');
+    var fi = $('#dd-filter');
+    if (fi) fi.addEventListener('input', function () { S.ddFilter = this.value; paintDDTree(); });
+  }
+  function hydrateDesignDoc(repo, path) {
+    var key = ddKey(repo, path);
+    var stamp = S.route + '|' + S.segs.join('/');
+    var row = null;
+    (LIVE.state.drafts || []).forEach(function (d) { if (d.kind === 'DesignDoc' && d.scope === repo && d.name === path) row = d; });
+    var draftP = row ? LIVE.designDraft(repo, path) : Promise.resolve(null);
+    Promise.all([LIVE.designDoc(repo, path), draftP]).then(function (rs) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var face = rs[0], dr = rs[1];
+      var prev = S.dd[key];
+      var base = String(face.content || '');
+      var working = dr ? String(dr.content || '') : base;
+      S.dd[key] = {
+        repo: repo, path: path, working: working, base: base, sha: String(face.sha || ''),
+        lastCommit: face.lastCommit || null, draftFM: dr ? String(dr.fieldManager || '') : '',
+        loaded: true,
+      };
+      paintDesignDoc(repo, path);
+      paintDDBadges(repo, path);
+      renderDesignCollab(repo, path);
+      bindDesignInput(repo, path);
+    }, function (e) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var ta = $('#dd-editor');
+      if (ta) ta.value = '';
+      var chip = $('#dd-sha-chip');
+      if (chip) chip.textContent = '读面暂不可达（' + String((e && e.message) || e) + '）';
+      var chip2 = $('#dd-commit-row');
+      if (chip2) chip2.textContent = '';
+    });
+  }
+  function paintDesignDoc(repo, path) {
+    var ed = S.dd[ddKey(repo, path)];
+    var ta = $('#dd-editor');
+    if (!ed || !ta) return;
+    ta.value = ed.working;
+    ta.disabled = false;
+    var sha = $('#dd-sha-chip');
+    if (sha) { sha.className = 'chip mute small mono'; sha.textContent = 'HEAD ' + String(ed.sha || '').slice(0, 8) + '（乐观锁基准）'; }
+    var cr = $('#dd-commit-row');
+    if (cr) cr.innerHTML = ed.lastCommit
+      ? '<span class="faint small">最近提交：<span class="mono">' + esc(String(ed.lastCommit.sha || '').slice(0, 8)) + '</span> ' + esc(ed.lastCommit.subject || '') + ' · ' + esc(fmtAgo(new Date(ed.lastCommit.at || Date.now()))) + '</span>'
+      : '<span class="faint small">最近提交：—（HEAD 无此文件，Apply 将创建）</span>';
+  }
+  function paintDDBadges(repo, path) {
+    var ed = S.dd[ddKey(repo, path)];
+    if (!ed) return;
+    var has = ed.working !== ed.base;
+    var hunks = has ? hunksOf(diffLines(ed.base, ed.working)) : 0;
+    var chip = $('#dd-draft-chip');
+    if (chip) {
+      chip.className = has ? 'chip warn small' : 'chip ok small';
+      chip.textContent = has ? '● 未 Apply（草稿 ' + hunks + ' 处变更）' : '无草稿';
+    }
+    var badge = $('#dd-badge-diff');
+    if (badge) { badge.hidden = !has; badge.textContent = has ? String(hunks) : ''; }
+    var dock = $('#dd-dock-btn');
+    if (dock) {
+      dock.disabled = !has;
+      dock.textContent = has ? 'Apply（' + hunks + ' 处变更）' : 'Apply（无变更）';
+    }
+    var disc = $('#dd-discard-btn');
+    if (disc) disc.disabled = !has;
+  }
+  var DD_TIMERS = {};
+  function bindDesignInput(repo, path) {
+    var ta = $('#dd-editor');
+    if (!ta) return;
+    ta.addEventListener('input', function () {
+      var ed = S.dd[ddKey(repo, path)];
+      if (!ed) return;
+      ed.working = ta.value;
+      paintDDBadges(repo, path);
+      clearTimeout(DD_TIMERS[ddKey(repo, path)]);
+      DD_TIMERS[ddKey(repo, path)] = setTimeout(function () { landDesignDraft(repo, path); }, 800);
+    });
+  }
+  function landDesignDraft(repo, path) {
+    var ed = S.dd[ddKey(repo, path)];
+    if (!ed || !ed.loaded) return Promise.resolve(false);
+    if (ed.working === ed.base) return Promise.resolve(true);
+    return LIVE.designDraftPut({
+      repo: repo, path: path, content: ed.working,
+      fieldManager: ddFM(repo, path), reasonRef: 'console:editor',
+    }).then(function (r) {
+      if (!r.ok) { toast('草稿未落（' + (r.status == null ? '传输层' : 'HTTP ' + r.status) + '）', '工作副本本地保留——恢复后再编辑即重落', 'warn'); return false; }
+      // live 草稿快照原位更新（树/徽章数据源；不整轮 reload）。
+      var found = false;
+      (LIVE.state.drafts || []).forEach(function (d) {
+        if (d.kind === 'DesignDoc' && d.scope === repo && d.name === path) {
+          d.fieldManager = ddFM(repo, path); d.updatedAt = new Date().toISOString(); d.bytes = ed.working.length; found = true;
+        }
+      });
+      if (!found) LIVE.state.drafts.push({ kind: 'DesignDoc', scope: repo, name: path, fieldManager: ddFM(repo, path), baseResourceVersion: 0, updatedAt: new Date().toISOString(), bytes: ed.working.length });
+      paintDDBadges(repo, path);
+      return true;
+    });
+  }
+  function renderDesignCollab(repo, path) {
+    var key = ddKey(repo, path);
+    var tab = S.ddTab[key] || 'diff';
+    var el = $('#dd-collab-body');
+    if (!el) return;
+    if (tab === 'hist') {
+      el.innerHTML = '<div id="dd-history" style="padding:4px 2px">' + liveSkeletonRows(2, 0) + '</div>';
+      hydrateDesignHistory(repo, path);
+      return;
+    }
+    var ed = S.dd[key];
+    if (!ed || !ed.loaded) { el.innerHTML = liveSkeletonRows(3, 0); return; }
+    var has = ed.working !== ed.base;
+    el.innerHTML = has
+      ? '<div class="sec-title">完整草稿 diff（HEAD ' + String(ed.sha || '').slice(0, 8) + ' → 草稿）</div>' + renderDiff(diffLines(ed.base, ed.working), 60)
+      : '<div class="empty" style="padding:20px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">草稿区为空</div><div>编辑左侧内容；改动先落草稿（kind=DesignDoc），Apply 才 git commit（DocApplied 必发）。</div></div>';
+  }
+  function hydrateDesignHistory(repo, path) {
+    var stamp = S.route + '|' + S.segs.join('/');
+    LIVE.designHistory(repo, path).then(function (b) {
+      if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+      var el = $('#dd-history');
+      if (!el) return;
+      var rows = (b.entries || []).map(function (h) {
+        var cls = h.result === 'ok' ? 'ok' : (h.result === 'denied' || h.result === 'conflict') ? 'danger' : 'mute';
+        return '<div class="rev-item"><span class="rv-no">' + esc(h.result) + '</span>' +
+          '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
+          '<span class="rv-sum">' + esc(h.result === 'ok' ? 'commit 落库' : h.result) + (h.reasonRef ? ' · ' + esc(h.reasonRef) : '') + (h.subject ? '<br><span class="mono faint">' + esc(h.subject) + '</span>' : '') + '<br><span class="mono">' + esc(fmtAgo(new Date(h.ts))) + '</span></span>' +
+          '<span class="chip ' + cls + ' small">' + esc(h.result) + '</span></div>';
+      }).join('');
+      el.innerHTML = (rows || '<div class="faint small" style="padding:6px 2px">暂无应用流水（该文档尚未 Apply 过）</div>') +
+        '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（obj=DesignDoc/<repo>/<path>；git 权威在正文，最近提交见左栏 headbar）。</div>';
+    }, function () {
+      var el = $('#dd-history');
+      if (el) el.innerHTML = '<div class="small faint">史面暂不可达（/v1/design-docs/history 缺席或超时）。</div>';
+    });
+  }
+  /* --- 设计文档动作 --- */
+  ACTIONS['dd-open'] = function (el) {
+    S.ddSel = { repo: el.dataset.repo, path: el.dataset.path };
+    S.ddTab[ddKey(S.ddSel.repo, S.ddSel.path)] = 'diff';
+    go('designdoc/' + encodeURIComponent(S.ddSel.repo) + '/' + encodeURIComponent(S.ddSel.path));
+  };
+  ACTIONS['dd-tab'] = function (el) {
+    var sel = ddSelOf();
+    if (!sel) return;
+    S.ddTab[ddKey(sel.repo, sel.path)] = el.dataset.t;
+    render();
+  };
+  ACTIONS['dd-discard'] = function () {
+    var sel = ddSelOf();
+    if (!sel) return;
+    var ed = S.dd[ddKey(sel.repo, sel.path)];
+    if (!ed) return;
+    LIVE.designDraftDelete(sel.repo, sel.path).then(function (r) {
+      if (!r.ok) { toast('弃稿失败', String(r.error || ''), 'danger'); return; }
+      ed.working = ed.base;
+      paintDesignDoc(sel.repo, sel.path);
+      paintDDBadges(sel.repo, sel.path);
+      renderDesignCollab(sel.repo, sel.path);
+      toast('草稿已弃', '工作副本回到 HEAD ' + String(ed.sha || '').slice(0, 8) + '（零提交零事件）', 'warn');
+    });
+  };
+  /* Apply 全流程（dry-run 三检查→人确认→真落库）：白名单（403）/ R-PUB-1 lint（400 携违规）/
+   * 乐观锁 baseSha（409）三件机械呈现——与对象编辑器 E4 确认弹窗同款交互。 */
+  ACTIONS['dd-apply'] = function () {
+    var sel = ddSelOf();
+    if (!sel) return;
+    var ed = S.dd[ddKey(sel.repo, sel.path)];
+    if (!ed || !ed.loaded) return;
+    if (ed.working === ed.base) { toast('空草稿——无操作', '草稿与 HEAD 无差异：不提交、不发事件'); return; }
+    landDesignDraft(sel.repo, sel.path).then(function (landed) {
+      if (!landed) return;
+      var fullDiff = diffLines(ed.base, ed.working);
+      var stats = diffStats(fullDiff);
+      openModal(
+        '<div class="modal-h"><span class="m-title">Apply 确认 · ' + esc(sel.repo) + '/' + esc(sel.path) + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
+        '<div class="modal-b">' +
+        '<div class="kv" style="margin-bottom:12px"><span class="k">变更</span><span class="v"><span class="chip ok small">+' + stats.add + '</span> <span class="chip danger small">-' + stats.del + '</span> · 权威=git 仓（Apply=git commit 本地落盘，不 push）</span></div>' +
+        '<div class="checklist" id="dd-checks">' +
+        '<div class="check-item" data-c="gate"><span class="ci-ic">…</span>白名单∧权限准入（--design-repo 注册仓 .md ∧ permission.md 机读判定）</div>' +
+        '<div class="check-item" data-c="lint"><span class="ci-ic">…</span>R-PUB-1 lint（公开仓不暴露 IP/部署路径/个人标识）</div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 HEAD ' + esc(String(ed.sha || '').slice(0, 8)) + ' ↔ 仓内现值）</div></div>' +
+        renderDiff(fullDiff, 26) +
+        '<div class="small faint" id="dd-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/design-docs {fromDraft:true, dryRun:true}——零副作用）…</div>' +
+        '</div>' +
+        '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="dd-apply-go" disabled>确认 Apply（git commit）</button></div>',
+        { cls: 'wide' });
+      LIVE.designApply({ repo: sel.repo, path: sel.path, baseSha: ed.sha, fromDraft: true, dryRun: true,
+        fieldManager: ddFM(sel.repo, sel.path), reasonRef: 'console:apply-dry' }).then(function (res) {
+        var mark = function (c, ok, note) {
+          var row = $('.check-item[data-c="' + c + '"]');
+          if (!row) return;
+          row.classList.add(ok ? 'pass' : 'fail');
+          var ic = row.querySelector('.ci-ic');
+          if (ic) { ic.textContent = ok ? '✓' : '✗'; ic.style.color = ok ? 'var(--ok)' : 'var(--danger)'; }
+          if (note) {
+            var n = document.createElement('span');
+            n.className = 'ci-note';
+            n.textContent = note;
+            row.appendChild(n);
+          }
+        };
+        if (res.ok && res.data && res.data.action === 'dry-run') {
+          mark('gate', true, '白名单过∧权限准入过（cored 判定）');
+          mark('lint', true, 'R-PUB-1 lint 过（IP/路径/个人标识零命中）');
+          var lockOk = String(res.data.sha || '') === String(ed.sha || '');
+          mark('lock', lockOk, lockOk ? 'HEAD ' + String(ed.sha || '').slice(0, 8) + ' == 仓内现值（可落）' : 'HEAD 已前移（现 ' + String(res.data.sha || '').slice(0, 8) + '）——落库将 409（稿保留）');
+          var note = $('#dd-dry-note');
+          if (note) note.textContent = 'dry-run 通过预检（HEAD ' + String(res.data.sha || '').slice(0, 8) + '）——确认后真落库（git commit）。';
+          var go = $('#dd-apply-go');
+          if (go && lockOk) {
+            go.disabled = false;
+            go.addEventListener('click', function () {
+              go.disabled = true;
+              LIVE.designApply({ repo: sel.repo, path: sel.path, baseSha: ed.sha, fromDraft: true,
+                fieldManager: ddFM(sel.repo, sel.path), reasonRef: 'console:apply' }).then(function (r2) {
+                if (r2.ok) {
+                  closeModal();
+                  var c = r2.data.commit || {};
+                  toast('已提交 ' + String(c.sha || '').slice(0, 8) + '（' + (r2.data.action === 'noop' ? 'noop：稿与 HEAD 一致，零提交' : r2.data.action) + '）',
+                    sel.repo + '/' + sel.path + ' · DocApplied 已归档 · 草稿已清 · 本地提交未 push', 'ok');
+                  delete S.dd[ddKey(sel.repo, sel.path)];
+                  S.ddTree = null; // 树 sha 已前移——重进即现读
+                  LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
+                    return !(d.kind === 'DesignDoc' && d.scope === sel.repo && d.name === sel.path);
+                  });
+                  render();
+                } else if (r2.status === 409) {
+                  closeModal();
+                  toast('乐观锁冲突（409）——稿保留', '仓内 HEAD 前移（' + String(r2.error || '') + '）——重读后重整再落', 'danger');
+                  delete S.dd[ddKey(sel.repo, sel.path)];
+                  S.ddTree = null;
+                  render();
+                } else {
+                  toast('Apply 失败（' + (r2.status == null ? '传输层' : 'HTTP ' + r2.status) + '）', String(r2.error || ''), 'danger');
+                }
+              });
+            });
+          }
+        } else {
+          var st = res.status;
+          var gateFail = st === 403; // 白名单/权限（两族 403——原因文本区分）
+          var lintVs = (res.body && res.body.violations) || [];
+          mark('gate', !gateFail, gateFail ? String(res.error || 'HTTP 403') : '—');
+          mark('lint', !(st === 400 && lintVs.length), (st === 400 && lintVs.length)
+            ? lintVs.map(function (v) { return v.rule + '@L' + v.line; }).join('、') + '（违规明细见报告面）'
+            : (st === 400 ? String(res.error || '') : '—'));
+          mark('lock', false, '预检未过（' + (st == null ? '传输层' : 'HTTP ' + st) + '）');
+          var note2 = $('#dd-dry-note');
+          if (note2) note2.textContent = 'dry-run 未通过（' + (res.error || 'HTTP ' + st) + '）——改正草稿后再试。';
+        }
+      });
+    });
+  };
+
   /* ================= 屏 7：Agent 对话（E5 真数据换装，console-adoption.md §1.11） =================
    * 数据源裁决（§3.7）：左栏会话=dsh session store（ctx.sessions，不复制状态）；中栏转录=
    * session 事件页读面（remote.session.page，user/assistant/tool 事件最小渲染）；发消息=
@@ -3507,6 +3856,21 @@
     if (it.kind === 'draft') {
       var d = it.draft;
       var src = isConsoleFM(d.fieldManager) ? 'console 草稿' : 'LLM/agent 提案';
+      if (d.kind === 'DesignDoc') {
+        // 设计文档稿（v0.52 能力 A）：kind=DesignDoc, scope=<repo>, name=<path>——深链设计文档工作台；
+        // 批准=designApply 全流程（dry-run 三检查：白名单/lint/乐观锁），驳回=designDraftDelete。
+        return '<div class="ap-card" id="apcard-' + esc(cssId(it.key)) + '">' +
+          '<div class="ap-head"><span class="ap-title mono">DesignDoc/' + esc(d.scope) + '/' + esc(d.name) + '</span>' +
+          '<span class="chip warn small">待审</span><span class="chip mute small">设计文档稿</span></div>' +
+          '<div class="ap-meta"><span>仓：<b class="mono">' + esc(d.scope || '—') + '</b></span>' +
+          '<span>fieldManager：<b class="mono">' + esc(d.fieldManager) + '</b></span>' +
+          '<span class="mono faint">' + esc(String(d.updatedAt || '').replace('T', ' ').slice(0, 19)) + '</span>' +
+          '<span class="lk mono small" data-act="go" data-go="designdoc/' + encodeURIComponent(d.scope || '') + '/' + encodeURIComponent(d.name || '') + '">设计文档工作台 →</span></div>' +
+          '<div class="ap-body" id="apdiff-' + esc(cssId(it.key)) + '">' + liveSkeletonRows(2, 0) + '</div>' +
+          '<div class="ap-acts"><button class="btn ok" data-act="ap-approve" data-key="' + esc(it.key) + '">批准（=git commit）</button>' +
+          '<button class="btn danger" data-act="ap-reject" data-key="' + esc(it.key) + '">驳回（弃稿）</button>' +
+          '<span class="small faint" style="align-self:center">批准=dry-run 三检查→git commit（DocApplied）；驳回=弃稿（零提交零事件）</span></div></div>';
+      }
       return '<div class="ap-card" id="apcard-' + esc(cssId(it.key)) + '">' +
         '<div class="ap-head"><span class="ap-title mono">' + esc(d.kind) + '/' + esc(d.name) + '</span>' +
         '<span class="chip warn small">待审</span><span class="chip mute small">' + esc(src) + '</span></div>' +
@@ -3531,6 +3895,10 @@
   function involvedRoute(inv) {
     var segs = String(inv || '').split('/');
     if (segs.length < 3) return 'welcome';
+    if (segs[0] === 'DesignDoc') {
+      // 设计文档 involved（v0.52 能力 A）：DesignDoc/<repo>/<path...> → 设计文档工作台深链。
+      return 'designdoc/' + encodeURIComponent(segs[1]) + '/' + encodeURIComponent(segs.slice(2).join('/'));
+    }
     return 'doc/' + segs.slice(0, -1).map(encodeURIComponent).join('/') + '/' + encodeURIComponent(segs[segs.length - 1]);
   }
   function apKeyOf(d) { return d.kind + '/' + (d.scope || '') + '/' + d.name; }
@@ -3584,10 +3952,30 @@
       if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">审批账面读面暂不可达（/v1/approvals 缺席或超时）——判定留痕暂只=apply_log（fieldManager=console:approve）。</div>';
     });
   }
-  /* diff 注水：稿 content（GET /v1/drafts/{kind}/{name}）+ 面现值（GET /v1/objects）现读 */
+  /* diff 注水：稿 content（GET /v1/drafts/{kind}/{name}）+ 面现值（GET /v1/objects）现读；
+   * kind=DesignDoc 分支（v0.52 能力 A）：设计文档稿 diff=HEAD 正文 vs 稿（designDoc+designDraft 现读）。 */
   function hydrateApprovalDiff(d) {
     var key = apKeyOf(d);
     var stamp = S.route + '|' + S.segs.join('/');
+    if (d.kind === 'DesignDoc') {
+      Promise.all([
+        LIVE.designDoc(d.scope, d.name).then(null, function () { return null; }),
+        LIVE.designDraft(d.scope, d.name).catch(function () { return null; }),
+      ]).then(function (rs) {
+        if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
+        var el = $('#apdiff-' + cssId(key));
+        if (!el) return;
+        var face = rs[0], dr = rs[1];
+        var base = face ? String(face.content || '') : '（HEAD 读面缺席）';
+        var working = String((dr && dr.content) || '');
+        el.innerHTML = (dr ? '' : '<div class="small faint">稿正文读面缺席（超时）——重进即现读</div>') + apDiffHtml(diffLines(base, working)) +
+          '<div class="small faint" style="margin-top:4px">基准=HEAD ' + (face ? String(face.sha || '').slice(0, 8) : '?') + '（git 权威）· 稿 ' + working.length + 'B vs HEAD ' + base.length + 'B（现读，不缓存）</div>';
+      }, function (e) {
+        var el = $('#apdiff-' + cssId(key));
+        if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">diff 读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
+      });
+      return;
+    }
     Promise.all([
       LIVE.get('v1/drafts/' + encodeURIComponent(d.kind) + '/' + encodeURIComponent(d.name) + (d.scope ? '?scope=' + encodeURIComponent(d.scope) : '')),
       LIVE.fetchObject(d.kind, d.scope, d.name).catch(function () { return null; }),
@@ -3668,10 +4056,90 @@
       });
     });
   }
+  /* 设计文档稿批准=designApply 全流程复用（dry-run 三检查→人确认→fromDraft git commit——
+   * v0.52 能力 A；乐观锁基准=HEAD blob sha 现读）。 */
+  function designDocApprovalApply(it) {
+    var d = it.draft; // kind=DesignDoc, scope=<repo>, name=<path>
+    Promise.all([
+      LIVE.designDoc(d.scope, d.name).then(null, function () { return null; }),
+      LIVE.designDraft(d.scope, d.name).catch(function () { return null; }),
+    ]).then(function (rs) {
+      var face = rs[0], dr = rs[1];
+      if (!dr) { toast('稿正文读面缺席', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
+      var base = face ? String(face.content || '') : '';
+      var working = String(dr.content || '');
+      var baseSha = face ? String(face.sha || '') : '';
+      var fullDiff = diffLines(base, working);
+      var stats = diffStats(fullDiff);
+      openModal(
+        '<div class="modal-h"><span class="m-title">批准（= git commit）· DesignDoc/' + esc(d.scope) + '/' + esc(d.name) + '</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
+        '<div class="modal-b">' +
+        '<div class="kv" style="margin-bottom:12px"><span class="k">变更</span><span class="v"><span class="chip ok small">+' + stats.add + '</span> <span class="chip danger small">-' + stats.del + '</span> · 来源 ' + esc(d.fieldManager) + '</span></div>' +
+        '<div class="checklist" id="ap-checks">' +
+        '<div class="check-item" data-c="gate"><span class="ci-ic">…</span>白名单∧权限准入（--design-repo 注册仓 .md ∧ permission.md 机读判定）</div>' +
+        '<div class="check-item" data-c="lint"><span class="ci-ic">…</span>R-PUB-1 lint（公开仓不暴露 IP/部署路径/个人标识）</div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 HEAD ' + esc(String(baseSha || '').slice(0, 8)) + ' ↔ 仓内现值）</div></div>' +
+        renderDiff(fullDiff, 26) +
+        '<div class="small faint" id="ap-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/design-docs {fromDraft:true, dryRun:true}——零副作用）…</div>' +
+        '</div>' +
+        '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="ap-apply-go" disabled>确认批准（git commit）</button></div>',
+        { cls: 'wide' });
+      LIVE.designApply({ repo: d.scope, path: d.name, baseSha: baseSha, fromDraft: true, dryRun: true,
+        fieldManager: 'console:approve', reasonRef: 'console:approve-dry' }).then(function (res) {
+        var mark = function (c, ok, note) {
+          var row = $('.check-item[data-c="' + c + '"]');
+          if (!row) return;
+          row.classList.add(ok ? 'pass' : 'fail');
+          var ic = row.querySelector('.ci-ic');
+          if (ic) { ic.textContent = ok ? '✓' : '✗'; ic.style.color = ok ? 'var(--ok)' : 'var(--danger)'; }
+          if (note) { var n = document.createElement('span'); n.className = 'ci-note'; n.textContent = note; row.appendChild(n); }
+        };
+        if (res.ok && res.data && res.data.action === 'dry-run') {
+          var lockOk = String(res.data.sha || '') === baseSha;
+          mark('gate', true, '白名单过∧权限准入过');
+          mark('lint', true, 'R-PUB-1 lint 过');
+          mark('lock', lockOk, lockOk ? 'HEAD ' + String(baseSha || '').slice(0, 8) + ' == 仓内现值（可落）' : 'HEAD 已前移——落库将 409（稿保留）');
+          var go = $('#ap-apply-go');
+          if (go && lockOk) {
+            go.disabled = false;
+            go.addEventListener('click', function () {
+              go.disabled = true;
+              LIVE.designApply({ repo: d.scope, path: d.name, baseSha: baseSha, fromDraft: true,
+                fieldManager: 'console:approve', reasonRef: 'console:approve' }).then(function (r2) {
+                if (r2.ok) {
+                  closeModal();
+                  var c = r2.data.commit || {};
+                  toast('已批准（git commit ' + String(c.sha || '').slice(0, 8) + '）', key + ' · DocApplied 已归档 · 草稿已清', 'ok');
+                  LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (x) { return apKeyOf(x) !== key; });
+                  S.ddTree = null;
+                  LIVE.load().then(function () { render(); });
+                } else if (r2.status === 409) {
+                  closeModal();
+                  toast('乐观锁冲突（409）——稿保留', String(r2.error || ''), 'danger');
+                  S.ddTree = null;
+                  render();
+                } else {
+                  toast('批准失败（' + (r2.status == null ? '传输层' : 'HTTP ' + r2.status) + '）', String(r2.error || ''), 'danger');
+                }
+              });
+            });
+          }
+        } else {
+          var st = res.status;
+          var lintVs = (res.body && res.body.violations) || [];
+          mark('gate', st !== 403, st === 403 ? String(res.error || 'HTTP 403') : '—');
+          mark('lint', !(st === 400 && lintVs.length), (st === 400 && lintVs.length)
+            ? lintVs.map(function (v) { return v.rule + '@L' + v.line; }).join('、') : (st === 400 ? String(res.error || '') : '—'));
+          mark('lock', false, '预检未过（' + (st == null ? '传输层' : 'HTTP ' + st) + '）');
+        }
+      });
+    });
+  }
   ACTIONS['ap-approve'] = function (el) {
     var key = el.dataset.key;
     var it = approvalNeededObjects().filter(function (x) { return x.kind === 'draft' && apKeyOf(x.draft) === key; })[0];
     if (!it) return;
+    if (it.draft.kind === 'DesignDoc') { designDocApprovalApply(it); return; }
     approvalApply(it, function (r2) {
       if (r2.ok) {
         closeModal();
@@ -3691,6 +4159,24 @@
     var key = el.dataset.key;
     var it = approvalNeededObjects().filter(function (x) { return x.kind === 'draft' && apKeyOf(x.draft) === key; })[0];
     if (!it) return;
+    if (it.draft.kind === 'DesignDoc') {
+      // 设计文档稿驳回：designDraftDelete（/core-console/design-docs/draft/...——与对象弃稿同语义零提交）。
+      var dd = it.draft;
+      confirmModal('驳回（弃稿）',
+        '<div>弃稿 <b class="mono">' + esc(key) + '</b>？——零提交零事件（设计文档工作台可重编辑）。</div>',
+        '确认驳回', function () {
+          __CC.live.designDraftDelete(dd.scope, dd.name).then(function (r) {
+            if (r.ok) {
+              toast('已驳回（弃稿）', key + ' · 草稿清空（' + (r.status === 404 ? '本就无稿' : 'DELETE 200') + '）', 'warn');
+              LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (x) { return apKeyOf(x) !== key; });
+              render();
+            } else {
+              toast('弃稿失败（' + (r.status == null ? '传输层' : 'HTTP ' + r.status) + '）', String(r.error || ''), 'danger');
+            }
+          });
+        }, true);
+      return;
+    }
     confirmModal('驳回（弃稿）',
       '<div>弃稿 <b class="mono">' + esc(key) + '</b>？——零文档面动作（不发明反向写路径）；ApprovalNeeded 归档行保留（审计素材）。</div>',
       '确认驳回', function () {
@@ -3706,7 +4192,7 @@
       }, true);
   };
   ACTIONS['ap-batch'] = function () {
-    var items = approvalNeededObjects().filter(function (x) { return x.kind === 'draft'; });
+    var items = approvalNeededObjects().filter(function (x) { return x.kind === 'draft' && x.draft.kind !== 'DesignDoc'; });
     if (!items.length) return;
     var kinds = {};
     items.forEach(function (x) { kinds[x.draft.kind] = 1; });
@@ -4001,6 +4487,8 @@
   route('doc/:name', function (v) { screenEditor(v, null); });      // 名字解析（歧义=空态引导回系统树）
   route('doc/:kind/:scope/:name', function (v) { screenEditor(v); }); // 对象键直链（kind/scope/name）——E4 起编辑器
   route('docs', screenDocsGlobal);
+  route('designdoc/:repo/:path', screenDesignDoc); // v0.52 能力 A：设计文档工作台深链（path 段整体 URL 编码）
+  route('designdoc', screenDesignDoc); // 未选档=默认首仓首文件
   route('chat/:agent', screenChat);
   route('connectors', screenConnectors);
   route('connector/:name', function (v) { screenEditor(v, 'ConnectorOps'); }); // E4 起同屏=编辑器（文档与资源同规则）
