@@ -3781,7 +3781,7 @@
     var loading = LIVE.state.status !== 'ok';
     var form =
       '<div class="settings-cards" style="margin-bottom:20px"><div class="set-card" style="grid-column:1/-1">' +
-      '<div class="set-card-h">提交需求提案</div><div class="set-card-sub">提交=草稿→Apply 全流程（对象入库 status=submitted）；高危=人审（ApprovalNeeded 自产→审批屏），低危可自动（部署侧分流配置 --proposal-auto-approve）。</div>' +
+      '<div class="set-card-h">提交需求提案</div><div class="set-card-sub">提交=草稿→Apply 全流程（对象入库 status=submitted）；高危=人审（ApprovalNeeded 自产→审批屏），低危可自动（部署侧分流配置 --proposal-auto-approve）。提案内容过 R-PUB：禁真实 IP/凭据/内网信息，secret 只引用式。</div>' +
       '<div class="prop-form" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:8px 16px 16px">' +
       '<div><label class="small muted">名称（slug）</label><input id="pf-name" class="inp mono" style="width:100%" placeholder="add-dark-mode" autocomplete="off"></div>' +
       '<div><label class="small muted">标题 *</label><input id="pf-title" class="inp" style="width:100%" placeholder="一句话说清做什么" autocomplete="off"></div>' +
