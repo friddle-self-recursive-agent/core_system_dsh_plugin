@@ -122,3 +122,12 @@ test('R-7 静态面：执行绑定 chip（决策面 execution 投影——consol
   assert.ok(appSrc.includes('<th>执行绑定</th>'), 'workflows 列表「执行绑定」列在册')
   assert.ok(appSrc.includes("wfExecChip(row.execution)"), '详情头/配置 tab 执行绑定 chip 复用在册')
 })
+
+test('R-8 静态面：派单行（apply-workflow 派单受理投影——console-adoption.md §1.22 L51-07 测试核）', () => {
+  assert.ok(appSrc.includes('wf-dispatch-state'), '派单行注水锚在册（骨架=实现未落时现读受理投影）')
+  assert.ok(appSrc.includes("v1/agents/dispatches"), '派单面读面路径在册（GET /v1/agents/dispatches）')
+  assert.ok(appSrc.includes('apply-workflow ×'), '派单锚 chip 在册（apply-workflow ×n——受理计数）')
+  assert.ok(appSrc.includes('autoLevel='), 'autoLevel 数据面在册（ask 默认——agent-session.md §2）')
+  assert.ok(appSrc.includes('受理投影≠会话已拉起'), '诚实投影注记在册（受理≠拉起——真实拉起 deferred）')
+  assert.ok(appSrc.includes('受理投影缺席'), '环归零缺席态如实标注（进程内环重启归零——skeleton 持久态兜底）')
+})

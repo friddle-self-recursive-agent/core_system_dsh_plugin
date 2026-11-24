@@ -3905,27 +3905,53 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
   ACTIONS['wf-tab-go'] = function (el) { S.wfTab[S.params.name] = el.dataset.t; render(); };
 
   /* --- 配置 tab：生效对象 YAML 现读（编辑深链=E4）；builtin 无本体=注册表说明 --- */
+  // 派单行（v0.50 R-8——workflow-runtime.md §11.2 拉起形态首段）：骨架物化即派单 apply-workflow
+  // （受理投影 GET /v1/agents/dispatches——受理≠会话已拉起，真实拉起 deferred）。骨架=skeleton
+  // true 时现读；进程内环重启归零=受理投影缺席如实标注（实现未落持久态=execution.skeleton）。
+  function wfDispatchLine() {
+    return '<div class="small faint" style="padding:4px 0 0">派单（apply-workflow）：<span id="wf-dispatch-state" class="faint small">…</span></div>';
+  }
   function wfLiveTabConfig(row) {
     var tt = wfToggleTarget(row);
+    var exSkel = !!(row.execution && row.execution.state === 'bound' && row.execution.skeleton);
     if (!tt.target) {
       return '<div class="card"><div class="card-h"><span class="h-title">spec（builtin 注册表——无文档本体）</span></div>' +
         '<div class="card-b"><div class="small faint" style="padding:4px 0">声明随运行时 builtin 注册表（相位词汇映射表同源，concepts/workflow.md §1）；override 编辑=E4 编辑器轮余量。</div>' +
         '<div class="yaml-block">' + esc('phases: [' + (row.phases || []).join(', ') + ']\nspecSource: ' + row.specSource) + '</div>' +
-        '<div class="small faint" style="padding:6px 0 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——apply 即实现骨架物化，workflow-runtime.md §11.1）</span></div></div></div>';
+        '<div class="small faint" style="padding:6px 0 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——apply 即实现骨架物化，workflow-runtime.md §11.1）</span></div>' +
+        (exSkel ? wfDispatchLine() : '') + '</div></div>';
     }
     var obj = tt.target;
     return '<div class="card"><div class="card-h"><span class="h-title">spec yaml（' + esc(obj.scope) + ' r' + obj.resourceVersion + ' · origin ' + esc(obj.origin) + '）</span>' +
       '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '">编辑（→ 对象 viewer，E4 起 Apply 全链）</span></span></div>' +
       '<div class="card-b" id="wf-config-yaml"><div class="skel-row"><div class="skel" style="width:220px"></div></div></div>' +
-      '<div class="card-b" style="border-top:1px solid var(--line)"><div class="small faint" style="padding:2px 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——骨架=apply 即实现物化面，实现代码=apply-workflow agent 余量）</span></div></div></div>';
+      '<div class="card-b" style="border-top:1px solid var(--line)"><div class="small faint" style="padding:2px 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——骨架=apply 即实现物化面，实现代码=apply-workflow agent 余量）</span></div>' +
+      (exSkel ? wfDispatchLine() : '') + '</div></div>';
   }
   function hydrateWfConfig(row) {
     var obj = wfToggleTarget(row).target;
-    if (!obj) return;
-    hydrate('wf-config-yaml', 'v1/objects/Workflow/' + encodeURIComponent(row.name) + '?scope=' + encodeURIComponent(obj.scope),
-      function (el, b) {
-        el.innerHTML = '<div class="yaml-block">' + esc(String(b.content || '')) + '</div>';
+    if (obj) {
+      hydrate('wf-config-yaml', 'v1/objects/Workflow/' + encodeURIComponent(row.name) + '?scope=' + encodeURIComponent(obj.scope),
+        function (el, b) {
+          el.innerHTML = '<div class="yaml-block">' + esc(String(b.content || '')) + '</div>';
+        });
+    }
+    // 派单行注水（v0.50 R-8）：骨架=实现未落 → apply-workflow 派单受理投影现读
+    // （环内该 workflow 锚的行数+最近一次动作/rv/autoLevel；缺席=重启归零如实标注）。
+    if (row.execution && row.execution.state === 'bound' && row.execution.skeleton) {
+      hydrate('wf-dispatch-state', 'v1/agents/dispatches', function (el, b) {
+        var recs = (b.dispatches || []).filter(function (d) { return d.workflow === row.name; });
+        if (!recs.length) {
+          el.innerHTML = '<span>受理投影缺席（进程内环——重启归零；实现未落=execution.skeleton 持久态在册）</span>';
+          return;
+        }
+        var last = recs[recs.length - 1];
+        el.innerHTML = '<span class="chip mute small mono">apply-workflow ×' + recs.length + '</span> ' +
+          '<span>最近 ' + esc(String(last.at || '').replace('T', ' ').slice(0, 19)) + ' · action=' + esc(last.action) +
+          ' · rv=' + esc(last.rv) + ' · autoLevel=' + esc(last.autoLevel) +
+          '（受理投影≠会话已拉起——真实拉起 deferred，workflow-runtime.md §11.2）</span>';
       });
+    }
   }
 
   /* --- 运行独立页 #/wf/:name/r/:n（屏幕 5 运行抽屉的独立路由形态，console-ui.md 详情页矩阵） --- */
