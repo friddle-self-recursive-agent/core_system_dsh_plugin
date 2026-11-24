@@ -104,3 +104,12 @@ test('E7 收口清扫：mock 渲染面归零（总览/palette/文档行/假动�
   assert.ok(appSrc.includes('手动触发=触发面余量'), 'manual tick 诚实提示在册（不画假回执）')
   assert.ok(appSrc.includes('新建文档=declared 余量'), 'newGoal 诚实提示在册（不推 mock 库）')
 })
+
+test('R-6 静态面：授权面 Role/Group 现读 + Role 授权矩阵（console-adoption.md §1.20 L49-04 测试核）', () => {
+  const liveSrc = readFileSync(join(PLUGIN, 'client/console-live.js'), 'utf8')
+  assert.ok(/smallKinds = \['Agent', 'ServiceDesc', 'ConnectorOps', 'Role', 'Group'\]/.test(liveSrc), 'live 小对象现读清单扩 Role/Group（授权矩阵 spec 现读数据源）')
+  assert.ok(appSrc.includes('Role 授权矩阵'), 'Role 授权矩阵区块在册（非空态激活面）')
+  assert.ok(appSrc.includes('spec 零授权条目'), '零授权条目诚实标注在册（声明在册零条目=不产生授权，授权面同判）')
+  assert.ok(appSrc.includes('绑定 role（user→group→role'), 'group→role 绑定反查在册（permission.md 骨架 3）')
+  assert.ok(appSrc.includes('Role / Group 对象零在册'), '零对象诚实空态保留（零在册分支不删——docsRoot 零对象时不冒充）')
+})

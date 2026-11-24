@@ -1410,9 +1410,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
       })
       .then(function () {
         // E5 小对象现读（Agent/ServiceDesc/ConnectorOps）：agent 声明集/归属链/owner 解析数据面。
-        // 数量小（agent/connectorops 各个位数、系统数个）——全量现读不拖库（limit 口径不适用）。
+        // R-6（adoption §1.20）：授权面小对象 Role/Group 同批现读——permissions 屏「Role 授权矩阵」
+        // spec 现读数据源（数量小——全量现读不拖库，limit 口径不适用）。
         state.docContent = {};
-        var smallKinds = ['Agent', 'ServiceDesc', 'ConnectorOps'];
+        var smallKinds = ['Agent', 'ServiceDesc', 'ConnectorOps', 'Role', 'Group'];
         var jobs = [];
         smallKinds.forEach(function (k) {
           (state.objects[k] || []).forEach(function (o) {
@@ -3448,12 +3449,65 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG \u56fe\u6807 
         '<div class="empty" style="padding:16px"><div class="e-title">Role / Group 对象零在册（docsRoot）</div>' +
         '<div class="small faint">角色面=declared 余量（docsRoot 未建 Role/Group 对象）——矩阵行只呈现 Agent 声明面现读，不冒充 role 授权</div></div></div></div>';
     } else {
+      // R-6（console-adoption.md §1.20）：Role/Group 文档面在册 → 授权矩阵 spec 现读区块。
+      // 数据源=live 小对象现读（console-live.js smallKinds 含 Role/Group）——声明正文现读，非内置表；
+      // 全可点溯源（role→#/role/:name、on 挂载→#/agent/:name、group 反查→role 链接）。
+      function strList(seg) {
+        return (seg || '').split(',').map(function (s) { return s.trim().replace(/^['"]|['"]$/g, ''); }).filter(Boolean);
+      }
+      function roleSpecOf(scope, name) {
+        var c = LIVE.docContent('Role', scope || '', name) || '';
+        var on = [];
+        var om = /on:\s*\[([^\]]*)\]/.exec(c);
+        if (om) on = strList(om[1]);
+        var perms = [];
+        var re = /-\s*\{scope:\s*([^,}]+),\s*actions:\s*\[([^\]]*)\]\}/g, pm;
+        while ((pm = re.exec(c))) perms.push({ scope: strList(pm[1])[0] || pm[1].trim(), actions: strList(pm[2]) });
+        return { on: on, perms: perms };
+      }
+      function groupRolesOf(scope, name) {
+        var c = LIVE.docContent('Group', scope || '', name) || '';
+        var m = /roles:\s*\[([^\]]*)\]/.exec(c);
+        return m ? strList(m[1]) : [];
+      }
+      var roleLink = function (bare) {
+        return '<span class="lk mono small" data-act="go" data-go="role/' + esc(bare.replace(/^role\//, '')) + '">' + esc(bare) + '</span>';
+      };
+      var grantRows = '';
+      roles.forEach(function (r) {
+        var sp = roleSpecOf(r.scope, r.name);
+        if (!sp.perms.length && !sp.on.length) {
+          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td colspan="3" class="small faint">spec 零授权条目（声明在册，零挂载零权限域——授权面同判=不产生授权）</td></tr>';
+          return;
+        }
+        sp.on.forEach(function (o) {
+          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td>' +
+            '<td class="mono">' + (o.indexOf('agent/') === 0
+              ? '<span class="lk" data-act="go" data-go="agent/' + esc(o.slice(6)) + '">' + esc(o) + '</span>'
+              : esc(o)) + '</td><td class="mono faint small">—</td><td class="small faint">on 对象挂载（permission.md 骨架 3b——持有者可处理该对象）</td></tr>';
+        });
+        sp.perms.forEach(function (p) {
+          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td class="mono">' + esc(p.scope) + '</td><td class="mono small">' + esc(p.actions.join(', ')) + '</td><td class="small faint">permissions 权限域条目（写面 admit 判定源）</td></tr>';
+        });
+      });
+      var grpRows = groups.map(function (g) {
+        var bound = groupRolesOf(g.scope, g.name);
+        return '<tr><td class="mono"><span class="chip kind">Group</span> ' + esc(g.name) + '</td><td>' +
+          (bound.length ? bound.map(roleLink).join(' ') : '<span class="faint">零绑定（组不产生授权）</span>') + '</td></tr>';
+      }).join('');
       rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 文档面</span></div><table class="tbl"><thead><tr><th>kind</th><th>name</th><th>scope</th><th>rv</th></tr></thead><tbody>' +
         roles.map(function (r) { return '<tr><td class="chip kind">Role</td><td class="mono"><span class="lk" data-act="go" data-go="role/' + esc(r.name) + '">' + esc(r.name) + '</span></td><td class="mono">' + esc(r.scope || '—') + '</td><td class="mono">r' + esc(r.resourceVersion) + '</td></tr>'; }).join('') +
         groups.map(function (g) { return '<tr><td class="chip kind">Group</td><td class="mono">' + esc(g.name) + '</td><td class="mono">' + esc(g.scope || '—') + '</td><td class="mono">r' + esc(g.resourceVersion) + '</td></tr>'; }).join('') +
-        '</tbody></table></div>';
+        '</tbody></table></div>' +
+        '<div class="card"><div class="card-h"><span class="h-title">Role 授权矩阵（行=Role × 授权条目——声明正文 spec 现读）</span>' +
+        '<span class="h-sub">on 挂载 / 权限域条目（scope + actions）/ 绑定 group 反查——全可点溯源</span></div>' +
+        '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="min-width:110px">role</th><th style="min-width:150px">对象挂载 · 权限域</th><th style="min-width:120px">actions</th><th>条目类型</th></tr></thead><tbody>' +
+        (grantRows || '<tr><td colspan="4" class="small faint">Role 零授权条目</td></tr>') +
+        '</tbody></table></div>' +
+        '<table class="tbl" style="margin-top:10px"><thead><tr><th style="min-width:140px">group</th><th>绑定 role（user→group→role，骨架 3）</th></tr></thead><tbody>' +
+        (grpRows || '<tr><td colspan="2" class="small faint">Group 零在册</td></tr>') + '</tbody></table></div>';
     }
-    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '权限面', '行=Agent 文档面 · 列=ConnectorOps/Provider/Ref · 格=声明正文挂载行现读（溯源全可点）· Role/Group=文档面枚举', 'Agent') +
+    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '权限面', '行=Agent 文档面 · 列=ConnectorOps/Provider/Ref · 格=声明正文挂载行现读（溯源全可点）· Role/Group=文档面枚举+授权矩阵 spec 现读', 'Agent') +
       '<div class="grid" style="grid-template-columns:1fr">' + matrix +
       '<div class="card"><div class="card-h"><span class="h-title">挂载反查（ConnectorOps × 挂载者——声明正文现读）</span></div>' +
       '<table class="tbl"><thead><tr><th>ConnectorOps</th><th>scope</th><th>挂载者（Agent 文档面）</th></tr></thead><tbody>' +

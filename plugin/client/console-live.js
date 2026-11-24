@@ -125,9 +125,10 @@
       })
       .then(function () {
         // E5 小对象现读（Agent/ServiceDesc/ConnectorOps）：agent 声明集/归属链/owner 解析数据面。
-        // 数量小（agent/connectorops 各个位数、系统数个）——全量现读不拖库（limit 口径不适用）。
+        // R-6（adoption §1.20）：授权面小对象 Role/Group 同批现读——permissions 屏「Role 授权矩阵」
+        // spec 现读数据源（数量小——全量现读不拖库，limit 口径不适用）。
         state.docContent = {};
-        var smallKinds = ['Agent', 'ServiceDesc', 'ConnectorOps'];
+        var smallKinds = ['Agent', 'ServiceDesc', 'ConnectorOps', 'Role', 'Group'];
         var jobs = [];
         smallKinds.forEach(function (k) {
           (state.objects[k] || []).forEach(function (o) {
