@@ -67,3 +67,23 @@ test('spawn 接线声明词形消费：wf 详情派单行+提案详情派单卡 
   assert.ok(appSrc.includes('wired 恒 false=零拉起执行器'), 'wired 恒 false 红线 a 机械锚标注在册（声明≠拉起）')
   assert.ok(appSrc.includes('r0.approval && r0.approval.state'), '提案详情派单卡 approval 键消费在册')
 })
+
+// ───────────────── v0.58 派单批准动作面 console 动作化（console-adoption.md §1.33——L60-UI-01 静态面） ─────────────────
+
+test('派单批准动作面：wf 配置 tab 派单行 approval=pending → 批准/驳回动作在册（动作=Apply 判定通路——红线 1 非旁路）', () => {
+  assert.ok(SRC.includes("data-act=\"disp-approve\""), 'wf 派单行批准动作锚在册（approval=pending 词形）')
+  assert.ok(SRC.includes("data-act=\"disp-reject\""), 'wf 派单行驳回动作锚在册')
+  assert.ok(SRC.includes("ACTIONS['disp-approve']") && SRC.includes("ACTIONS['disp-reject']"), '动作 handler 接线在册（全局 data-act 委托）')
+  assert.ok(SRC.includes("fieldManager: fm"), '动作本体=既有 Apply 通路（workflow:approve|workflow:reject 判定串——零新写路径）')
+  assert.ok(SRC.includes("dryRun: true"), 'dry-run 预检在册（E4 通路同款三检查——零副作用先于判定）')
+  assert.ok(SRC.includes('confirmModal('), '确认弹窗在册（人点为准——挂起行审批动作面）')
+  assert.ok(SRC.includes("rec.approval.state !== 'pending'"), '判定终态守卫在册（终态后无批准/驳回动作——状态机词汇闭合）')
+  assert.ok(SRC.includes("resourceVersion: rec.rv"), '乐观锁基线=批准投影行 rv 在册（DecisionAction 同源）')
+})
+
+test('派单批准动作红线词形：批准≠拉起（wired 恒 false 机械锚标注）+ 判定权威=apply_log 判定行（toast 词形）+ 回链闭环语义', () => {
+  assert.ok(SRC.includes('批准→spawn 接线声明（wired 恒 false=真实拉起 deferred——红线 a，批准≠拉起零执行）'), '批准动作红线 a 标注在册（确认弹窗词形）')
+  assert.ok(SRC.includes('apply_log 判定行=批准投影翻转权威'), '判定权威=apply_log 判定行词形在册（§11.5 动作面口径）')
+  assert.ok(SRC.includes('inbox 下一次装载反映（挂起行消失=回链闭环）'), '回链闭环 toast 词形在册（挂起行投影已判过滤——v0.58 拍即生效）')
+  assert.ok(SRC.includes('无挂起批准投影'), '终态守卫 toast 词形在册（零发明动作）')
+})

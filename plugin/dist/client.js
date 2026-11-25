@@ -4328,6 +4328,16 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         // deferred 机械锚（红线 a：声明≠拉起，真实执行仍 observe）；键缺席=旧代 cored 词形。
         var apState = (last.approval && last.approval.state) || '';
         var apCls = apState === 'approved' ? 'ok' : apState === 'rejected' ? 'danger' : 'warn';
+        // v0.58 批准动作面 console 动作化（§11.5 动作面——console-adoption.md §1.33 L60-UI-01）：
+        // approval=pending → 批准/驳回按钮（data-act=disp-approve|disp-reject）——动作本体=既有
+        // Apply 判定通路（workflow:approve|workflow:reject，workservice DecisionAction 单点拼装
+        // 同键同串；dry-run 预检+确认弹窗=E4 通路同款红线 1 全程不破）；判定终态=词形 chips
+        // 在册（无按钮——状态机词汇闭合）；spawn 声明词形随行（§11.7——wired 恒 false=真实拉起
+        // deferred 机械锚红线 a：批准≠拉起，动作面零拉起执行器）。
+        var actHtml = apState === 'pending'
+          ? '<span class="lk small" data-act="disp-approve" data-wf="' + esc(row.name) + '" style="color:var(--ok)">批准（=Apply workflow:approve）</span> · ' +
+            '<span class="lk small" data-act="disp-reject" data-wf="' + esc(row.name) + '" style="color:var(--danger)">驳回（=Apply workflow:reject）</span> · '
+          : '';
         var sp = last.spawn || null;
         var spHtml = '';
         if (sp && sp.declared) {
@@ -4335,14 +4345,76 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         } else if (sp) {
           spHtml = '<span class="chip mute small mono" title="spawn 接线缺席词形（pending/rejected 行或批准投影缺席——零值键恒在=代际判别器；未批准=接线面未进入）">spawn·未声明（wired=false）</span> ';
         }
-        var apHtml = apState ? '<span class="chip ' + apCls + ' small mono" title="ask 批准动作面（§11.5）：批准/驳回=Apply workflow:approve|reject 判定（apply_log 行集匹配原地翻转）">批准投影·' + esc(apState) + '</span> ' : '';
+        var apHtml = apState ? '<span id="wf-approval-chip" class="chip ' + apCls + ' small mono" title="ask 批准动作面（§11.5）：批准/驳回=Apply workflow:approve|reject 判定（apply_log 行集匹配原地翻转）">批准投影·' + esc(apState) + '</span> ' : '';
         el.innerHTML = '<span class="chip mute small mono">apply-workflow ×' + recs.length + '</span> ' + apHtml + spHtml +
           '<span>最近 ' + esc(String(last.at || '').replace('T', ' ').slice(0, 19)) + ' · action=' + esc(last.action) +
           ' · rv=' + esc(last.rv) + ' · autoLevel=' + esc(last.autoLevel) +
-          '（受理投影≠会话已拉起——拉起接线=§11.2 第三段声明；节点输入=' + esc(nodes || '—') + '）</span>';
+          '（受理投影≠会话已拉起——拉起接线=§11.2 第三段声明；节点输入=' + esc(nodes || '—') + '）</span>' +
+          (actHtml ? '<div style="margin-top:4px">' + actHtml + '</div>' : '');
       });
     }
   }
+
+  // v0.58 派单批准/驳回动作本体（§11.5 动作面 console 动作化——console-adoption.md §1.33）：
+  // 动作=Apply 判定（红线 1——非旁路）：判定串 workflow:approve|workflow:reject=workservice
+  // DecisionAction 单点拼装同键同串（对象键=matchingKeyOf；rv=批准投影行 rv=乐观锁基线；
+  // reasonRef=workflow:<动作>:<approvalId>）；通路=既有 POST /core-console/apply（E4 同款）。
+  // 形态=dry-run 预检（scheme/权限/乐观锁三检查）→ 确认弹窗（人点为准——挂起行审批动作面）→
+  // 真实 Apply → toast + 呈现面 refresh（chips 原地翻转 + inbox 挂起行消失=回链闭环）。
+  // 红线 a：批准≠拉起——声明面零拉起执行器，动作面零新增写词形零旁路。
+  function dispApprovalRow(name) {
+    return LIVE.get('v1/agents/dispatches').then(function (b) {
+      var recs = (b.dispatches || []).filter(function (d) { return d.workflow === name; });
+      return recs.length ? recs[recs.length - 1] : null;
+    });
+  }
+  function dispDecide(name, decision) {
+    dispApprovalRow(name).then(function (rec) {
+      if (!rec || !rec.approval || rec.approval.state !== 'pending') {
+        toast('无挂起批准投影', name + ' · 判定终态后无批准/驳回动作（状态机词汇闭合）', 'warn');
+        return;
+      }
+      var fm = decision === 'approve' ? 'workflow:approve' : 'workflow:reject';
+      var key = rec.approval && rec.approval.approvalId ? rec.approval.approvalId
+        : (rec.connector ? 'ConnectorOps/' + rec.scope + '/' + rec.connector : 'Proposal/' + rec.scope + '/' + rec.proposal);
+      // dry-run 预检（E4 通路同款三检查——零副作用；cored v0.58 起动作 Apply 的 dry-run
+      // 不进批准投影同步：预检≠判定，词形不冒充已判定）。
+      LIVE.apply({ kind: 'ConnectorOps', scope: rec.scope, name: rec.connector,
+        resourceVersion: rec.rv, content: '',
+        fieldManager: fm, reasonRef: 'workflow:' + decision + ':' + key, dryRun: true }).then(function (dry) {
+        var lockOk = dry.ok && dry.data && dry.data.rv === rec.rv;
+        var checks = dry.ok
+          ? '<div class="checklist">' +
+            '<div class="check-item pass"><span class="ci-ic" style="color:var(--ok)">✓</span>Scheme 校验 + 权限准入（dry-run 零副作用）</div>' +
+            '<div class="check-item ' + (lockOk ? 'pass' : 'fail') + '"><span class="ci-ic" style="color:' + (lockOk ? 'var(--ok)' : 'var(--danger)') + '">' + (lockOk ? '✓' : '✗') + '</span>乐观锁（投影 rv r' + rec.rv + ' ↔ 面上现值' + (lockOk ? '一致' : '漂移 r' + (dry.data && dry.data.rv) + '——重进即现读') + '）</div>' +
+            '</div>'
+          : '<div class="small" style="color:var(--danger)">预检未过（' + esc(String(dry.error || ('HTTP ' + dry.status))) + '）</div>';
+        confirmModal(decision === 'approve' ? '批准派单（= Apply workflow:approve）' : '驳回派单（= Apply workflow:reject）',
+          '<div class="small" style="margin-bottom:8px">对象 <b class="mono">' + esc(key) + '</b>' +
+          ' · 派单 rv r' + esc(rec.rv) + ' · autoLevel=' + esc(rec.autoLevel || 'ask') +
+          '（判定串 workflow:' + esc(decision) + '——apply_log 判定行=批准投影翻转权威，§11.5 动作面；' +
+          (decision === 'approve' ? '批准→spawn 接线声明（wired 恒 false=真实拉起 deferred——红线 a，批准≠拉起零执行）' : '驳回→零声明（接线面未进入））') + '）' +
+          checks,
+          decision === 'approve' ? '确认批准（Apply）' : '确认驳回（Apply）', function () {
+            LIVE.apply({ kind: 'ConnectorOps', scope: rec.scope, name: rec.connector,
+              resourceVersion: rec.rv, content: '',
+              fieldManager: fm, reasonRef: 'workflow:' + decision + ':' + key }).then(function (res) {
+              if (res.ok) {
+                toast(decision === 'approve' ? '已批准（判定行在账 r' + res.data.rv + '）' : '已驳回（r' + res.data.rv + '）',
+                  name + ' · 批准投影翻转 ' + fm + ' · inbox 下一次装载反映（挂起行消失=回链闭环）', decision === 'approve' ? 'ok' : 'warn');
+                render(); // 呈现面 refresh（chips 原地翻转 + 动作按钮摘除；inbox 回链=挂起行投影已判过滤）
+              } else if (res.status === 409) {
+                toast('乐观锁冲突（409）', '派单行 rv 已前移（r' + rec.rv + ' → 面上现值）——重进即现读', 'danger');
+              } else {
+                toast('判定失败（' + (res.status == null ? '传输层' : 'HTTP ' + res.status) + '）', String(res.error || ''), 'danger');
+              }
+            });
+          }, decision !== 'approve');
+      });
+    }, function (e) { toast('派单投影现读失败', String((e && e.message) || e), 'danger'); });
+  }
+  ACTIONS['disp-approve'] = function (el) { dispDecide(el.dataset.wf, 'approve'); };
+  ACTIONS['disp-reject'] = function (el) { dispDecide(el.dataset.wf, 'reject'); };
 
   /* --- 运行独立页 #/wf/:name/r/:n（屏幕 5 运行抽屉的独立路由形态，console-ui.md 详情页矩阵） --- */
   function screenWfRun(view) {
@@ -7594,6 +7666,13 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       // v0.57 批准投影+spawn 接线声明随行（拉起投影面第三/末段——workflow-runtime.md §11.5/§11.7）。
       var apState = (r0.approval && r0.approval.state) || '';
       var apCls = apState === 'approved' ? 'ok' : apState === 'rejected' ? 'danger' : 'warn';
+      // v0.58 派单卡动作行（§11.5 动作面 console 动作化——kind=proposal 派单行的批准/驳回=
+      // 提案判定通路同款动作（console:approve|console:reject——proposalFlip 既有）；pending
+      // 态=动作在册，判定终态=词形 chips 在册无按钮）。note=d.syncsProposal proposalsPayload
+      // 无决策动作（§1.33 余量）——本卡=派单投影的动作化消费落点。
+      var actLine = apState === 'pending'
+        ? '<div style="margin-top:6px"><span class="lk small" style="color:var(--ok)" data-act="prop-approve" data-scope="' + esc(scope) + '" data-name="' + esc(name) + '">批准（=Apply console:approve）</span> · <span class="lk small" style="color:var(--danger)" data-act="prop-reject" data-scope="' + esc(scope) + '" data-name="' + esc(name) + '">驳回（=Apply console:reject）</span></div>'
+        : '';
       var sp = r0.spawn || null;
       var spWord = sp && sp.declared
         ? '<span class="chip acc small">spawn·声明 target=' + esc(sp.target || '') + ' · wired=' + esc(String(sp.wired)) + '</span>'
@@ -7604,7 +7683,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<span class="chip mute small">rv=' + (r0.rv || 0) + '</span>' +
         '<span class="chip mute small">eventId=' + esc(String(r0.eventId || '').slice(0, 28)) + '…</span>' +
         (apState ? '<span class="chip ' + apCls + ' small">批准投影·' + esc(apState) + '</span>' : '') +
-        spWord + '</div>' +
+        spWord + '</div>' + actLine +
         '<div class="small faint">受理 ≠ agent 会话已拉起（诚实投影——真实拉起=dsh 会话挂载，declared-deferred；spawn 声明=approved 批准投影的接线意图词形，wired 恒 false=零拉起执行器——红线 a）；载荷带提案名/目标/验收（执行体输入）。</div>';
     }, function () {
       var el = $('#pd-dispatch');
