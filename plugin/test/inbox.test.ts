@@ -87,3 +87,18 @@ test('派单批准动作红线词形：批准≠拉起（wired 恒 false 机械�
   assert.ok(SRC.includes('inbox 下一次装载反映（挂起行消失=回链闭环）'), '回链闭环 toast 词形在册（挂起行投影已判过滤——v0.58 拍即生效）')
   assert.ok(SRC.includes('无挂起批准投影'), '终态守卫 toast 词形在册（零发明动作）')
 })
+
+// ───────────────── v0.58a 活体补口（loop-60 UI 探针实证缺陷收口——content 原文随行） ─────────────────
+
+test('动作判定 Apply 原文随行：content=骨架对象现读原文（repository 面 content 须为可解析文档根——v0.58 首版空串活体 400 收口）', () => {
+  assert.ok(SRC.includes("LIVE.get('v1/objects/'"), '动作前骨架对象现读在册（原文零变更=判定行照落照判定）')
+  assert.ok(!SRC.includes("resourceVersion: rec.rv, content: ''"), '空串 content 词形废除（400「文档根须为映射」活体实证——不再回潮）')
+  assert.ok(SRC.includes("var kind = (rec.kind === 'proposal' || rec.proposal) ? 'Proposal' : 'ConnectorOps'"), 'kind 判别在册（workflow 派单=骨架对象/proposal 派单=Proposal 对象——DecisionAction matchingKeyOf 同键）')
+  assert.ok(SRC.includes("fieldManager: fm, reasonRef: 'workflow:' + decision + ':' + key, dryRun: true"), 'dry-run 预检同载荷同原文（预检≠判定）')
+})
+
+test('动作面 dry-run 零副作用词形守卫：预检/真实动作两拍同判据（弹窗词形不发明终态——投影词形只由真实判定翻转）', () => {
+  assert.ok(SRC.includes("dry.data.rv === rec.rv"), '乐观锁预检判据在册（投影 rv ↔ 面上现值漂移即示）')
+  assert.ok(SRC.includes("rec.approval.state !== 'pending'"), '真实动作拍终态守卫在册（pending→动作，终态=零动作）')
+  assert.ok(SRC.includes("409"), '乐观锁冲突路径在册（rv 前移=重进现读——零旁路）')
+})

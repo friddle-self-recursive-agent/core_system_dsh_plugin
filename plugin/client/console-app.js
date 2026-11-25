@@ -2241,13 +2241,22 @@
         toast('无挂起批准投影', name + ' · 判定终态后无批准/驳回动作（状态机词汇闭合）', 'warn');
         return;
       }
+      // v0.58a 活体补口：判定 Apply 的 content=骨架对象现读原文（repository 面语义=content
+      // 须为可解析文档根——v0.58 首版 content:'' 在活体探针实证 400「文档根须为映射」，
+      // loop-59「零 content noop」词形对 repo 面不成立；原文零变更=判定行照落照判定）。
+      LIVE.get('v1/objects/' + (rec.connector ? 'ConnectorOps' : 'Proposal') + '/' +
+        encodeURIComponent(rec.connector || rec.proposal) + '?scope=' + encodeURIComponent(rec.scope || ''))
+      .catch(function () { return null; }).then(function (obj) {
+        var curContent = (obj && (obj.content || (obj.data && obj.data.content))) || '';
       var fm = decision === 'approve' ? 'workflow:approve' : 'workflow:reject';
       var key = rec.approval && rec.approval.approvalId ? rec.approval.approvalId
         : (rec.connector ? 'ConnectorOps/' + rec.scope + '/' + rec.connector : 'Proposal/' + rec.scope + '/' + rec.proposal);
       // dry-run 预检（E4 通路同款三检查——零副作用；cored v0.58 起动作 Apply 的 dry-run
       // 不进批准投影同步：预检≠判定，词形不冒充已判定）。
-      LIVE.apply({ kind: 'ConnectorOps', scope: rec.scope, name: rec.connector,
-        resourceVersion: rec.rv, content: '',
+      var kind = (rec.kind === 'proposal' || rec.proposal) ? 'Proposal' : 'ConnectorOps';
+      var objName = kind === 'Proposal' ? rec.proposal : rec.connector;
+      LIVE.apply({ kind: kind, scope: rec.scope, name: objName,
+        resourceVersion: rec.rv, content: curContent,
         fieldManager: fm, reasonRef: 'workflow:' + decision + ':' + key, dryRun: true }).then(function (dry) {
         var lockOk = dry.ok && dry.data && dry.data.rv === rec.rv;
         var checks = dry.ok
@@ -2263,8 +2272,8 @@
           (decision === 'approve' ? '批准→spawn 接线声明（wired 恒 false=真实拉起 deferred——红线 a，批准≠拉起零执行）' : '驳回→零声明（接线面未进入））') + '）' +
           checks,
           decision === 'approve' ? '确认批准（Apply）' : '确认驳回（Apply）', function () {
-            LIVE.apply({ kind: 'ConnectorOps', scope: rec.scope, name: rec.connector,
-              resourceVersion: rec.rv, content: '',
+            LIVE.apply({ kind: kind, scope: rec.scope, name: objName,
+              resourceVersion: rec.rv, content: curContent,
               fieldManager: fm, reasonRef: 'workflow:' + decision + ':' + key }).then(function (res) {
               if (res.ok) {
                 toast(decision === 'approve' ? '已批准（判定行在账 r' + res.data.rv + '）' : '已驳回（r' + res.data.rv + '）',
@@ -2277,6 +2286,7 @@
               }
             });
           }, decision !== 'approve');
+      });
       });
     }, function (e) { toast('派单投影现读失败', String((e && e.message) || e), 'danger'); });
   }
