@@ -515,3 +515,12 @@
   .cc-app .cc-empty-inline{ align-items: flex-start; flex-wrap: wrap; }
   .cc-app .cc-empty-inline .btn{ margin-left: 0; }
 }
+/* ── v0.56 R-10：待你处理收件箱（screenInbox——console-adoption.md §1.25 页面兜底） ── */
+.cc-app .cc-inbox-list{ display:flex; flex-direction:column; }
+.cc-app .ib-item{ display:flex; align-items:center; gap:12px; padding:10px 8px; border:0; border-bottom:1px solid var(--border-1); background:transparent; color:var(--text-2); cursor:pointer; text-align:left; width:100%; }
+.cc-app .ib-item:hover{ background:var(--panel-2); }
+.cc-app .ib-item:last-child{ border-bottom:0; }
+.cc-app .ib-main{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.cc-app .ib-digest{ color:var(--text); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cc-app .ib-link{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cc-app .ib-at{ margin-left:auto; flex:none; color:var(--text-3); }

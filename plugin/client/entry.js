@@ -16,7 +16,7 @@ var CONSOLE_NAV = [
 var CONSOLE_SEGS = [
   'welcome', 'overview', 'tree', 's', 'workflows', 'wf', 'docs', 'doc', 'designdoc',
   'chat', 'session', 'connectors', 'connector', 'ws', 'provider', 'ref', 'role',
-  'agent', 'event', 'events', 'approvals', 'proposals', 'proposal'
+  'agent', 'event', 'events', 'approvals', 'proposals', 'proposal', 'inbox'
 ]
 
 function isConsoleHash(h) {

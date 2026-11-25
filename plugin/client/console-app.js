@@ -121,6 +121,14 @@
     return out;
   }
   function pendingApprovals() { return approvalNeededObjects(); }
+  /* 通知中心收件箱计数（v0.56 R-10——§1.25 四类待办汇总）：数据源=/v1/inbox 投影（读面机械
+   * 自分类）；读面缺席（旧代 cored/超时）=回落草稿+ApprovalNeeded 归档现读（同一判定词形——
+   * console 零自建持久状态，计数口径不翻倍：inbox 面在册即唯一口径）。 */
+  function inboxCount() {
+    var box = LIVE.state && LIVE.state.inbox;
+    if (box && typeof box.count === 'number') return box.count;
+    return approvalNeededObjects().length;
+  }
   /* E7 收口清扫：openDrifts/runningWfs/healthScore mock 聚合摘除（渲染面已归零——
    * liveHealth()=真数据聚合唯一口径）；addEvent mock 事件入栈摘除（审计账=cored 归档唯一权威）。 */
   function openDrifts() { return LIVE.refs('DriftReport'); }
@@ -376,6 +384,7 @@
     var rootAgent = liveChatAgents()[0] || 'core-headless'; // 文档面在册 agent（缺省=builtin root 名）
     add('动作', '与 root（' + rootAgent + '）对话', '#/chat/' + rootAgent, 'chat/' + rootAgent, 'i-chat');
     add('动作', '打开审批页', pendingApprovals().length + ' 条待审', 'approvals', 'i-check');
+    add('动作', '待你处理收件箱', inboxCount() + ' 条四类待办汇总', 'inbox', 'i-check');
     add('动作', '打开事件流', (liveHealth().events24) + ' events/24h（归档窗）', 'events', 'i-pulse');
     // 导航
     M.nav.forEach(function (n) { add('导航', n.label, navRouteOf(n.route), navRouteOf(n.route).replace('#/', ''), n.icon); });
@@ -780,6 +789,7 @@
       metric('insync', 'InSync 系统数', fmtNum(h.insyncSystems) + '<span class="cm-unit"> / ' + fmtNum(h.systems.length) + '</span>',
         h.instances.length ? '实例相位 ' + fmtNum(h.insyncCount) + '/' + fmtNum(h.instances.length) + ' 同步' : '暂无实例，待接入', h.instances.length ? 'success' : 'neutral', 'tree') +
       metric('approvals', '待审批', fmtNum(pend), pend ? '需要你处理，点击进入审批' : '当前没有待审批事项', pend ? 'danger' : 'neutral', 'approvals') +
+      metric('inbox', '待你处理', fmtNum(inboxCount()), inboxCount() ? '四类待办汇总，点击进入收件箱' : '四类待办均无挂起项（空态显式）', inboxCount() ? 'warn' : 'neutral', 'inbox') +
       metric('failure', '24h 失败率', h.failedRate == null ? '—' : fmtPct(h.failedRate),
         h.started ? '失败 ' + fmtNum(h.failed) + ' / 运行 ' + fmtNum(h.started) : '暂无 run，等待触发', h.failedRate == null ? 'neutral' : (h.failedRate > 0 ? 'warn' : 'success'), 'workflows') +
       '</div>';
@@ -5513,6 +5523,67 @@
 
   /* ================= 路由注册 & 启动 ================= */
   // E2 路由换装：五屏真数据（Welcome/tree/s/:name/doc/object/event），其余屏保持 proto mock 待各自 E 轮
+  /* ================= 屏：待你处理收件箱（v0.56 R-10——console-adoption.md §1.25 页面兜底
+   * 首段 + notification.md 规则 6「未配置通知通道=仅页面展示」的 console 落点） =================
+   * 数据面=cored GET /v1/inbox 投影（四类判定分类=读面机械自分类——console 零自建持久状态
+   * 红线 2）：NeedsHuman（接管链）/ApprovalNeeded（人注意终态族+派单 ask 批准投影挂起）/
+   * Proposal 待批（status=submitted）/DocReview（草稿缓存=代改代审的家）。条目可点=深链操作面
+   * （编辑器/审批/提案详情/事件详情）；未配置通知通道=本页即兜底（规则 6）；空态显式（判据
+   * §1.25：无待办时显式空态）。watchdog 投影随行（自愈接线观测面——v0.56 §1.30）。 */
+  var INBOX_CLASS_META = {
+    NeedsHuman: { label: '需人接管', cls: 'danger', why: 'NeedsHuman/Escalate——需求决策/文档定稿/权限提升/外部动作（acceptance.md §9 接管判定）' },
+    ApprovalNeeded: { label: '待批准', cls: 'warn', why: '审批提升与人注意终态族（ApprovalNeeded 归档）+派单 ask 批准投影挂起（批准=Apply 判定）' },
+    Proposal: { label: '提案待批', cls: 'acc', why: '需求提案 status=submitted——批准/驳回=Apply（console:approve|console:reject）' },
+    DocReview: { label: '文档待审', cls: 'mute', why: '草稿缓存（代改代审的家，apply.md §6）——diff 预览在审批屏' }
+  };
+  function inboxItemHtml(it) {
+    var meta = INBOX_CLASS_META[it.class] || { label: it.class, cls: 'mute', why: '' };
+    var go = String(it.link || 'welcome').replace(/^#\//, '');
+    return '<button type="button" class="ib-item" data-act="go" data-go="' + esc(go) + '" data-cc-inbox-class="' + esc(it.class) + '">' +
+      '<span class="chip ' + meta.cls + ' small">' + esc(meta.label) + '</span>' +
+      '<span class="ib-main"><span class="ib-digest">' + esc(it.digest || '') + '</span>' +
+      '<span class="ib-link mono small faint">' + esc(go) + '</span></span>' +
+      '<span class="ib-at mono small">' + esc(String(it.at || '').replace('T', ' ').slice(0, 19) || '—') + '</span></button>';
+  }
+  function screenInbox(view) {
+    LIVE.ensure();
+    setCrumbs([{ label: '总览', go: 'welcome' }, { label: '待你处理' }]);
+    var box = LIVE.state.inbox;
+    var loading = LIVE.state.status !== 'ok';
+    var items = (box && box.items) || [];
+    var classes = (box && box.classes) || {};
+    var order = ['NeedsHuman', 'ApprovalNeeded', 'Proposal', 'DocReview'];
+    var chips = order.map(function (c) {
+      var m = INBOX_CLASS_META[c];
+      return '<button type="button" class="fchip' + (S.inboxClass === c ? ' on' : '') + '" data-act="ib-class" data-c="' + c + '" title="' + esc(m.why) + '">' +
+        esc(m.label) + ' ' + fmtNum(classes[c] || 0) + '</button>';
+    }).join('');
+    var shown = items.filter(function (it) { return !S.inboxClass || it.class === S.inboxClass; });
+    var listHtml = shown.map(inboxItemHtml).join('');
+    if (!listHtml) listHtml = loading ? liveSkeletonRows(3)
+      : '<div class="empty" data-cc-empty="inbox"><svg class="ic"><use href="#cc-i-check"/></svg><div class="e-title">待你处理清单为空</div><div>四类待办（需人接管/待批准/提案待批/文档待审）均无挂起项——完成操作后事件回链在账（接管路径=提案/文档/审批三入口）。</div></div>';
+    var degraded = LIVE.state.status === 'degraded' ? liveDegradedNote() : '';
+    // watchdog 投影（v0.56 §1.30 观测面——批准投影挂起/会话活性）：真实词形非停摆不冒充。
+    var wd = (box && box.watchdog) || {};
+    var sess = LIVE.state.sessions;
+    var wdRows = '<span class="mono small">批准投影 ' + fmtNum(wd.approvals || 0) + ' 条（挂起 ' + fmtNum(wd.pending || 0) +
+      (wd.approveIdle === true ? ' · 空闲（零挂起≠停摆）' : ' · 待决') + '）</span>' +
+      (sess && sess.watchdog ? '<span class="mono small">会话活性 watchdog ' + (sess.watchdog.enabled ? 'on（阈值 ' + esc(sess.watchdog.stallThreshold) + '）' : 'off（--session-watch-interval=0 纯观测关断）') +
+        ' · 心跳 ' + fmtNum(sess.count || 0) + ' 行</span>' : '');
+    view.innerHTML = '<div class="view-inner" data-cc-screen="inbox">' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>待你处理</h1><span class="chip ' + ((box && box.count) ? 'warn' : 'ok') + '">' +
+      fmtNum((box && box.count) || 0) + ' 条待办</span></div>' +
+      '<div class="dh-sub">四类汇总+计数+深链（console-adoption.md §1.25）：接管路径=①提交需求（提案）②编辑文档（设计文档/对象编辑器）③审批（ApprovalNeeded）；未配置通知通道=本页兜底展示（notification.md 规则 6）。</div></div>' +
+      '<div class="dh-actions"><button type="button" class="btn secondary" data-act="go" data-go="proposals">提交需求</button></div></div>' +
+      '<div class="fbar">' + chips + '</div>' +
+      '<div class="card"><div class="card-b cc-inbox-list" data-cc-inbox-list="true">' + listHtml + '</div></div>' + degraded +
+      '<div class="sec-title">watchdog 观测面</div><div class="card"><div class="card-b cc-prose" data-cc-watchdog="true">' + wdRows + '</div></div>' +
+      '<details class="cc-disclosure"><summary>接管与回链口径</summary><div class="cc-prose">完成任一操作即产事件回链（Proposal approved / DocApplied / ApprovalGranted）→ loop 自动续跑对应分支（acceptance.md §9）；无通道部署零外发——本页即唯一展示面（规则 6），条目计数不受 dedup 抑制。</div></details>' +
+      '</div>';
+  }
+  ACTIONS['ib-class'] = function (el) { S.inboxClass = (S.inboxClass === el.dataset.c ? '' : el.dataset.c); render(); };
+
+  route('inbox', screenInbox); // v0.56 R-10：待你处理收件箱（四类汇总+计数+深链——§1.25 页面兜底）
   route('welcome', screenWelcome);
   route('overview', screenOverview);
   route('tree', screenTree);
@@ -5620,7 +5691,7 @@
       if (!ROOT) return;
       // 'doc'（编辑器）不在列：编辑器自注水（屏加载即现读），live 轻刷新不重渲染（编辑态/textarea 焦点保真）；
       // Apply 成功后的重渲染走 apply 回调显式 LIVE.load().then(render)。
-      if (['welcome', 'overview', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'proposals', 'connectors'].indexOf(S.route) >= 0) render();
+      if (['welcome', 'overview', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'proposals', 'connectors', 'inbox'].indexOf(S.route) >= 0) render();
     };
     addInterval(function () { if (ROOT) LIVE.load(); }, 15000);
     boot();
