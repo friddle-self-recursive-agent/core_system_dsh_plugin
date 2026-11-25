@@ -153,3 +153,14 @@ test('能力 D + R-UX-1/R-UX-2：对话式录入默认模式 + scheme 驱动八�
   assert.ok(SRC.includes("'console:propose:chat'"), '对话录入 Apply fieldManager=console:propose:chat 在册')
   assert.ok(!SRC.includes('var PROP_PRIORITIES ='), '旧硬编码优先级列表已摘除（由 scheme 单一真相驱动）')
 })
+
+// —— loop-67 rev-content diff 面（console-adoption.md §1.40）——
+test('rev-content diff 面：历史 tab ok 行可点（data-act=hist-diff）+ 点行 diff 通路读 /v1/rev-content（零写路径）+ 旧「余量」标注摘除', () => {
+  assert.ok(SRC.includes("data-act=\"hist-diff\""), 'ok 行可点词形在册（hist-diff）')
+  assert.ok(SRC.includes('v1/rev-content/'), 'rev-content 读面通路在册（GET 快照）')
+  assert.ok(!SRC.includes('点行 diff 上一版=rev-content 面余量'), '旧「余量」如实标注必须摘除（已收口不再自贬）')
+  assert.ok(!/method:\s*['"](?:POST|DELETE|PUT|PATCH)['"][^}]*rev-content/.test(liveSrc) && !/rev-content[^]*?method:\s*['"](?:POST|DELETE|PUT|PATCH)['"]/.test(SRC.slice(Math.max(0, SRC.indexOf('rev-content') - 200), SRC.indexOf('rev-content') + 200)),
+    'rev-content 只读 GET（零写路径——渲染数据无双源红线 §5 规则 2）')
+  assert.ok(SRC.includes('hist-diff-box'), 'diff 呈现面板在册（单处开合——复点换内容）')
+  assert.ok(SRC.includes('对象起点（create，无上一版）'), '起点行如实标注词形在册')
+})

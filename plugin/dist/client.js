@@ -4916,20 +4916,61 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   }
 
   // 历史 tab：apply_log 投影（rev 流水的权威=审计账；git 权威在正文）。
+  // 点行 diff 上一版（v0.63 rev-content 读面）：ok 行可点 → GET /v1/rev-content 取该 rv 快照
+  // 与上一版 rv 快照 diff（两读面现读零缓存零副作用；noop/审计行不可点=快照域无行）。读面退化
+  // 如实降级（不冒充）；读面缺席（503）=整面不可用说明。首行=对象起点（无上一版，如实标注）。
   function hydrateHistory(kind, scope, name) {
     hydrate('ed-history', 'v1/history/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''),
       function (el, b) {
-        var rows = (b.entries || []).map(function (h) {
+        var rows = (b.entries || []).map(function (h, i) {
           var cls = h.result === 'ok' ? 'ok' : (h.result === 'denied' || h.result === 'conflict') ? 'danger' : 'mute';
-          return '<div class="rev-item"><span class="rv-no">' + (h.result === 'ok' ? 'r' + h.rv : h.result) + '</span>' +
+          var clickable = h.result === 'ok';
+          var prev = null; // 下一行集内首个 ok 行=上一版（投影 rv 降序——noop/审计行不产 rv）
+          for (var j = i + 1; j < (b.entries || []).length; j++) {
+            if (b.entries[j].result === 'ok') { prev = b.entries[j].rv; break; }
+          }
+          return '<div class="rev-item"' + (clickable ? ' data-act="hist-diff" data-rv="' + h.rv + '" data-prev="' + (prev || '') + '" title="点行 diff 上一版（rev-content 读面现读）"' : '') + '>' +
+            '<span class="rv-no">' + (h.result === 'ok' ? 'r' + h.rv : h.result) + '</span>' +
             '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
             '<span class="rv-sum">' + esc(h.result) + (h.reasonRef ? ' · ' + esc(h.reasonRef) : '') + (h.subject ? '<br><span class="mono faint">' + esc(h.subject) + '</span>' : '') + '<br><span class="mono">' + esc(fmtAgo(new Date(h.ts))) + '</span></span>' +
-            '<span class="chip ' + cls + ' small">' + esc(h.result) + '</span></div>';
+            '<span class="chip ' + cls + ' small">' + esc(h.result) + (clickable ? (prev ? ' · diff r' + prev : ' · 起点') : '') + '</span></div>';
         }).join('');
-        el.innerHTML = (rows || '<div class="faint small" style="padding:8px 2px">归档窗内暂无应用流水（该对象尚未 Apply 过）</div>') +
-          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；点行 diff 上一版=rev-content 面余量（git show 面未开，如实标注）。</div>';
+        el.innerHTML = '<div id="hist-diff-box" hidden style="border:1px solid var(--border-2);border-radius:8px;margin-bottom:10px;padding:8px;background:var(--bg)"></div>' +
+          (rows || '<div class="faint small" style="padding:8px 2px">归档窗内暂无应用流水（该对象尚未 Apply 过）</div>') +
+          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；ok 行可点=与上一版 diff（rev-content 读面现读 git 权威正文快照，零副作用零写路径）。</div>';
       });
   }
+  // 点行 diff 上一版（v0.63 rev-content 读面）：rv+prev 两快照现读 → diff 呈现（面板只开一处，
+  // 复点/它行换内容；读面退化行内如实降级）。零写路径零缓存（渲染数据无双源红线 §5 规则 2）。
+  ACTIONS['hist-diff'] = function (el) {
+    var ctx = edCtx();
+    if (!ctx) return;
+    var rv = Number(el.dataset.rv);
+    var prev = el.dataset.prev ? Number(el.dataset.prev) : 0;
+    var box = $('#hist-diff-box');
+    if (!box || !rv) return;
+    box.hidden = false;
+    box.innerHTML = '<div class="small faint">rev-content 读取中（r' + rv + (prev ? ' vs r' + prev : '——对象起点，无上一版') + '）…</div>';
+    var path = function (r) {
+      return 'v1/rev-content/' + encodeURIComponent(ctx.kind) + '/' + encodeURIComponent(ctx.name) +
+        '?scope=' + encodeURIComponent(ctx.scope) + '&rv=' + r;
+    };
+    var newP = rv === 1 ? Promise.resolve(null) : LIVE.get(path(rv)).then(function (b) { return String(b.content || ''); });
+    var oldP = prev ? LIVE.get(path(prev)).then(function (b) { return String(b.content || ''); }) : Promise.resolve(null);
+    Promise.all([newP, oldP]).then(function (rs) {
+      var cur = rs[0], old = rs[1];
+      if (cur == null) { box.innerHTML = '<span class="faint small">快照暂不可读（读面退化）</span>'; return; }
+      var head = '<div class="sec-title">r' + rv + (prev ? ' ← r' + prev : ' ← 对象起点（create，无上一版）') +
+        ' <span class="faint mono small">rev-content 读面现读（git 权威正文快照）</span></div>';
+      box.innerHTML = head + (old == null
+        ? '<div class="small faint" style="padding:4px 0">起点行=首版全文（' + cur.split('\n').length + ' 行）——无上一版可 diff，全文首览：</div>' + renderDiff(diffLines('', cur), 40)
+        : (old === cur
+          ? '<span class="faint small">两版快照一致（rv 反写行推进——正文零变更）</span>'
+          : renderDiff(diffLines(old, cur), 60)));
+    }).catch(function (e) {
+      box.innerHTML = '<span class="faint small">快照暂不可读（读面退化：' + esc(String((e && e.message) || e)) + '）</span>';
+    });
+  };
 
   // 元数据 tab：对象身份键+rev+草稿态+写路径（与资源同规则）。
   function metaTabHtml(kind, scope, name) {
