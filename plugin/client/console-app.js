@@ -142,6 +142,10 @@
    * 同一函数消费：原先只数 pendingApprovals()（草稿∪归档两子源）=提案与派单两源计数
    * 缺席，与聚合面板族总数双源漂移——loop-63 实现拓扑③收口）。 */
   function backlogCount() { return approvalBacklog().total; }
+  /* 「四源积压」族构成词形单点（loop-65——队列 1 E6 词形一致性复核）：短词形（Welcome 卡
+   * note「四源积压（草稿/归档/提案/派单）」/palette「族总数四源」）与长词形（聚合面板
+   * 族=分解行）共用同一族构成声明——文字词形回潮双源漂移即红（改一处即可全四点随行）。 */
+  function backlogFamilyNote() { return { short: '草稿/归档/提案/派单', long: '族=草稿待审（DocReview）' }; }
   /* 通知中心收件箱计数（v0.56 R-10——§1.25 四类待办汇总）：数据源=/v1/inbox 投影（读面机械
    * 自分类）；读面缺席（旧代 cored/超时）=回落草稿+ApprovalNeeded 归档现读（同一判定词形——
    * console 零自建持久状态，计数口径不翻倍：inbox 面在册即唯一口径）。 */
@@ -413,7 +417,7 @@
     add('动作', '新建 Goal', 'global scope 草稿', 'act:newgoal', 'i-plus');
     var rootAgent = liveChatAgents()[0] || 'core-headless'; // 文档面在册 agent（缺省=builtin root 名）
     add('动作', '与 root（' + rootAgent + '）对话', '#/chat/' + rootAgent, 'chat/' + rootAgent, 'i-chat');
-    add('动作', '打开审批页', backlogCount() + ' 条积压待办（族总数四源）', 'approvals', 'i-check');
+    add('动作', '打开审批页', backlogCount() + ' 条积压待办（族总数' + backlogFamilyNote().short + '）', 'approvals', 'i-check');
     add('动作', '待你处理收件箱', inboxCount() + ' 条四类待办汇总', 'inbox', 'i-check');
     add('动作', '打开事件流', (liveHealth().events24) + ' events/24h（归档窗）', 'events', 'i-pulse');
     // 导航
@@ -818,7 +822,7 @@
     var metrics = '<div class="cc-metrics" aria-label="顶部指标">' +
       metric('insync', 'InSync 系统数', fmtNum(h.insyncSystems) + '<span class="cm-unit"> / ' + fmtNum(h.systems.length) + '</span>',
         h.instances.length ? '实例相位 ' + fmtNum(h.insyncCount) + '/' + fmtNum(h.instances.length) + ' 同步' : '暂无实例，待接入', h.instances.length ? 'success' : 'neutral', 'tree') +
-      metric('approvals', '待审批', fmtNum(pend), pend ? '四源积压（草稿/归档/提案/派单），点击进入审批' : '四源积压均无挂起项（空态显式）', pend ? 'danger' : 'neutral', 'approvals') +
+      metric('approvals', '待审批', fmtNum(pend), pend ? '四源积压（' + backlogFamilyNote().short + '），点击进入审批' : '四源积压均无挂起项（空态显式）', pend ? 'danger' : 'neutral', 'approvals') +
       metric('inbox', '待你处理', fmtNum(inboxCount()), inboxCount() ? '四类待办汇总，点击进入收件箱' : '四类待办均无挂起项（空态显式）', inboxCount() ? 'warn' : 'neutral', 'inbox') +
       metric('failure', '24h 失败率', h.failedRate == null ? '—' : fmtPct(h.failedRate),
         h.started ? '失败 ' + fmtNum(h.failed) + ' / 运行 ' + fmtNum(h.started) : '暂无 run，等待触发', h.failedRate == null ? 'neutral' : (h.failedRate > 0 ? 'warn' : 'success'), 'workflows') +
@@ -4111,10 +4115,11 @@
     if (!isSys) {
       var back = approvalBacklog(); // E6 积压族扩：归档∪submitted 提案∪派单 pending（§1.13 余量收口）
       var dead = base.length ? Math.round(base.filter(function (e) { return String(e.routedTo || '').indexOf('dead-letter') >= 0; }).length * 1000 / base.length) / 10 : 0;
+      var pal = backlogFamilyNote(); // 族构成词形单点（loop-65——与 Welcome note/palette 同源声明）
       sidePanel = '<div style="display:grid;gap:12px;align-self:start">' +
         '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span><span class="h-sub">归档窗内实数</span></div><div class="card-b" style="display:grid;gap:10px">' +
         '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (back.total ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + back.total + '</span></span>' +
-        '<span class="small faint">族=草稿待审（DocReview）' + back.drafts + ' ∪ ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作面落点：审批屏∪编辑器/提案详情/wf 配置）</span></div>' +
+        '<span class="small faint">' + pal.long + back.drafts + ' ∪ ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作面落点：审批屏∪编辑器/提案详情/wf 配置）</span></div>' +
         '<div class="kv"><span class="k">死信率</span><span class="v mono">' + dead + '%</span></div>' +
         '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">n/a</span><span class="small faint">run 终态事件未落归档（declared 余量，不冒充）</span></div>' +
         '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据面余量</span></div>' +

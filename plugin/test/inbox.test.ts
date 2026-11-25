@@ -167,3 +167,15 @@ test('E6 族源分化核验：四点族源守卫（drafts/proposals/dispatches/e
   assert.ok(appSrc.includes('st.dispatches || []'), '派单子源缺席=零（v0.56 前旧代诚实词形）')
   assert.ok(appSrc.includes('pendingApprovals()'), '归档子源=approvalNeededObjects 现读（读面缺席窗=空集不冒充）')
 })
+
+test('E6 四源积压词形单点复核（loop-65 队列 1）：族构成声明=单点函数——四消费点文字词形回潮双源漂移即红', () => {
+  const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
+  assert.ok(appSrc.includes('function backlogFamilyNote'), '族构成词形声明单点函数在册（loop-65）')
+  assert.ok(/backlogFamilyNote\(\)\.short/.test(appSrc), 'Welcome note 短词形=单点声明消费（不再字面量散用）')
+  assert.ok(/积压待办（族总数' \+ backlogFamilyNote\(\)\.short/.test(appSrc), 'palette 积压行词形=单点声明消费（回潮即红）')
+  assert.ok(/pal\.long \+ back\.drafts/.test(appSrc), '聚合面板族构成长词形=单点声明消费（回潮即红）')
+  assert.ok(appSrc.split("short: '草稿/归档/提案/派单'").length - 1 === 1, '短词形=backlogFamilyNote 声明唯一（单一真相）')
+  assert.ok(!/['"]四源积压（草稿/.test(appSrc), '渲染面零字面量散用（Welcome note 拼装词形——回潮即红）')
+  assert.ok(appSrc.split('族=草稿待审（DocReview）').length - 1 === 1, '长词形字面量唯一（族构成声明单点——散用回潮即红）')
+  assert.ok(/'四源积压（' \+ backlogFamilyNote\(\)\.short/.test(appSrc), 'Welcome「待审批」卡 note=四源积压+族构成单点拼装')
+})
