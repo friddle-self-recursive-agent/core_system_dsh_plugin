@@ -294,7 +294,7 @@ test('E5b 合并：已有 status 块 Agent = currentSession 键级更新（rv �
   assert.ok(r.content.includes('connector-ops/agent-comm'), '其余字段零盲写（mount 声明保留）')
   assert.equal((r.content.match(/currentSession:/g) || []).length, 1, 'currentSession 键唯一（零双键）')
   assert.ok(r.content.startsWith('apiVersion: core/v1'), 'frontmatter 头部零改写')
-  assert.ok(r.content.endsWith('docsLoaded: []'), '块内结构=YAML 可解析词形（尾行 docsLoaded）')
+  assert.ok(r.content.endsWith('docsLoaded: []\n'), '块内结构=YAML 可解析词形（尾行 docsLoaded；文末换行保真=L64 零盲写字节级）')
 })
 
 test('E5b 合并：同参回放=幂等 noop 词形（第二次起 content 恒等——零盲写红线机读锚）', () => {
@@ -344,4 +344,83 @@ test('E5b 回归：调用点余量词形摘除（「未回填（诚实余量）�
   assert.ok(app.includes('mergeCurrentSession'), '调用点=结构化合并纯映射接线在册')
   assert.ok(app.includes("res.data.action === 'noop'"), '幂等 noop 回执词形消费在册（action=create|update|noop）')
   assert.ok(app.includes('console:chat-backfill'), 'fieldManager 不变（判据面）')
+})
+
+// ── L64 混合缩进容忍（console-adoption.md §1.37——§1.11 补注④ 缺席窗收窄；loop-64） ──
+// 判据：首块缩进宽=锚定基准（ind 自观测，不再硬编码 2 空格单值）——混合缩进文档回填 ok=true
+// ∧ 追加三键缩进族谱对齐（键宽=父键宽+ind）∧ 块外字节恒等 ∧ 缺席窗收窄
+// （真缺席=无 metadata.name / status 块或 currentSession 子块含 tab 缩进——手术区限定面）。
+
+/** 生产 docsRoot 实形态锚：2 空格锚定块 + list 内嵌行首 tab（手编词形——旧代整篇拒绝=降级不回填）。 */
+const AGENT_MIXED_TAB_LINE = [
+  'apiVersion: core/v1',
+  'kind: Agent',
+  'metadata:',
+  '  name: core-headless',
+  '  scope: global',
+  '  resourceVersion: 11',
+  '  labels: {tier: control-plane}',
+  'spec:',
+  '  runtime: dsh',
+  '  connectorOps:',
+  '\t- {ops: connector-ops/agent-comm, as: agent-comm} # 手编 tab 内嵌行',
+  'status:',
+  '  currentSession:',
+  '    id: session-old-1',
+  '    startedAt: 2026-11-25T21:35:02.518Z',
+  '    docsLoaded: []',
+  '',
+].join('\n')
+const AGENT_MIXED_CS_INDENT = ['kind: Agent', 'metadata:', '  name: split', 'status:', '  phase: ready', '  currentSession:', '      id: old-split', '      note: keep-split', ''].join('\n')
+const AGENT_FOUR_SPACE = ['apiVersion: core/v1', 'metadata:', '    name: deep4', 'spec:', '    runtime: dsh', 'status:', '    currentSession:', '        id: old4', '        note: keep4', ''].join('\n')
+const AGENT_APPEND_FOUR = ['metadata:', '    name: a4', 'spec:', '    runtime: dsh', ''].join('\n')
+const TAB_STATUS_DOC = 'metadata:\n  name: t\nstatus:\n\tcurrentSession:\n\t\tid: q\n'
+
+test('L64 混合缩进：手编 tab 内嵌行文档回填成功（缺席窗收窄——旧代整篇拒绝词形摘除）+ 块外字节恒等', () => {
+  const merge = loadMerge()
+  const r = merge(AGENT_MIXED_TAB_LINE, 'l64-mix-sess', '2026-11-26T22:30:00.000Z')
+  assert.equal(r.ok, true, '混合缩进（手术区外 tab）≠缺席——回填放行')
+  assert.ok(r.content.includes('id: l64-mix-sess'), '新 SessionId 落位')
+  assert.ok(!r.content.includes('session-old-1'), '旧 id 翻新（键级重写）')
+  assert.ok(r.content.includes('\t- {ops: connector-ops/agent-comm'), '手术区外 tab 行原样保留（零盲写）')
+  assert.ok(r.content.startsWith(AGENT_MIXED_TAB_LINE.slice(0, AGENT_MIXED_TAB_LINE.indexOf('status:'))), 'status 块外字节恒等')
+  assert.equal((r.content.match(/currentSession:/g) || []).length, 1, 'currentSession 键唯一')
+  const r2 = merge(r.content, 'l64-mix-sess', '2026-11-26T22:30:00.000Z')
+  assert.equal(r2.content, r.content, '混合缩进文档同参回放=幂等 noop 词形')
+})
+
+test('L64 缩进族谱对齐：currentSession 子块缩进分家（6sp 成员）+ 全 4 空格文档（8sp 成员）=族谱内回填', () => {
+  const merge = loadMerge()
+  const rS = merge(AGENT_MIXED_CS_INDENT, 'l64-split', 'T1')
+  assert.equal(rS.ok, true, '子块缩进分家=各自处理不缺席')
+  assert.ok(rS.content.includes('      id: l64-split'), '新键组缩进=父键宽+锚定基准（6sp）')
+  assert.ok(!rS.content.includes('old-split'), '旧 id 翻新')
+  assert.ok(rS.content.includes('note: keep-split'), '未知子键零盲写保留')
+  assert.ok(rS.content.includes('phase: ready'), 'sibling 键零动')
+  assert.equal((rS.content.match(/currentSession:/g) || []).length, 1, '不发明第二 currentSession 键')
+  const rF = merge(AGENT_FOUR_SPACE, 'l64-deep', 'T2')
+  assert.equal(rF.ok, true, '全 4 空格文档=锚定基准 4')
+  assert.ok(rF.content.includes('        id: l64-deep'), '新键组=8sp（锚定基准×2）——硬编码 2 空格词形不回归')
+  assert.ok(!rF.content.includes('old4'), '旧 id 翻新')
+  assert.ok(rF.content.includes('keep4'), '未知子键保留')
+})
+
+test('L64 追加分支自适应：全 4 空格文档无 status 块=文末追加块缩进随锚定基准（4sp 键+8sp 三键）', () => {
+  const merge = loadMerge()
+  const r = merge(AGENT_APPEND_FOUR, 'l64-app', 'T3')
+  assert.equal(r.ok, true, '无 status 块=追加分支放行')
+  assert.ok(r.content.includes('\n    currentSession:\n'), '追加块键宽=锚定基准（4sp，非硬编码 2sp）')
+  assert.ok(r.content.includes('        id: l64-app'), '追加三键=8sp（族谱对齐）')
+  assert.ok(r.content.endsWith('docsLoaded: []\n'), 'YAML 可解析词形尾行（追加块文末换行在册）')
+  const r2 = merge(r.content, 'l64-app', 'T3')
+  const r3 = merge(r2.content, 'l64-app', 'T3')
+  assert.equal(r3.content, r2.content, '追加分支同参幂等（第二拍起恒等——文末换行归一词形，与既有 AGENT_NO_STATUS 锚同口径）')
+})
+
+test('L64 缺席窗收窄：真缺席=status 块或 currentSession 子块含 tab（原文零改写）——无 metadata.name 恒拒绝', () => {
+  const merge = loadMerge()
+  const rT = merge(TAB_STATUS_DOC, 's', 'T')
+  assert.equal(rT.ok, false, 'status 块/currentSession 子块 tab 缩进=保守拒绝（键级手术口径外）')
+  assert.equal(rT.content, TAB_STATUS_DOC, '拒绝=原文零改写')
+  assert.equal(merge('kind: Agent\nstatus: inline-scalar\n', 's', 'T').ok, false, '无 metadata.name=拒绝（既有锚保持）')
 })

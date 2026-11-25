@@ -1991,47 +1991,97 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
 
   /** mergeCurrentSession 结构化合并纯映射（E5b 收口，console-adoption.md §1.35——§1.11 补注④
    *  余量摘除；lineback 裁决 2026-11-26：已有 status 块=键级合并不跳过，零盲写不变）。
+   *  L64 收口（§1.37 缩进自适应）：缩进宽度自适应解析——首块缩进宽=锚定基准（ind=2|4 自观测，
+   *  不再硬编码 2 空格单值）；混合缩进文档（部分块 2 空格/部分块 4 空格——手编 docsRoot 实形态）
+   *  =currentSession 子块按所属父块缩进宽各自处理，不再被 tab 防御闸整篇拒绝。
    *  输入=Agent 文档正文原文+新身份（sessionId/startedAt）；输出={ok, content}——
-   *  ok=false=预读口径缺席（无 metadata.name / status 块含 tab 缩进=保守拒绝）=诚实降级；
+   *  ok=false=预读口径缺席（真缺席=无 metadata.name / status 块或 currentSession 键含 tab 缩进）=诚实降级；
    *  零盲写红线=纯文本手术非 yaml 重编码：status 块外字节恒等，块内未知键原样保留，
    *  currentSession 只重写 id/startedAt/docsLoaded 三键（同参回放=幂等 noop 词形）。
-   *  分支：①无 status 块=文末追加最小块；②有块无 currentSession=块内追加；
+   *  分支：①无 status 块=文末追加最小块（追加宽=首块锚定基准）；②有块无 currentSession=块内追加；
    *  ③有 currentSession=子块三键重写（其余子行保序）。 */
   function mergeCurrentSession(content, sessionId, startedAt) {
     var text = String(content == null ? '' : content);
     if (!/(^|\n)\s*name:\s*\S/.test(text)) return { ok: false, content: text };
-    if (/^[\t]|\n[\t]/.test(text)) return { ok: false, content: text };
+    // 文末换行保真（L64：零盲写字节级——文末换行=尾行终止符，split 伪影不丢）。
+    var hadNL = /\n$/.test(text);
+    var finish = function (s) { if (hadNL && s.slice(-1) !== '\n') s += '\n'; return s; };
+    // tab 防御=键级手术限定面（不再整篇拒绝）：仅 status 块/currentSession 子块含 tab 才缺席降级
+    // （§1.11 补注④ 缺席窗收窄；文档其余部分（如 list 内嵌行）tab 与本次手术零交=放行）。
+    function indentedTabIn(from, to) {
+      for (var i = from; i < to; i++) { if (/^[\t]/.test(lines[i])) return true; }
+      return false;
+    }
     var lines = text.split('\n');
+    // 缩进基准=首个以空格缩进的非空行（元数据块锚定；全顶格/纯 tab 缩进文档=仍走 tab 防御闸）。
+    var ind = 2;
+    for (var p = 0; p < lines.length; p++) { var m0 = /^( +)\S/.exec(lines[p]); if (m0) { ind = m0[1].length; break; } }
+    var pad = '';
+    for (var q = 0; q < ind; q++) pad += ' ';
     var si = -1;
     for (var i = 0; i < lines.length; i++) { if (/^status:(\s|#|$)/.test(lines[i])) { si = i; break; } }
     var mk = function () {
-      return ['    id: ' + sessionId, '    startedAt: ' + startedAt, '    docsLoaded: []'];
+      return [pad + pad + 'id: ' + sessionId, pad + pad + 'startedAt: ' + startedAt, pad + pad + 'docsLoaded: []'];
     };
     if (si < 0) {
-      return { ok: true, content: lines.join('\n').replace(/\n?$/, '\n') + ['status:', '  currentSession:'].concat(mk()).join('\n') + '\n' };
+      // 无 status 块=文末追加最小块（追加缩进宽=首块锚定基准 ind——混合缩进文档与文档自身词形对齐）。
+      return { ok: true, content: finish(lines.join('\n').replace(/\n?$/, '\n') + ['status:', pad + 'currentSession:'].concat(mk()).join('\n') + '\n') };
     }
     var bi = si + 1;
     while (bi < lines.length && (lines[bi] === '' || /^[ \t]/.test(lines[bi]))) bi++;
+    if (indentedTabIn(si + 1, bi)) return { ok: false, content: text };
     var headLines = lines.slice(0, si);
     var blockLine = lines[si];
     var bodyLines = lines.slice(si + 1, bi);
     var tailLines = lines.slice(bi);
     var ci = -1;
-    for (var k = 0; k < bodyLines.length; k++) { if (/^  currentSession:(\s|#|$)/.test(bodyLines[k])) { ci = k; break; } }
+    var csKeyRe = new RegExp('^' + pad + 'currentSession:(\\s|#|$)');
+    for (var k = 0; k < bodyLines.length; k++) { if (csKeyRe.test(bodyLines[k])) { ci = k; break; } }
     if (ci < 0) {
       var nb = bodyLines.slice();
       while (nb.length && nb[nb.length - 1] === '') nb.pop();
-      return { ok: true, content: headLines.concat([blockLine]).concat(nb).concat(['  currentSession:']).concat(mk()).concat(tailLines).join('\n') };
+      return { ok: true, content: finish(headLines.concat([blockLine]).concat(nb).concat([pad + 'currentSession:']).concat(mk()).concat(tailLines).join('\n')) };
     }
+    var csKey = pad + 'currentSession:';
+    // 成员区识别=纯列宽模型（L64：cs 键列宽=ind，其下任意更深列=子块成员——缩进族谱任意键宽
+    // 各自处理；空行=区内，首个 ≤ind 列非空行=子块终止）。
+    var colOf = function (l) { if (l === '') return -1; var m = /^ +/.exec(l); return m ? m[0].length : 0; };
     var cj = ci + 1;
-    while (cj < bodyLines.length && (bodyLines[cj] === '' || /^(?:    |  [^\s])[^\n]*$/.test(bodyLines[cj]))) cj++;
+    while (cj < bodyLines.length && (bodyLines[cj] === '' || colOf(bodyLines[cj]) > ind)) cj++;
     var csHead = bodyLines.slice(0, ci);
     var csBody = bodyLines.slice(ci + 1, cj);
+    // 块内真实尾部空行保真（L64：尾空行≠split 伪影——bi 越界窗的真实空行原样保留=零盲写）。
+    var realTrail = [];
+    if (bi >= lines.length) {
+      var probe = bodyLines.length - 1;
+      while (probe >= 0 && bodyLines[probe] === '') { realTrail.unshift(''); probe--; }
+    }
     var csTail = bodyLines.slice(cj);
-    var unknown = csBody.filter(function (l) { return !/^    (id|startedAt|docsLoaded):/.test(l); });
+    // 身份三键清洗=按相对深度（子块内任意空格深的 id/startedAt/docsLoaded——混合缩进文档旧值行
+    // 缩进宽与首块锚定基准无关；非身份未知键不受此清洗=零盲写保留原样）。
+    var keepRe = /^ *(?:id|startedAt|docsLoaded):/;
+    // 重写键宽=子块成员缩进观测（缩进族谱对齐：同层键须同列=合法 YAML 词形）；族谱多态=
+    // 成员键宽各行不一（嵌套续行/脚踩，无单一合法重写列）→ 保守拒绝不盲写；
+    // 空子块（无成员行）=回退锚定基准（既有「cs 键在册无值」词形行为零回归）。
+    var firstDeep = null;
+    var csKeyPolys = false;
+    for (var k2 = 0; k2 < csBody.length; k2++) {
+      var m2 = /^( +)\S/.exec(csBody[k2]);
+      if (!m2) continue;
+      if (firstDeep == null) firstDeep = m2[1];
+      else if (m2[1] !== firstDeep) { csKeyPolys = true; break; }
+    }
+    if (csKeyPolys) {
+      return { ok: false, content: text };
+    }
+    var keyPad = firstDeep == null ? pad + pad : firstDeep;
+    var mk = function () {
+      return [keyPad + 'id: ' + sessionId, keyPad + 'startedAt: ' + startedAt, keyPad + 'docsLoaded: []'];
+    };
+    var unknown = csBody.filter(function (l) { return !keepRe.test(l); });
     while (unknown.length && unknown[unknown.length - 1] === '') unknown.pop();
-    var merged = csHead.concat(['  currentSession:']).concat(unknown).concat(mk()).concat(csTail);
-    return { ok: true, content: headLines.concat([blockLine]).concat(merged).concat(tailLines).join('\n') };
+    var merged = csHead.concat([csKey]).concat(unknown).concat(mk()).concat(csTail);
+    return { ok: true, content: finish(headLines.concat([blockLine]).concat(merged).concat(realTrail).concat(tailLines).join('\n')) };
   }
 
   __CC.chat = {
@@ -5887,8 +5937,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   };
   /** Agent.status.currentSession 回填（身份=SessionId 的文档面落点，§5.7 #1/#2）：
    *  读现文 → 结构化合并纯映射（mergeCurrentSession——E5b 收口：键级合并/幂等 noop/零盲写，
-   *  console-adoption.md §1.35）→ 既有 apply 通路（主体宿主注入，rv 乐观锁）。
-   *  预读口径缺席（ok=false）=诚实降级 toast 不盲写（§1.11 补注④ 余量词形收窄为该形态）。 */
+   *  L64 缩进自适应=混合缩进容忍+缺席窗收窄，console-adoption.md §1.35/§1.37）
+   *  → 既有 apply 通路（主体宿主注入，rv 乐观锁）。
+   *  预读口径缺席（ok=false）=诚实降级 toast 不盲写（缺席窗=真缺席：无 metadata.name /
+   *  status 块或 currentSession 子块含 tab 缩进——§1.11 补注④ 收窄词形）。 */
   function backfillCurrentSession(agentName, sessionId) {
     var aref = liveAgentRef(agentName);
     if (!aref) return;

@@ -3706,8 +3706,10 @@
   };
   /** Agent.status.currentSession 回填（身份=SessionId 的文档面落点，§5.7 #1/#2）：
    *  读现文 → 结构化合并纯映射（mergeCurrentSession——E5b 收口：键级合并/幂等 noop/零盲写，
-   *  console-adoption.md §1.35）→ 既有 apply 通路（主体宿主注入，rv 乐观锁）。
-   *  预读口径缺席（ok=false）=诚实降级 toast 不盲写（§1.11 补注④ 余量词形收窄为该形态）。 */
+   *  L64 缩进自适应=混合缩进容忍+缺席窗收窄，console-adoption.md §1.35/§1.37）
+   *  → 既有 apply 通路（主体宿主注入，rv 乐观锁）。
+   *  预读口径缺席（ok=false）=诚实降级 toast 不盲写（缺席窗=真缺席：无 metadata.name /
+   *  status 块或 currentSession 子块含 tab 缩进——§1.11 补注④ 收窄词形）。 */
   function backfillCurrentSession(agentName, sessionId) {
     var aref = liveAgentRef(agentName);
     if (!aref) return;
