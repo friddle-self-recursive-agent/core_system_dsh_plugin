@@ -39,3 +39,31 @@ test('inbox 入口三件：总览待你处理 metric 卡 + palette 动作 + inbo
   assert.ok(SRC.includes('return approvalNeededObjects().length'), '读面缺席回落=草稿∪ApprovalNeeded 归档现读（不冒充零）')
   assert.ok(SRC.includes("'inbox'"), 'inbox 深链段在册（entry CONSOLE_SEGS/路由）')
 })
+
+// ── v0.57 R-10 续段（console-adoption.md §1.32——深链操作面活体+事件回链+spawn 声明词形消费） ──
+const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
+
+test('类内 op 深链落点升格：四类各自兜底落点函数在册（link 键原值优先=cored 深链单一真相）', () => {
+  assert.ok(appSrc.includes('function inboxOpOf'), '类内 op 落点派生函数在册（§1.32 收口——L58-UI-10 类级跳过词形废除）')
+  assert.ok(appSrc.includes("it.link || ''"), 'link 键原值优先（cored 深链不改写——红线 2 无双源）')
+  for (const w of ["'NeedsHuman'", "'ApprovalNeeded'", "'Proposal'", "'DocReview'"]) {
+    assert.ok(appSrc.includes(`if (it.class === ${w})`), `类 ${w} 兜底落点词形在册`)
+  }
+  assert.ok(appSrc.includes('data-cc-inbox-event'), '条目行 eventId 判据锚在册（NeedsHuman→事件详情回链活体判定）')
+  assert.ok(appSrc.includes('data-cc-inbox-kind'), '条目行 kind 判据锚在册（挂起行 kind=dispatch 词形）')
+})
+
+test('挂起行幽灵计数缺口收口：ApprovalNeeded 派单待批行进行集词形+旧代诚实降级标注（不翻倍）', () => {
+  assert.ok(appSrc.includes("it.class === 'ApprovalNeeded' && it.kind === 'dispatch'"), '派单待批行进行集消费在册（cored v0.57 行集同源）')
+  assert.ok(appSrc.includes('dispatch-legacy'), '旧代幽灵计数诚实降级词形在册（计数挂起而行集缺席=旧代 cored 词形照实）')
+  assert.ok(appSrc.includes('data-cc-inbox-count'), 'inbox 计数判据锚在册（回链判据=操作完成下次装载降位）')
+})
+
+test('spawn 接线声明词形消费：wf 详情派单行+提案详情派单卡 approval/spawn chips（wired 恒 false 词形诚实）', () => {
+  assert.ok(appSrc.includes('last.approval && last.approval.state'), 'wf 派单行 approval 键消费在册（§11.5 批准投影随行）')
+  assert.ok(appSrc.includes('last.spawn || null'), 'wf 派单行 spawn 键消费在册（§11.7 接线声明随行）')
+  assert.ok(appSrc.includes('spawn·声明'), 'spawn 声明词形 chip 在册（declared=true 词形）')
+  assert.ok(appSrc.includes('spawn·未声明'), 'spawn 缺席词形 chip 在册（零值键=诚实缺席）')
+  assert.ok(appSrc.includes('wired 恒 false=零拉起执行器'), 'wired 恒 false 红线 a 机械锚标注在册（声明≠拉起）')
+  assert.ok(appSrc.includes('r0.approval && r0.approval.state'), '提案详情派单卡 approval 键消费在册')
+})

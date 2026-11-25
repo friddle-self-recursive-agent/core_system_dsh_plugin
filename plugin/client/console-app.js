@@ -2189,7 +2189,21 @@
         }
         var last = recs[recs.length - 1];
         var nodes = (last.nodes || []).map(function (n) { return esc(n.name); }).join('·');
-        el.innerHTML = '<span class="chip mute small mono">apply-workflow ×' + recs.length + '</span> ' +
+        // v0.57 批准投影+spawn 接线声明随行（拉起投影面第三/末段——workflow-runtime.md §11.5/§11.7）：
+        // approval.state=pending|approved|rejected（人批/驳回=Apply workflow:approve|reject 判定）；
+        // spawn 声明词形=approved 行 {declared:true, wired:false, target}——wired 恒 false=真实拉起
+        // deferred 机械锚（红线 a：声明≠拉起，真实执行仍 observe）；键缺席=旧代 cored 词形。
+        var apState = (last.approval && last.approval.state) || '';
+        var apCls = apState === 'approved' ? 'ok' : apState === 'rejected' ? 'danger' : 'warn';
+        var sp = last.spawn || null;
+        var spHtml = '';
+        if (sp && sp.declared) {
+          spHtml = '<span class="chip acc small mono" title="spawn 接线声明（v0.57 §11.7）：approved 批准投影行→声明词形；wired=false=真实拉起 deferred（agent-session 域）——approved≠拉起，真实执行仍 observe">spawn·声明 target=' + esc(sp.target || '') + ' · wired=' + esc(String(sp.wired)) + '</span> ';
+        } else if (sp) {
+          spHtml = '<span class="chip mute small mono" title="spawn 接线缺席词形（pending/rejected 行或批准投影缺席——零值键恒在=代际判别器；未批准=接线面未进入）">spawn·未声明（wired=false）</span> ';
+        }
+        var apHtml = apState ? '<span class="chip ' + apCls + ' small mono" title="ask 批准动作面（§11.5）：批准/驳回=Apply workflow:approve|reject 判定（apply_log 行集匹配原地翻转）">批准投影·' + esc(apState) + '</span> ' : '';
+        el.innerHTML = '<span class="chip mute small mono">apply-workflow ×' + recs.length + '</span> ' + apHtml + spHtml +
           '<span>最近 ' + esc(String(last.at || '').replace('T', ' ').slice(0, 19)) + ' · action=' + esc(last.action) +
           ' · rv=' + esc(last.rv) + ' · autoLevel=' + esc(last.autoLevel) +
           '（受理投影≠会话已拉起——拉起接线=§11.2 第三段声明；节点输入=' + esc(nodes || '—') + '）</span>';
@@ -5444,12 +5458,21 @@
         return;
       }
       var r0 = rows[rows.length - 1];
+      // v0.57 批准投影+spawn 接线声明随行（拉起投影面第三/末段——workflow-runtime.md §11.5/§11.7）。
+      var apState = (r0.approval && r0.approval.state) || '';
+      var apCls = apState === 'approved' ? 'ok' : apState === 'rejected' ? 'danger' : 'warn';
+      var sp = r0.spawn || null;
+      var spWord = sp && sp.declared
+        ? '<span class="chip acc small">spawn·声明 target=' + esc(sp.target || '') + ' · wired=' + esc(String(sp.wired)) + '</span>'
+        : '<span class="chip mute small">spawn·未声明（wired=false——真实拉起 deferred）</span>';
       el.innerHTML = '<div class="small" style="margin-bottom:6px"><span class="chip ok small">apply-workflow ×' + rows.length + '</span>' +
         '<span class="chip mute small">autoLevel=' + esc(r0.autoLevel || '') + '</span>' +
         '<span class="chip mute small">action=' + esc(r0.action || '') + '</span>' +
         '<span class="chip mute small">rv=' + (r0.rv || 0) + '</span>' +
-        '<span class="chip mute small">eventId=' + esc(String(r0.eventId || '').slice(0, 28)) + '…</span></div>' +
-        '<div class="small faint">受理 ≠ agent 会话已拉起（诚实投影——真实拉起=dsh 会话挂载，declared-deferred）；载荷带提案名/目标/验收（执行体输入）。</div>';
+        '<span class="chip mute small">eventId=' + esc(String(r0.eventId || '').slice(0, 28)) + '…</span>' +
+        (apState ? '<span class="chip ' + apCls + ' small">批准投影·' + esc(apState) + '</span>' : '') +
+        spWord + '</div>' +
+        '<div class="small faint">受理 ≠ agent 会话已拉起（诚实投影——真实拉起=dsh 会话挂载，declared-deferred；spawn 声明=approved 批准投影的接线意图词形，wired 恒 false=零拉起执行器——红线 a）；载荷带提案名/目标/验收（执行体输入）。</div>';
     }, function () {
       var el = $('#pd-dispatch');
       if (el) el.innerHTML = '<div class="small faint">派单投影读面暂不可达（/v1/agents/dispatches 缺席或超时）。</div>';
@@ -5536,13 +5559,30 @@
     Proposal: { label: '提案待批', cls: 'acc', why: '需求提案 status=submitted——批准/驳回=Apply（console:approve|console:reject）' },
     DocReview: { label: '文档待审', cls: 'mute', why: '草稿缓存（代改代审的家，apply.md §6）——diff 预览在审批屏' }
   };
+  /* 类内 op 深链落点（v0.57 R-10 续段——console-adoption.md §1.32 收口：四类各自的操作面
+   * 落点活体判定——L58-UI-10 类级跳过词形废除）。落点只按 class 兜底派生（link 键在册=
+   * cored 深链单一真相原值优先，console 不改写读面深链——红线 2 无双源）。 */
+  function inboxOpOf(it) {
+    var go = String(it.link || '').replace(/^#\//, '');
+    if (go) return { go: go, tag: '' };
+    // link 缺席=按 class 兜底（读面深链缺席的诚实词形——不发明对象键）。
+    if (it.class === 'NeedsHuman') return { go: 'events', tag: '事件流' };
+    if (it.class === 'ApprovalNeeded') return { go: 'approvals', tag: '审批屏' };
+    if (it.class === 'Proposal') return { go: 'proposals', tag: '提案库' };
+    if (it.class === 'DocReview') return { go: 'approvals', tag: '审批屏' };
+    return { go: 'inbox', tag: '' };
+  }
   function inboxItemHtml(it) {
     var meta = INBOX_CLASS_META[it.class] || { label: it.class, cls: 'mute', why: '' };
-    var go = String(it.link || 'welcome').replace(/^#\//, '');
-    return '<button type="button" class="ib-item" data-act="go" data-go="' + esc(go) + '" data-cc-inbox-class="' + esc(it.class) + '">' +
+    var op = inboxOpOf(it);
+    var tag = op.tag ? '<span class="chip mute small">' + esc(op.tag) + '</span>' : '';
+    return '<button type="button" class="ib-item" data-act="go" data-go="' + esc(op.go) + '" data-cc-inbox-class="' + esc(it.class) + '"' +
+      (it.eventId ? ' data-cc-inbox-event="' + esc(it.eventId) + '"' : '') +
+      (it.kind ? ' data-cc-inbox-kind="' + esc(it.kind) + '"' : '') + ' title="' + esc(meta.why) + '">' +
       '<span class="chip ' + meta.cls + ' small">' + esc(meta.label) + '</span>' +
+      tag +
       '<span class="ib-main"><span class="ib-digest">' + esc(it.digest || '') + '</span>' +
-      '<span class="ib-link mono small faint">' + esc(go) + '</span></span>' +
+      '<span class="ib-link mono small faint">' + esc(op.go) + '</span></span>' +
       '<span class="ib-at mono small">' + esc(String(it.at || '').replace('T', ' ').slice(0, 19) || '—') + '</span></button>';
   }
   function screenInbox(view) {
@@ -5559,6 +5599,17 @@
         esc(m.label) + ' ' + fmtNum(classes[c] || 0) + '</button>';
     }).join('');
     var shown = items.filter(function (it) { return !S.inboxClass || it.class === S.inboxClass; });
+    // v0.57 批准投影挂起行进行集（ ApprovalNeeded 类——cored v0.57 行集同源；读面旧代=
+    // 计数挂起而条目缺席的幽灵计数词形，本屏以 count/classes 差值如实标注缺口不翻倍）。
+    var pendingRows = shown.filter(function (it) { return it.class === 'ApprovalNeeded' && it.kind === 'dispatch'; }).length;
+    if (S.inboxClass === 'ApprovalNeeded' && (classes.ApprovalNeeded || 0) > items.filter(function (it) { return it.class === 'ApprovalNeeded'; }).length) {
+      var ghost = (classes.ApprovalNeeded || 0) - items.filter(function (it) { return it.class === 'ApprovalNeeded'; }).length;
+      if (ghost > 0 && pendingRows === 0) {
+        shown = shown.concat([{ class: 'ApprovalNeeded', kind: 'dispatch-legacy', name: '', scope: '',
+          digest: '派单待批（批准投影挂起 ×' + ghost + '——读面行集缺席=旧代 cored 词形，计数照实）',
+          eventId: '', at: '', link: '#/workflows' }]);
+      }
+    }
     var listHtml = shown.map(inboxItemHtml).join('');
     if (!listHtml) listHtml = loading ? liveSkeletonRows(3)
       : '<div class="empty" data-cc-empty="inbox"><svg class="ic"><use href="#cc-i-check"/></svg><div class="e-title">待你处理清单为空</div><div>四类待办（需人接管/待批准/提案待批/文档待审）均无挂起项——完成操作后事件回链在账（接管路径=提案/文档/审批三入口）。</div></div>';
@@ -5571,9 +5622,9 @@
       (sess && sess.watchdog ? '<span class="mono small">会话活性 watchdog ' + (sess.watchdog.enabled ? 'on（阈值 ' + esc(sess.watchdog.stallThreshold) + '）' : 'off（--session-watch-interval=0 纯观测关断）') +
         ' · 心跳 ' + fmtNum(sess.count || 0) + ' 行</span>' : '');
     view.innerHTML = '<div class="view-inner" data-cc-screen="inbox">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>待你处理</h1><span class="chip ' + ((box && box.count) ? 'warn' : 'ok') + '">' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>待你处理</h1><span class="chip ' + ((box && box.count) ? 'warn' : 'ok') + '" data-cc-inbox-count="true">' +
       fmtNum((box && box.count) || 0) + ' 条待办</span></div>' +
-      '<div class="dh-sub">四类汇总+计数+深链（console-adoption.md §1.25）：接管路径=①提交需求（提案）②编辑文档（设计文档/对象编辑器）③审批（ApprovalNeeded）；未配置通知通道=本页兜底展示（notification.md 规则 6）。</div></div>' +
+      '<div class="dh-sub">四类汇总+计数+深链（console-adoption.md §1.25/§1.32——类内 op 落点：NeedsHuman→事件详情/Escalate→wf 锚、ApprovalNeeded→编辑器∪审批屏∪wf 派单行、Proposal→提案详情批准/驳回、DocReview→审批屏 diff∪编辑器；操作完成=事件回链，下一次装载反映）：接管路径=①提交需求（提案）②编辑文档（设计文档/对象编辑器）③审批（ApprovalNeeded）；未配置通知通道=本页兜底展示（notification.md 规则 6）。</div></div>' +
       '<div class="dh-actions"><button type="button" class="btn secondary" data-act="go" data-go="proposals">提交需求</button></div></div>' +
       '<div class="fbar">' + chips + '</div>' +
       '<div class="card"><div class="card-b cc-inbox-list" data-cc-inbox-list="true">' + listHtml + '</div></div>' + degraded +
