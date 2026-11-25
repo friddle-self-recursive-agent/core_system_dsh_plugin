@@ -46,8 +46,8 @@ const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
 test('类内 op 深链落点升格：四类各自兜底落点函数在册（link 键原值优先=cored 深链单一真相）', () => {
   assert.ok(appSrc.includes('function inboxOpOf'), '类内 op 落点派生函数在册（§1.32 收口——L58-UI-10 类级跳过词形废除）')
   assert.ok(appSrc.includes("it.link || ''"), 'link 键原值优先（cored 深链不改写——红线 2 无双源）')
-  for (const w of ["'NeedsHuman'", "'ApprovalNeeded'", "'Proposal'", "'DocReview'"]) {
-    assert.ok(appSrc.includes(`if (it.class === ${w})`), `类 ${w} 兜底落点词形在册`)
+  for (const w of ["'NeedsHuman'", "'Proposal'", "'DocReview'", "it.kind === 'dispatch' || it.kind === 'dispatch-legacy'"]) {
+    assert.ok(appSrc.includes(`if (it.class === ${w})`) || appSrc.includes(`it.class === 'ApprovalNeeded' && (${w})`), `族内落点词形在册：${w}`)
   }
   assert.ok(appSrc.includes('data-cc-inbox-event'), '条目行 eventId 判据锚在册（NeedsHuman→事件详情回链活体判定）')
   assert.ok(appSrc.includes('data-cc-inbox-kind'), '条目行 kind 判据锚在册（挂起行 kind=dispatch 词形）')
@@ -101,4 +101,27 @@ test('动作面 dry-run 零副作用词形守卫：预检/真实动作两拍同�
   assert.ok(SRC.includes("dry.data.rv === rec.rv"), '乐观锁预检判据在册（投影 rv ↔ 面上现值漂移即示）')
   assert.ok(SRC.includes("rec.approval.state !== 'pending'"), '真实动作拍终态守卫在册（pending→动作，终态=零动作）')
   assert.ok(SRC.includes("409"), '乐观锁冲突路径在册（rv 前移=重进现读——零旁路）')
+})
+
+// ── E6 积压族扩 + 收件箱类内落点分化（console-adoption.md §1.13 余量收口——loop-62） ──
+// 判据：积压族=ApprovalNeeded 归档∪submitted 提案∪派单 pending 三源同窗单一真相函数；
+// 聚合面板与「待审批」metric 卡同一函数消费（无双源）；族内落点=dispatch 行→wf 配置 tab
+// （批准动作面在册屏）、归档行→审批屏；零 Go 改动零新写路径（既有读面族语义扩展）。
+
+test('E6 积压族扩：approvalBacklog 三源单一真相函数在册+聚合面板/metric 卡同源消费+族构成词形标注', () => {
+  assert.ok(appSrc.includes('function approvalBacklog'), '积压族单一真相函数在册（§1.13 余量收口）')
+  assert.ok(appSrc.includes("d.approval && d.approval.state === 'pending'"), '派单批准投影 pending 源消费（v0.56/0.57 dispatches 读面——approval 键所在面）')
+  assert.ok(appSrc.includes("st.dispatches || []"), '派单受理投影行集消费在册（live 层 dispatches 快照）')
+  assert.ok(appSrc.includes("p.status === 'submitted'"), '提案 submitted 源消费（v0.51 读面）')
+  assert.ok(appSrc.includes('approvalBacklog().length + submitted + dispatchPending') || appSrc.includes('total: pendingApprovals().length + submitted + dispatchPending'), '族=三源和（归档∪提案∪派单）单一真相')
+  assert.ok(appSrc.includes('back.total'), '事件流聚合面板积压行消费族总数')
+  assert.ok(appSrc.includes('族=ApprovalNeeded 归档'), '族构成词形标注在册（三源分解可见）')
+  assert.ok(appSrc.includes('操作面落点：审批屏/提案详情/wf 配置'), '操作面落点词形在册')
+})
+
+test('E6 链点顺延：收件箱 ApprovalNeeded 族内落点分化（dispatch 行→wf 配置 tab 批准动作面；归档行→审批屏/editor 深链）', () => {
+  assert.ok(appSrc.includes("'wf 配置'"), 'wf 配置落点 tag 词形在册（族内分化）')
+  assert.ok(appSrc.includes("data-cc-inbox-tab"), 'tab 预置判据锚在册（落地即配置 tab=动作行可见）')
+  assert.ok(appSrc.includes("S.wfTab[decodeURIComponent(segs[1])] = tab"), 'ACTIONS.go tab 预置消费在册（落地即配置 tab）')
+  assert.ok(/it\.class === 'ApprovalNeeded' && \(it\.kind === 'dispatch' \|\| it\.kind === 'dispatch-legacy'\)/.test(appSrc), '族内分化逻辑在 inboxOpOf 单点（零散用）')
 })

@@ -1329,6 +1329,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     deliveries: null,
     wakes: null,
     proposals: [],  // /v1/proposals 需求提案读面（v0.51 能力 B——console-adoption.md §1.24）
+    dispatches: [], // /v1/agents/dispatches 派单受理投影（v0.50/0.56——积压族第三源 approval.state=pending）
     inbox: null,    // /v1/inbox 通知中心收件箱投影（v0.56 R-10——§1.25「待你处理」页面兜底）
     sessions: null, // /v1/sessions 会话活性查询面（v0.54 KI-003——watchdog 投影）
     metrics: [],
@@ -1525,6 +1526,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
           jget('v1/notifications/deliveries').then(function (r) { state.deliveries = r; }).catch(function () { state.deliveries = null; }),
           jget('v1/agents/wakes').then(function (r) { state.wakes = r; }).catch(function () { state.wakes = null; }),
           jget('v1/proposals').then(function (r) { state.proposals = r.proposals || []; }).catch(function () { state.proposals = []; }),
+          jget('v1/agents/dispatches').then(function (r) { state.dispatches = r.dispatches || []; }).catch(function () { state.dispatches = []; }),
           jget('v1/inbox').then(function (r) { state.inbox = r; }).catch(function () { state.inbox = null; }),
           jget('v1/sessions').then(function (r) { state.sessions = r; }).catch(function () { state.sessions = null; }),
           jget('v1/metrics').then(function (r) { state.metrics = r.metrics || []; }),
@@ -1987,6 +1989,51 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     return adapter;
   }
 
+  /** mergeCurrentSession 结构化合并纯映射（E5b 收口，console-adoption.md §1.35——§1.11 补注④
+   *  余量摘除；lineback 裁决 2026-11-26：已有 status 块=键级合并不跳过，零盲写不变）。
+   *  输入=Agent 文档正文原文+新身份（sessionId/startedAt）；输出={ok, content}——
+   *  ok=false=预读口径缺席（无 metadata.name / status 块含 tab 缩进=保守拒绝）=诚实降级；
+   *  零盲写红线=纯文本手术非 yaml 重编码：status 块外字节恒等，块内未知键原样保留，
+   *  currentSession 只重写 id/startedAt/docsLoaded 三键（同参回放=幂等 noop 词形）。
+   *  分支：①无 status 块=文末追加最小块；②有块无 currentSession=块内追加；
+   *  ③有 currentSession=子块三键重写（其余子行保序）。 */
+  function mergeCurrentSession(content, sessionId, startedAt) {
+    var text = String(content == null ? '' : content);
+    if (!/(^|\n)\s*name:\s*\S/.test(text)) return { ok: false, content: text };
+    if (/^[\t]|\n[\t]/.test(text)) return { ok: false, content: text };
+    var lines = text.split('\n');
+    var si = -1;
+    for (var i = 0; i < lines.length; i++) { if (/^status:(\s|#|$)/.test(lines[i])) { si = i; break; } }
+    var mk = function () {
+      return ['    id: ' + sessionId, '    startedAt: ' + startedAt, '    docsLoaded: []'];
+    };
+    if (si < 0) {
+      return { ok: true, content: lines.join('\n').replace(/\n?$/, '\n') + ['status:', '  currentSession:'].concat(mk()).join('\n') + '\n' };
+    }
+    var bi = si + 1;
+    while (bi < lines.length && (lines[bi] === '' || /^[ \t]/.test(lines[bi]))) bi++;
+    var headLines = lines.slice(0, si);
+    var blockLine = lines[si];
+    var bodyLines = lines.slice(si + 1, bi);
+    var tailLines = lines.slice(bi);
+    var ci = -1;
+    for (var k = 0; k < bodyLines.length; k++) { if (/^  currentSession:(\s|#|$)/.test(bodyLines[k])) { ci = k; break; } }
+    if (ci < 0) {
+      var nb = bodyLines.slice();
+      while (nb.length && nb[nb.length - 1] === '') nb.pop();
+      return { ok: true, content: headLines.concat([blockLine]).concat(nb).concat(['  currentSession:']).concat(mk()).concat(tailLines).join('\n') };
+    }
+    var cj = ci + 1;
+    while (cj < bodyLines.length && (bodyLines[cj] === '' || /^(?:    |  [^\s])[^\n]*$/.test(bodyLines[cj]))) cj++;
+    var csHead = bodyLines.slice(0, ci);
+    var csBody = bodyLines.slice(ci + 1, cj);
+    var csTail = bodyLines.slice(cj);
+    var unknown = csBody.filter(function (l) { return !/^    (id|startedAt|docsLoaded):/.test(l); });
+    while (unknown.length && unknown[unknown.length - 1] === '') unknown.pop();
+    var merged = csHead.concat(['  currentSession:']).concat(unknown).concat(mk()).concat(csTail);
+    return { ok: true, content: headLines.concat([blockLine]).concat(merged).concat(tailLines).join('\n') };
+  }
+
   __CC.chat = {
     runnerList: runnerList,
     runnerById: runnerById,
@@ -1997,6 +2044,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     createAdapter: createAdapter,
     projectTranscript: projectTranscript,
     textOfBlocks: textOfBlocks,
+    mergeCurrentSession: mergeCurrentSession,
     bindFaces: bindFaces
   };
 })();
@@ -2254,6 +2302,21 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     return out;
   }
   function pendingApprovals() { return approvalNeededObjects(); }
+  /* E6 审批积压族扩（console-adoption.md §1.13 余量注记收口——loop-62；§1.25 ApprovalNeeded
+   * 类同口径顺延）：族=ApprovalNeeded 归档行 ∪ status=submitted 提案（v0.51 读面）∪
+   * 派单批准投影 pending 行（v0.56/0.57 读面）——三源各带操作面落点（审批屏/提案详情/
+   * wf 配置 tab）。零 Go 改动零新写路径（既有读面族语义扩展）；countDownLatch 口径=
+   * 「待判定动作数」非族员数（归档行可能已有稿=同窗可批——聚合面板计数与详情页解析
+   * 同一函数单一真相，无双源）。 */
+  function approvalBacklog() {
+    var st = LIVE.state;
+    // 派单批准投影行集=派单受理投影（/v1/agents/dispatches——v0.56/0.57 approval 键所在面；
+    // runs 面不载 approval 键——loop-62 活体实证修正）。进程内环重启归零=诚实口径（挂起行
+    // 在读面缺席窗=族第三源归零，不冒充存量）。
+    var dispatchPending = (st.dispatches || []).filter(function (d) { return d.approval && d.approval.state === 'pending'; }).length;
+    var submitted = (st.proposals || []).filter(function (p) { return p.status === 'submitted'; }).length;
+    return { total: pendingApprovals().length + submitted + dispatchPending, archive: pendingApprovals().length, submitted: submitted, dispatchPending: dispatchPending };
+  }
   /* 通知中心收件箱计数（v0.56 R-10——§1.25 四类待办汇总）：数据源=/v1/inbox 投影（读面机械
    * 自分类）；读面缺席（旧代 cored/超时）=回落草稿+ApprovalNeeded 归档现读（同一判定词形——
    * console 零自建持久状态，计数口径不翻倍：inbox 面在册即唯一口径）。 */
@@ -2423,7 +2486,16 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   
     });
   }
-  ACTIONS.go = function (el) { go(el.dataset.go); };
+  ACTIONS.go = function (el) {
+    // 收件箱族内落点 tab 预置（loop-62 §1.35——ApprovalNeeded dispatch 行→wf 详情配置 tab：
+    // 批准动作面在册屏；data-cc-inbox-tab=config 预置 S.wfTab 后 go()——落地即动作行可见）。
+    var tab = el.getAttribute('data-cc-inbox-tab');
+    if (tab) {
+      var segs = String(el.dataset.go || '').split('/');
+      if (segs[0] === 'wf' && segs[1]) S.wfTab[decodeURIComponent(segs[1])] = tab;
+    }
+    go(el.dataset.go);
+  };
   ACTIONS['stop'] = function () {};
 
   /* ================= 浮层栈（共用模态裁决 Esc 并恢复焦点） ================= */
@@ -5744,7 +5816,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
           (r.enabled ? '' : ' <span class="chip mute tiny">余量</span>') + '</div><div class="rc-desc">' + esc(r.desc) +
           (r.enabled ? '' : '<div class="small faint">' + esc(r.why) + '</div>') + '</div></div>';
       }).join('') + '</div>' +
-      '<div class="small faint" style="margin-top:10px">创建成功即 Apply 回填 Agent.status.currentSession（身份=SessionId，§5.7 #1）；不可用 runner 在册但禁用=诚实余量标注。</div></div>' +
+      '<div class="small faint" style="margin-top:10px">创建成功即 Apply 回填 Agent.status.currentSession（身份=SessionId，§5.7 #1——结构化合并键级更新）；不可用 runner 在册但禁用=诚实余量标注。</div></div>' +
       '<div class="modal-f"><button class="btn" data-act="close-modal">取消</button><button class="btn primary" id="sess-create">创建会话（内嵌 dsh）</button></div>');
     $all('#runner-cards .runner-card').forEach(function (c) {
       c.addEventListener('click', function () {
@@ -5786,28 +5858,29 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     });
   };
   /** Agent.status.currentSession 回填（身份=SessionId 的文档面落点，§5.7 #1/#2）：
-   *  读现文 → 追加/更新 status 块 → 既有 apply 通路（主体宿主注入，rv 乐观锁）。
-   *  已有 status 块的结构化合并=E5b 余量（诚实跳过并 toast，不盲写覆盖）。 */
+   *  读现文 → 结构化合并纯映射（mergeCurrentSession——E5b 收口：键级合并/幂等 noop/零盲写，
+   *  console-adoption.md §1.35）→ 既有 apply 通路（主体宿主注入，rv 乐观锁）。
+   *  预读口径缺席（ok=false）=诚实降级 toast 不盲写（§1.11 补注④ 余量词形收窄为该形态）。 */
   function backfillCurrentSession(agentName, sessionId) {
     var aref = liveAgentRef(agentName);
     if (!aref) return;
     LIVE.get('v1/objects/Agent/' + encodeURIComponent(agentName) + '?scope=' + encodeURIComponent(aref.scope)).then(function (b) {
-      var content = String(b.content || '');
-      if (/^status:/m.test(content)) {
-        toast('currentSession 未回填（诚实余量）', 'Agent 文档已有 status 块——结构化合并=E5b 余量，不盲写覆盖', 'warn');
+      var merged = (CHAT() && CHAT().mergeCurrentSession) ? CHAT().mergeCurrentSession(String(b.content || ''), sessionId, new Date().toISOString()) : { ok: false, content: String(b.content || '') };
+      if (!merged.ok) {
+        toast('currentSession 未回填（诚实降级）', 'Agent 文档预读口径缺席（无 metadata.name 或 tab 缩进）——零盲写红线不冒险', 'warn');
         return;
       }
-      var startedAt = new Date().toISOString();
-      var block = '\nstatus:\n  currentSession:\n    id: ' + sessionId + '\n    startedAt: ' + startedAt + '\n    docsLoaded: []\n';
       LIVE.apply({
         kind: 'Agent', scope: aref.scope, name: agentName,
         resourceVersion: b.resourceVersion,
-        content: content.replace(/\n*$/, '\n') + block,
+        content: merged.content,
         fieldManager: 'console:chat-backfill',
         reasonRef: 'console E5: chat session create'
       }).then(function (res) {
         if (res.ok) {
-          toast('currentSession 已回填', 'Agent/' + agentName + ' → rv' + (res.data && res.data.rv != null ? res.data.rv : '?') + '（身份=SessionId）');
+          var rv = res.data && res.data.rv != null ? res.data.rv : '?';
+          var noop = res.data && res.data.action === 'noop'; // 幂等重入=同值零提交零事件（apply.md rule 1）
+          toast('currentSession 已回填' + (noop ? '（幂等 noop）' : ''), 'Agent/' + agentName + ' → rv' + rv + '（身份=SessionId' + (noop ? ' · 同值零盲写' : ' · 结构化合并键级更新') + '）');
           LIVE.load().then(function () { if (S.route === 'chat') render(); });
         } else {
           toast('回填未落库（' + (res.status == null ? '传输层' : 'HTTP ' + res.status) + '）', String(res.error || '').slice(0, 140), 'warn');
@@ -6178,8 +6251,6 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var types = [];
     scoped.forEach(function (e) { if (types.indexOf(e.type) < 0) types.push(e.type); });
     types.sort();
-    var apN = base.filter(function (e) { return e.type === 'ApprovalNeeded'; }).length;
-    var dead = base.length ? Math.round(base.filter(function (e) { return String(e.routedTo || '').indexOf('dead-letter') >= 0; }).length * 1000 / base.length) / 10 : 0;
     var typeCount = {};
     base.forEach(function (e) { typeCount[e.type] = (typeCount[e.type] || 0) + 1; });
     var top5 = Object.keys(typeCount).sort(function (a, b) { return typeCount[b] - typeCount[a]; }).slice(0, 5);
@@ -6189,9 +6260,12 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<div class="dh-sub">Event / 状态变迁 / 数据事件 · 点任意一条跳相关对象（event→run→workflow→doc 链路）。数据源=event_log 归档投影（/v1/events limit=500 + until 游标滚动加载）。</div></div></div>';
     var sidePanel = '';
     if (!isSys) {
+      var back = approvalBacklog(); // E6 积压族扩：归档∪submitted 提案∪派单 pending（§1.13 余量收口）
+      var dead = base.length ? Math.round(base.filter(function (e) { return String(e.routedTo || '').indexOf('dead-letter') >= 0; }).length * 1000 / base.length) / 10 : 0;
       sidePanel = '<div style="display:grid;gap:12px;align-self:start">' +
         '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span><span class="h-sub">归档窗内实数</span></div><div class="card-b" style="display:grid;gap:10px">' +
-        '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (apN ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + apN + '</span></span></div>' +
+        '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (back.total ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + back.total + '</span></span>' +
+        '<span class="small faint">族=ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作面落点：审批屏/提案详情/wf 配置）</span></div>' +
         '<div class="kv"><span class="k">死信率</span><span class="v mono">' + dead + '%</span></div>' +
         '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">n/a</span><span class="small faint">run 终态事件未落归档（declared 余量，不冒充）</span></div>' +
         '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据面余量</span></div>' +
@@ -7785,11 +7859,23 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
    * 落点活体判定——L58-UI-10 类级跳过词形废除）。落点只按 class 兜底派生（link 键在册=
    * cored 深链单一真相原值优先，console 不改写读面深链——红线 2 无双源）。 */
   function inboxOpOf(it) {
-    var go = String(it.link || '').replace(/^#\//, '');
-    if (go) return { go: go, tag: '' };
+    // link 键原值优先（cored 深链不改写——红线 2 无双源）；#/ 前缀剥除后经 go() 路由解析。
+    var raw = String(it.link || '');
+    var go = raw.replace(/^#\//, '');
+    if (go) {
+      // link 面族内落点分化（E6 链点顺延——loop-62 §1.35）：ApprovalNeeded∧kind=dispatch 行
+      // 的批准动作面=wf 详情配置 tab（cored link=#/wf/<锚> 落 wf/:name 详情——默认 tab=runs，
+      // 动作行在配置 tab：落点补 tab 参数#wf/:name?tab=config 解析守卫）。未知深链形状=
+      // link 原值优先照走（404 词形=缺口可见不静默——console 不改写读面深链键）。
+      if (it.class === 'ApprovalNeeded' && (it.kind === 'dispatch' || it.kind === 'dispatch-legacy')) {
+        var nm = String(it.name || '');
+        if (nm) return { go: 'wf/' + encodeURIComponent(nm), tag: 'wf 配置', tab: 'config' };
+        return { go: go, tag: 'wf 配置', tab: '' };
+      }
+      return { go: go, tag: '' };
+    }
     // link 缺席=按 class 兜底（读面深链缺席的诚实词形——不发明对象键）。
     if (it.class === 'NeedsHuman') return { go: 'events', tag: '事件流' };
-    if (it.class === 'ApprovalNeeded') return { go: 'approvals', tag: '审批屏' };
     if (it.class === 'Proposal') return { go: 'proposals', tag: '提案库' };
     if (it.class === 'DocReview') return { go: 'approvals', tag: '审批屏' };
     return { go: 'inbox', tag: '' };
@@ -7798,7 +7884,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var meta = INBOX_CLASS_META[it.class] || { label: it.class, cls: 'mute', why: '' };
     var op = inboxOpOf(it);
     var tag = op.tag ? '<span class="chip mute small">' + esc(op.tag) + '</span>' : '';
-    return '<button type="button" class="ib-item" data-act="go" data-go="' + esc(op.go) + '" data-cc-inbox-class="' + esc(it.class) + '"' +
+    return '<button type="button" class="ib-item" data-act="go" data-go="' + esc(op.go) + '"' +
+      (op.tab ? ' data-cc-inbox-tab="' + esc(op.tab) + '"' : '') +
+      ' data-cc-inbox-class="' + esc(it.class) + '"' +
       (it.eventId ? ' data-cc-inbox-event="' + esc(it.eventId) + '"' : '') +
       (it.kind ? ' data-cc-inbox-kind="' + esc(it.kind) + '"' : '') + ' title="' + esc(meta.why) + '">' +
       '<span class="chip ' + meta.cls + ' small">' + esc(meta.label) + '</span>' +

@@ -265,6 +265,51 @@
     return adapter;
   }
 
+  /** mergeCurrentSession 结构化合并纯映射（E5b 收口，console-adoption.md §1.35——§1.11 补注④
+   *  余量摘除；lineback 裁决 2026-11-26：已有 status 块=键级合并不跳过，零盲写不变）。
+   *  输入=Agent 文档正文原文+新身份（sessionId/startedAt）；输出={ok, content}——
+   *  ok=false=预读口径缺席（无 metadata.name / status 块含 tab 缩进=保守拒绝）=诚实降级；
+   *  零盲写红线=纯文本手术非 yaml 重编码：status 块外字节恒等，块内未知键原样保留，
+   *  currentSession 只重写 id/startedAt/docsLoaded 三键（同参回放=幂等 noop 词形）。
+   *  分支：①无 status 块=文末追加最小块；②有块无 currentSession=块内追加；
+   *  ③有 currentSession=子块三键重写（其余子行保序）。 */
+  function mergeCurrentSession(content, sessionId, startedAt) {
+    var text = String(content == null ? '' : content);
+    if (!/(^|\n)\s*name:\s*\S/.test(text)) return { ok: false, content: text };
+    if (/^[\t]|\n[\t]/.test(text)) return { ok: false, content: text };
+    var lines = text.split('\n');
+    var si = -1;
+    for (var i = 0; i < lines.length; i++) { if (/^status:(\s|#|$)/.test(lines[i])) { si = i; break; } }
+    var mk = function () {
+      return ['    id: ' + sessionId, '    startedAt: ' + startedAt, '    docsLoaded: []'];
+    };
+    if (si < 0) {
+      return { ok: true, content: lines.join('\n').replace(/\n?$/, '\n') + ['status:', '  currentSession:'].concat(mk()).join('\n') + '\n' };
+    }
+    var bi = si + 1;
+    while (bi < lines.length && (lines[bi] === '' || /^[ \t]/.test(lines[bi]))) bi++;
+    var headLines = lines.slice(0, si);
+    var blockLine = lines[si];
+    var bodyLines = lines.slice(si + 1, bi);
+    var tailLines = lines.slice(bi);
+    var ci = -1;
+    for (var k = 0; k < bodyLines.length; k++) { if (/^  currentSession:(\s|#|$)/.test(bodyLines[k])) { ci = k; break; } }
+    if (ci < 0) {
+      var nb = bodyLines.slice();
+      while (nb.length && nb[nb.length - 1] === '') nb.pop();
+      return { ok: true, content: headLines.concat([blockLine]).concat(nb).concat(['  currentSession:']).concat(mk()).concat(tailLines).join('\n') };
+    }
+    var cj = ci + 1;
+    while (cj < bodyLines.length && (bodyLines[cj] === '' || /^(?:    |  [^\s])[^\n]*$/.test(bodyLines[cj]))) cj++;
+    var csHead = bodyLines.slice(0, ci);
+    var csBody = bodyLines.slice(ci + 1, cj);
+    var csTail = bodyLines.slice(cj);
+    var unknown = csBody.filter(function (l) { return !/^    (id|startedAt|docsLoaded):/.test(l); });
+    while (unknown.length && unknown[unknown.length - 1] === '') unknown.pop();
+    var merged = csHead.concat(['  currentSession:']).concat(unknown).concat(mk()).concat(csTail);
+    return { ok: true, content: headLines.concat([blockLine]).concat(merged).concat(tailLines).join('\n') };
+  }
+
   __CC.chat = {
     runnerList: runnerList,
     runnerById: runnerById,
@@ -275,6 +320,7 @@
     createAdapter: createAdapter,
     projectTranscript: projectTranscript,
     textOfBlocks: textOfBlocks,
+    mergeCurrentSession: mergeCurrentSession,
     bindFaces: bindFaces
   };
 })();

@@ -27,6 +27,7 @@
     deliveries: null,
     wakes: null,
     proposals: [],  // /v1/proposals 需求提案读面（v0.51 能力 B——console-adoption.md §1.24）
+    dispatches: [], // /v1/agents/dispatches 派单受理投影（v0.50/0.56——积压族第三源 approval.state=pending）
     inbox: null,    // /v1/inbox 通知中心收件箱投影（v0.56 R-10——§1.25「待你处理」页面兜底）
     sessions: null, // /v1/sessions 会话活性查询面（v0.54 KI-003——watchdog 投影）
     metrics: [],
@@ -223,6 +224,7 @@
           jget('v1/notifications/deliveries').then(function (r) { state.deliveries = r; }).catch(function () { state.deliveries = null; }),
           jget('v1/agents/wakes').then(function (r) { state.wakes = r; }).catch(function () { state.wakes = null; }),
           jget('v1/proposals').then(function (r) { state.proposals = r.proposals || []; }).catch(function () { state.proposals = []; }),
+          jget('v1/agents/dispatches').then(function (r) { state.dispatches = r.dispatches || []; }).catch(function () { state.dispatches = []; }),
           jget('v1/inbox').then(function (r) { state.inbox = r; }).catch(function () { state.inbox = null; }),
           jget('v1/sessions').then(function (r) { state.sessions = r; }).catch(function () { state.sessions = null; }),
           jget('v1/metrics').then(function (r) { state.metrics = r.metrics || []; }),

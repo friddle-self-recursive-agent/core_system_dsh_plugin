@@ -250,3 +250,98 @@ test('E5 host bundle 静态面：chat 屏真数据换装（mock 会话名/假 to
   assert.ok(!dist.includes('personaReply(agent.name'), 'mock 回复链路调用点摘除')
   assert.ok(!dist.includes("chat/builtinRoot"), 'mock agent 对话入口摘除（文档面真数据）')
 })
+
+// ── E5b chat-backfill 结构化合并（console-adoption.md §1.35——§1.11 补注④ 余量摘除；loop-62） ──
+// 判据：已有 status 块=键级合并落库不跳过；零盲写（块外字节恒等/未知键保留）；同值幂等 noop；
+// 预读口径缺席（无 metadata.name/tab 缩进）=诚实降级不盲写；调用点余量词形摘除（回潮即红）。
+
+const AGENT_WITH_STATUS = [
+  'apiVersion: core/v1',
+  'kind: Agent',
+  'metadata:',
+  '  name: core-headless',
+  '  scope: global',
+  '  resourceVersion: 4',
+  'spec:',
+  '  runtime: dsh',
+  '  connectorOps:',
+  '    - {ops: connector-ops/agent-comm, as: agent-comm}',
+  'status:',
+  '  currentSession:',
+  '    id: session-old-1',
+  '    startedAt: 2026-11-23T21:16:46.173Z',
+  '    docsLoaded: []',
+  '',
+].join('\n')
+const AGENT_NO_CS = ['kind: Agent', 'metadata:', '  name: x', 'status:', '  phase: ready', ''].join('\n')
+const AGENT_NO_STATUS = ['kind: Agent', 'metadata:', '  name: y', 'spec:', '  runtime: dsh', ''].join('\n')
+const AGENT_UNKNOWN_KEY = ['kind: Agent', 'metadata:', '  name: z', 'status:', '  currentSession:', '    id: oldz', '    note: keep-me', '    docsLoaded: [a]', 'spec:', '  runtime: dsh', ''].join('\n')
+const AGENT_SIBLING = ['kind: Agent', 'metadata:', '  name: g', 'status:', '  phase: ready', '  currentSession:', '    id: oldg', ''].join('\n')
+
+function loadMerge() {
+  const chat = loadChat()
+  assert.equal(typeof chat.mergeCurrentSession, 'function', 'mergeCurrentSession 纯映射已导出（__CC.chat）')
+  return chat.mergeCurrentSession
+}
+
+test('E5b 合并：已有 status 块 Agent = currentSession 键级更新（rv 前进落库词形；既有块 id 翻新旧值不残留）', () => {
+  const merge = loadMerge()
+  const r = merge(AGENT_WITH_STATUS, 'sess-9', '2026-11-26T10:00:00.000Z')
+  assert.equal(r.ok, true, '已有 status 块=合并不跳过（余量词形摘除）')
+  assert.ok(r.content.includes('id: sess-9'), '新 SessionId 落位')
+  assert.ok(!r.content.includes('session-old-1'), '旧 id 不残留（键级重写非追加）')
+  assert.ok(r.content.includes('runtime: dsh'), 'spec 面零盲写（块外字节恒等）')
+  assert.ok(r.content.includes('connector-ops/agent-comm'), '其余字段零盲写（mount 声明保留）')
+  assert.equal((r.content.match(/currentSession:/g) || []).length, 1, 'currentSession 键唯一（零双键）')
+  assert.ok(r.content.startsWith('apiVersion: core/v1'), 'frontmatter 头部零改写')
+  assert.ok(r.content.endsWith('docsLoaded: []'), '块内结构=YAML 可解析词形（尾行 docsLoaded）')
+})
+
+test('E5b 合并：同参回放=幂等 noop 词形（第二次起 content 恒等——零盲写红线机读锚）', () => {
+  const merge = loadMerge()
+  const r1 = merge(AGENT_WITH_STATUS, 'sess-9', '2026-11-26T10:00:00.000Z')
+  const r2 = merge(r1.content, 'sess-9', '2026-11-26T10:00:00.000Z')
+  const r3 = merge(r2.content, 'sess-9', '2026-11-26T10:00:00.000Z')
+  assert.equal(r2.content, r3.content, '同参回放=幂等 noop（apply 面零新 rv）')
+  const rB = merge(AGENT_NO_CS, 's2', 'T1')
+  const rB2 = merge(rB.content, 's2', 'T1')
+  const rB3 = merge(rB2.content, 's2', 'T1')
+  assert.equal(rB2.content, rB3.content, '有块无 currentSession 分支同参幂等')
+  const rC = merge(AGENT_NO_STATUS, 's3', 'T2')
+  const rC2 = merge(rC.content, 's3', 'T2')
+  const rC3 = merge(rC2.content, 's3', 'T2')
+  assert.equal(rC2.content, rC3.content, '无 status 块分支（首次追加）回放幂等')
+  const rD = merge(AGENT_UNKNOWN_KEY, 's4', 'T3')
+  const rD2 = merge(rD.content, 's4', 'T3')
+  assert.equal(rD.content, rD2.content, '未知子键分支回放幂等')
+})
+
+test('E5b 合并：零盲写红线——status 块内未知子键原样保留 + sibling 键零动 + 块外文档零改写', () => {
+  const merge = loadMerge()
+  const rD = merge(AGENT_UNKNOWN_KEY, 's4', 'T3')
+  assert.ok(rD.content.includes('note: keep-me'), '未知子键原样保留（零盲写）')
+  assert.ok(!rD.content.includes('oldz'), '旧 id 翻新')
+  assert.ok(rD.content.includes('runtime: dsh'), 'status 块后文档零改写')
+  const rG = merge(AGENT_SIBLING, 's6', 'T4')
+  assert.ok(rG.content.includes('phase: ready'), 'sibling 键零动')
+  assert.equal((rG.content.match(/currentSession:/g) || []).length, 1, '不发明第二 currentSession 键')
+  assert.ok(!rG.content.includes('oldg'), '旧 id 翻新')
+})
+
+test('E5b 合并：预读口径缺席=诚实降级（ok=false 不盲写）——无 metadata.name / tab 缩进两形', () => {
+  const merge = loadMerge()
+  const rE = merge('kind: Agent\nstatus: inline-scalar\n', 's', 'T')
+  assert.equal(rE.ok, false, '无 metadata.name=拒绝合并（无身份锚不盲写）')
+  assert.equal(rE.content, 'kind: Agent\nstatus: inline-scalar\n', '拒绝=原文零改写')
+  const rT = merge('status:\n\tid: x\n', 's', 'T')
+  assert.equal(rT.ok, false, 'tab 缩进=保守拒绝（键级手术口径外）')
+})
+
+test('E5b 回归：调用点余量词形摘除（「未回填（诚实余量）」/「结构化合并=E5b 余量」回潮即红）', () => {
+  const app = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
+  assert.ok(!app.includes('未回填（诚实余量）'), '余量跳过 toast 词形已摘除')
+  assert.ok(!app.includes('结构化合并=E5b 余量'), '余量标注词形已摘除')
+  assert.ok(app.includes('mergeCurrentSession'), '调用点=结构化合并纯映射接线在册')
+  assert.ok(app.includes("res.data.action === 'noop'"), '幂等 noop 回执词形消费在册（action=create|update|noop）')
+  assert.ok(app.includes('console:chat-backfill'), 'fieldManager 不变（判据面）')
+})
