@@ -11,7 +11,9 @@ import {
   createApplyHandler, createConsoleApiHandler, mountConsoleRoutes,
   CONSOLE_COMM_PATH, CONSOLE_DESIGN_DOCS_PATH, CONSOLE_INTAKE_PATH, CONSOLE_SERVICE_PROJECTS_PATH,
   createCommHandler, createCommState, createDesignDocsHandler, createIntakeHandler, createServiceProjectsHandler,
+  createSessionHeartbeatHandler,
   type FetchLike, type HttpReqLike, type HttpResLike,
+  CONSOLE_SESSION_HEARTBEAT_PATH,
 } from '../src/index.ts'
 import { makeErrorReply } from '../src/agent-comm.ts'
 import { mkdtempSync, existsSync, rmSync } from 'node:fs'
@@ -109,8 +111,9 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['prefix', CONSOLE_DRAFTS_PATH],
     ['prefix', CONSOLE_DESIGN_DOCS_PATH],
     ['prefix', CONSOLE_INTAKE_PATH],
+    ['exact', CONSOLE_SESSION_HEARTBEAT_PATH],
     ['exact', CONSOLE_SERVICE_PROJECTS_PATH],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ Service project 映射（exact，能力 C）成套注册')
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）成套注册')
   assert.equal(disposed, 0)
 
   // 依赖缺席（headless）：回调体不注册、不抛错
@@ -122,6 +125,46 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     },
   }, { url: '' })
   assert.ok(called, 'inject 回调仍被驱动（软出现=依赖缺席时无害空转）')
+})
+
+// ─────── v0.54 KI-003：/core-console/session-heartbeat 心跳注册通路 ───────
+
+test('createSessionHeartbeatHandler：栅栏 fail-closed ∧ 非 POST=405 ∧ subject 宿主注入剥客户端声明 ∧ 上游透传 /v1/sessions/heartbeat', async () => {
+  const allow = () => undefined as 401 | 403 | undefined
+  let seenUrl = ''
+  let seenBody = ''
+  const h = createSessionHeartbeatHandler({
+    bridge: { url: 'http://127.0.0.1:9/' },
+    reject: allow,
+    subject: DEFAULT_APPLY_SUBJECT,
+    fetchImpl: (async (url: any, init: any) => {
+      seenUrl = String(url)
+      seenBody = String(init?.body ?? '')
+      return new Response('{"ok":true,"sessionId":"s1"}', { status: 200 })
+    }) as FetchLike,
+  })
+  const res = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await h(
+    { method: 'POST', url: CONSOLE_SESSION_HEARTBEAT_PATH, headers: {}, body: JSON.stringify({ sessionId: 's1', phase: 'tool-call', subject: { user: 'spoofed' } }) },
+    res,
+  )
+  assert.equal(res.statusCode, 200, '受理=200 透传')
+  assert.ok(seenUrl.endsWith('/v1/sessions/heartbeat'), '上游路径=/v1/sessions/heartbeat')
+  const up = JSON.parse(seenBody)
+  assert.equal(up.sessionId, 's1')
+  assert.ok(up.subject && !up.subject.user.includes('spoofed'), '客户端 subject 声明剥除，宿主主体注入')
+  // 非 POST=405
+  const res405 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await h({ method: 'GET', url: CONSOLE_SESSION_HEARTBEAT_PATH, headers: {}, body: '' }, res405)
+  assert.equal(res405.statusCode, 405, '非 POST=405')
+  // 栅栏拒绝=403
+  const hDenied = createSessionHeartbeatHandler({
+    bridge: { url: 'http://127.0.0.1:9/' }, reject: () => 403, subject: DEFAULT_APPLY_SUBJECT,
+    fetchImpl: (async () => new Response('{}', { status: 200 })) as FetchLike,
+  })
+  const res403 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await hDenied({ method: 'POST', url: CONSOLE_SESSION_HEARTBEAT_PATH, headers: {}, body: '{}' }, res403)
+  assert.equal(res403.statusCode, 403, '栅栏拒绝=403（fail-closed）')
 })
 
 // ─────── E3：/core-console/apply 写路由（console-adoption.md §1.9）───────

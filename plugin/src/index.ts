@@ -137,6 +137,8 @@ export const CONSOLE_DESIGN_DOCS_PATH = '/core-console/design-docs'
  *  POST /core-console/intake/generate → cored POST /v1/intake/generate（提交节点生成标准 YAML + 系统补缺省 + 三重 dry-run 字段级归因）。
  *  主体由宿主注入（剥除客户端声明）；读面 GET /v1/intake/sessions* 走既有只读代理 /core-console/api/v1/*。 */
 export const CONSOLE_INTAKE_PATH = '/core-console/intake'
+/** 会话活性心跳注册通路（v0.54 KI-003）：POST /core-console/session-heartbeat → cored POST /v1/sessions/heartbeat。 */
+export const CONSOLE_SESSION_HEARTBEAT_PATH = '/core-console/session-heartbeat'
 
 /** 草稿 fieldManager 缺省（客户端缺主时宿主补——无主稿 cored 拒绝 400，兜底保 UX）。 */
 export const DEFAULT_DRAFT_FIELD_MANAGER = 'console:editor'
@@ -784,6 +786,72 @@ export function createIntakeHandler(opts: {
   }
 }
 
+/** 会话活性心跳注册 handler（v0.54 KI-003，agent-session.md §8）：POST /core-console/session-heartbeat
+ *   → cored POST /v1/sessions/heartbeat。会话推进点（相位推进/工具调用完成/产物落盘任一）
+ *   上报心跳；主体宿主注入（心贴士：心跳是引擎活性数据不是文档写——但注册面随写面门控，
+ *   主体同 apply 注入口径）；connection 栅栏 fail-closed 同款；非 POST=405。 */
+export function createSessionHeartbeatHandler(opts: {
+  bridge: { url: string }
+  reject?: (req: { headers: unknown }) => 401 | 403 | undefined
+  fetchImpl?: FetchLike
+  subject: ApplySubject
+}) {
+  const fetchImpl = opts.fetchImpl ?? fetch
+  return async function sessionHeartbeatHandler(req: HttpReqLike, res: HttpResLike): Promise<void> {
+    if (!opts.reject) {
+      res.statusCode = 401
+      res.end()
+      return
+    }
+    const rejection = opts.reject({ headers: req.headers })
+    if (rejection !== undefined) {
+      res.statusCode = rejection
+      res.end()
+      return
+    }
+    if ((req.method ?? 'GET') !== 'POST') {
+      res.statusCode = 405
+      res.setHeader('allow', 'POST')
+      res.end()
+      return
+    }
+    if (!opts.bridge.url) {
+      sendJson(res, 503, { error: 'cored 未就绪（桥接未完成）' })
+      return
+    }
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse((await readRequestBody(req)) || '{}')
+    } catch {
+      sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+      return
+    }
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' })
+      return
+    }
+    delete parsed.subject
+    const upstream = { ...parsed, subject: opts.subject }
+    const base = opts.bridge.url.replace(/\/+$/, '')
+    let out: Awaited<ReturnType<FetchLike>>
+    try {
+      out = await fetchImpl(base + '/v1/sessions/heartbeat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(upstream),
+      })
+    } catch (e) {
+      sendJson(res, 502, { error: `cored 不可达: ${String((e as Error)?.message ?? e)}` })
+      return
+    }
+    const text = await out.text()
+    res.statusCode = out.status
+    res.setHeader('content-type', 'application/json; charset=utf-8')
+    res.setHeader('cache-control', 'no-store')
+    res.end(text)
+  }
+}
+
 /**
  * agent-comm 四 op 工具装配（E5b；cross-agent.md §5 协议 v0.1）：
  *   ctx.tools.register 四工具（dispatch/query/interrupt/inbox）——工具宿主=本 plugin
@@ -961,6 +1029,11 @@ export function mountConsoleRoutes(ctx: {
       webServer.register({
         kind: 'prefix', path: CONSOLE_INTAKE_PATH,
         handler: createIntakeHandler({ bridge, reject, subject: applySubject }),
+      }),
+      // 会话活性心跳注册通路（v0.54 KI-003）：agent 侧推进点上报走宿主注入主体。
+      webServer.register({
+        kind: 'exact', path: CONSOLE_SESSION_HEARTBEAT_PATH,
+        handler: createSessionHeartbeatHandler({ bridge, reject, subject: applySubject }),
       }),
       ...(comm ? [webServer.register({
         kind: 'exact', path: CONSOLE_COMM_PATH,
