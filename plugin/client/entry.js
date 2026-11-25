@@ -1,16 +1,22 @@
-// E1 slot 注册面（console-adoption.md §6 方向性风险的主案验证）：
-//   顶层导航扩展位=dsh 0.2.2-rc.5 的 sidebar.panellist（列表，id ↔ main 面板键）+
-//   main（keyed，key=面板 id，非 conversation 键无 Session 绑定）——注册该对=顶层导航+整页路由能力。
-// 八入口不占八个 dsh 面板：console 壳自带侧栏（proto 同构，hash 路由在壳内），dsh 侧只加一枚
-// 入口（id=core-console）。路由即状态（location.hash，dsh client 不占用 hash）——刷新恢复=
-// 注册完成后按 hash 判定 selectPanel（深链可直发他人，console-ui.md 全局框架行）。
-var PANEL_ID = 'core-console'
+// console 原生整合（console-adoption.md §1.23）：
+// 九项经 dsh Slots 注册到宿主主侧栏；console 壳只保留内容区，不再拥有第二列导航。
+// Welcome 与总览按 console-ui.md §11 A1 合并；已交付「需求提案」补足九项。
+var CONSOLE_NAV = [
+  { id: 'overview', panel: 'core-console-overview', label: '总览', route: '#/welcome', icon: 'home', segs: ['welcome', 'overview'] },
+  { id: 'tree', panel: 'core-console-tree', label: '系统树', route: '#/tree', icon: 'tree', segs: ['tree', 's'] },
+  { id: 'workflows', panel: 'core-console-workflows', label: 'Workflows', route: '#/workflows', icon: 'flow', segs: ['workflows', 'wf'] },
+  { id: 'docs', panel: 'core-console-docs', label: '文档', route: '#/docs', icon: 'doc', segs: ['docs', 'doc', 'designdoc'] },
+  { id: 'events', panel: 'core-console-events', label: '事件', route: '#/events', icon: 'pulse', segs: ['events', 'event'] },
+  { id: 'approvals', panel: 'core-console-approvals', label: '审批', route: '#/approvals', icon: 'check', segs: ['approvals'] },
+  { id: 'connectors', panel: 'core-console-connectors', label: '连接', route: '#/connectors', icon: 'plug', segs: ['connectors', 'connector', 'ws', 'provider', 'ref', 'role'] },
+  { id: 'sessions', panel: 'core-console-sessions', label: '会话', route: '#/chat/root-agent', icon: 'chat', segs: ['chat', 'session', 'agent'] },
+  { id: 'proposals', panel: 'core-console-proposals', label: '需求提案', route: '#/proposals', icon: 'spark', segs: ['proposals', 'proposal'] }
+]
 
-// console 全部 hash 路由首段（console-ui.md §proto 对应关系表；E1 起全部入此集）
 var CONSOLE_SEGS = [
   'welcome', 'overview', 'tree', 's', 'workflows', 'wf', 'docs', 'doc', 'designdoc',
   'chat', 'session', 'connectors', 'connector', 'ws', 'provider', 'ref', 'role',
-  'agent', 'event', 'events', 'approvals', 'proposals', 'proposal',
+  'agent', 'event', 'events', 'approvals', 'proposals', 'proposal'
 ]
 
 function isConsoleHash(h) {
@@ -19,16 +25,67 @@ function isConsoleHash(h) {
   return first !== '' && CONSOLE_SEGS.indexOf(first) >= 0
 }
 
-// 侧栏图标（dsh 侧栏拥有按钮/文案/选中态，本组件只给字形——PluginsPanelIcon 同构）
-function ConsoleIcon(props) {
-  props = props || {}
-  var s = props.size || 16
-  return React.createElement('svg', { width: s, height: s, viewBox: '0 0 16 16', 'aria-hidden': true },
-    React.createElement('path', { d: 'M8 1.5 14.5 8 8 14.5 1.5 8z', fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinejoin: 'round' }),
-    React.createElement('path', { d: 'M8 5v6M5 8h6', stroke: 'currentColor', strokeWidth: 1.1 }))
+function panelForHash(h) {
+  if (!isConsoleHash(h)) return null
+  var first = h.replace(/^#\/?/, '').split('/')[0]
+  for (var i = 0; i < CONSOLE_NAV.length; i++) {
+    if (CONSOLE_NAV[i].segs.indexOf(first) >= 0) return CONSOLE_NAV[i]
+  }
+  return CONSOLE_NAV[0]
 }
 
-// 主面板：ref 挂载点——React 只递容器，壳内由 proto 自治（挂载即引导，卸载即回收）
+var GLYPHS = {
+  home: 'M2 8.5 8 3l6 5.5V14H9.5v-4h-3v4H2z',
+  tree: 'M3 2v12M3 5h5M3 9h5M8 5v1.5M8 9v1.5M8 6.5h4M8 10.5h4',
+  flow: 'M8 1.5v6M8 7.5H4v3M8 7.5h4v3M4 10.5v3h8v-3',
+  doc: 'M4 1.5h5.5L13 5v9.5H4zM9.5 1.5V5H13M6 8h4.5M6 10.5h4.5',
+  pulse: 'M1.5 8h3l2-5 3 10 2-5h3',
+  check: 'M5 8.2 7.1 10.2 11.2 6M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z',
+  plug: 'M5 1.5v3M11 1.5v3M4 4.5h8v3a4 4 0 0 1-8 0zM8 11.5v3',
+  chat: 'M2 3.5h12v8H8l-3 3v-3H2zM5 6.5h6M5 8.8h4',
+  spark: 'M8 1.5 9.6 6 14 8l-4.4 2L8 14.5 6.4 10 2 8l4.4-2z'
+}
+
+function approvalSnapshot() {
+  return Number((typeof __CC !== 'undefined' && __CC.approvalCount) || 0)
+}
+function subscribeApprovals(cb) {
+  if (typeof window === 'undefined' || !window.addEventListener) return function () {}
+  window.addEventListener('cc-approvals', cb)
+  return function () { window.removeEventListener('cc-approvals', cb) }
+}
+
+function ConsoleIcon(nav, props) {
+  props = props || {}
+  var s = props.size || 16
+  var children = []
+  // 宿主 wide 行请求 16px，collapsed rail 请求 18px；只在 wide 行显示分组标题。
+  if (nav.id === 'overview' && s === 16) {
+    children.push(React.createElement('span', {
+      key: 'group', 'data-cc-sidebar-label': '核心控制台', role: 'heading', 'aria-level': 2
+    }, '核心控制台'))
+  }
+  children.push(React.createElement('svg', {
+    key: 'icon', width: s, height: s, viewBox: '0 0 16 16', 'aria-hidden': true,
+    'data-cc-nav': nav.id,
+    fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round'
+  }, React.createElement('path', { d: GLYPHS[nav.icon] || GLYPHS.home })))
+  if (nav.id === 'approvals') {
+    var count = React.useSyncExternalStore(subscribeApprovals, approvalSnapshot, approvalSnapshot)
+    if (count > 0) children.push(React.createElement('span', {
+      key: 'badge', 'data-cc-approval-badge': 'true', 'aria-label': count + ' 项待审批'
+    }, count > 99 ? '99+' : String(count)))
+  }
+  return React.createElement(React.Fragment, null, children)
+}
+
+function makeConsoleIcon(nav) {
+  return function ConsoleNavIcon(props) {
+    return ConsoleIcon(nav, props)
+  }
+}
+
+// ref 挂载点：React 只递容器，壳内由 proto 自治（挂载即引导，卸载即回收）。
 var ccDepth = 0
 function consoleRef(node) {
   if (node) {
@@ -39,37 +96,93 @@ function consoleRef(node) {
     if (ccDepth === 0) __CC.unmountConsole()
   }
 }
-function ConsolePanel() {
-  // className=cc-app：作用域化 css 的挂载类（console.css 全部选择器收进 .cc-app，§1.6）
-  return React.createElement('div', { className: 'cc-app cc-host', ref: consoleRef, style: { height: '100%' } })
+
+function makeConsolePanel(nav) {
+  return function ConsolePanel() {
+    React.useEffect(function () {
+      if (panelForHash(location.hash) !== nav) location.hash = nav.route
+    }, [nav])
+    return React.createElement('div', { className: 'cc-app cc-host', ref: consoleRef, style: { height: '100%' } })
+  }
+}
+
+var CC_NATIVE_CSS = [
+  '[data-cc-sidebar-label]{position:absolute;top:-16px;left:12px;color:var(--dsw-alias-label-tertiary);font:11px/16px var(--dsw-font-family);letter-spacing:.04em;pointer-events:none}',
+  'button:has(>span>svg[data-cc-nav="overview"]){margin-top:16px}',
+  '[data-cc-approval-badge]{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-label-on-color);font:11px/16px var(--dsw-font-family);text-align:center}',
+  '@media(max-width:1199px){.cc-host .cc-narrow-menu{display:inline-flex!important}}'
+].join('\n')
+
+function ensureNativeStyle() {
+  if (typeof document === 'undefined' || !document.head) return
+  if (!document.getElementById('cc-native-style')) {
+    var st = document.createElement('style')
+    st.id = 'cc-native-style'
+    st.textContent = CC_NATIVE_CSS
+    document.head.appendChild(st)
+  }
+}
+
+function syncNarrowSidebar(ctx) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return
+  if (window.innerWidth < 1200 && !document.querySelector('[data-sidebar-collapsed]')) ctx.layout.toggleSidebar()
 }
 
 exports.inject = ['slots', 'layout']
 exports.apply = function applyClient(ctx) {
-  // E5 会话数据面（console-adoption.md §1.11；§3.7 裁决：数据源=dsh session store 不复制状态）：
-  // ctx.sessions=宿主会话清单/创建/prompt 真通路 + retain 持有的事件窗（转录活体源——
-  // binding.eventSource，不触 remote.* 命名空间护栏：E5 探针实证 remote.session 未声明即访问抛错）。
-  // faces 经回调式 inject 软出现（声明式 exports.inject 加名会让 apply 停等=面板缺席，E5 探针实证）；
-  // 缺席宿主回调不启动=chat 屏 ready()=false 诚实降级（不冒充数据）。
+  ensureNativeStyle()
+  __CC.hostFaces = { layout: ctx.layout }
+  __CC.toggleHostSidebar = function () { ctx.layout.toggleSidebar() }
+  var onResize = function () { syncNarrowSidebar(ctx) }
+  syncNarrowSidebar(ctx)
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', onResize)
+
+  // 宿主能力回调式软出现：缺席不阻塞 console，chat/Workspace 面诚实降级。
   try {
     ctx.inject(['sessions'], function (sub) {
       __CC.chatFaces = { sessions: Reflect.get(sub, 'sessions') }
     })
-  } catch (e) { /* 无 inject 能力的极简宿主：chat 降级 */ }
+  } catch (e) { /* 无会话面：chat 降级 */ }
   try {
-    // 终端 roster 面（可选能力）：回调式注入（缺席宿主回调不启动=roster 诚实空态）
+    ctx.inject(['workspaces'], function (sub) {
+      __CC.hostFaces.workspaces = Reflect.get(sub, 'workspaces')
+      if (__CC.serviceProjects) __CC.serviceProjects.bind()
+    })
+  } catch (e) { /* 无 Workspace 面：Service project 降级 */ }
+  try {
     ctx.inject(['webTerminals'], function (sub) {
       __CC.termFaces = { webTerminals: Reflect.get(sub, 'webTerminals') }
     })
-  } catch (e) { /* 同上：终端 roster 降级为诚实空态 */ }
+  } catch (e) { /* 无终端面：roster 降级 */ }
+
   ctx.slots.inject('main', function* () {
-    yield ctx.slots.register({ name: 'main', key: PANEL_ID }, ConsolePanel)
-    // 刷新可恢复：hash 是 console 路由而宿主面板选择已回到会话 → 重选本面板（不整页刷新）
-    if (isConsoleHash(location.hash) && ctx.layout.panelInfo.getSnapshot().activePanelId !== PANEL_ID) {
-      ctx.layout.selectPanel(PANEL_ID)
+    for (var i = 0; i < CONSOLE_NAV.length; i++) {
+      yield ctx.slots.register({ name: 'main', key: CONSOLE_NAV[i].panel }, makeConsolePanel(CONSOLE_NAV[i]))
+    }
+    var target = panelForHash(location.hash)
+    if (target && ctx.layout.panelInfo.getSnapshot().activePanelId !== target.panel) ctx.layout.selectPanel(target.panel)
+    else if (!location.hash && ctx.layout.panelInfo.getSnapshot().activePanelId === null) ctx.layout.selectPanel(CONSOLE_NAV[0].panel)
+  })
+
+  ctx.slots.inject('sidebar.panellist', function* () {
+    for (var j = 0; j < CONSOLE_NAV.length; j++) {
+      var nav = CONSOLE_NAV[j]
+      yield ctx.slots.register({ name: 'sidebar.panellist', id: nav.panel, order: 60 + j, label: nav.label }, makeConsoleIcon(nav))
     }
   })
-  ctx.slots.inject('sidebar.panellist', function* () {
-    yield ctx.slots.register({ name: 'sidebar.panellist', id: PANEL_ID, order: 60, label: 'core console' }, ConsoleIcon)
-  })
+
+  // hash 是 console 路由；跨分组深链时同步宿主选中态，刷新可恢复。
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    var onHash = function () {
+      var nav = panelForHash(location.hash)
+      if (nav && ctx.layout.panelInfo.getSnapshot().activePanelId !== nav.panel) ctx.layout.selectPanel(nav.panel)
+    }
+    window.addEventListener('hashchange', onHash)
+    if (typeof ctx.effect === 'function') ctx.effect(function () {
+      return function () {
+        window.removeEventListener('hashchange', onHash)
+        window.removeEventListener('resize', onResize)
+      }
+    }, 'core-console:native-navigation')
+  }
 }

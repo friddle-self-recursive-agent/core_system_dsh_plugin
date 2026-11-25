@@ -9,11 +9,14 @@ import assert from 'node:assert/strict'
 import {
   CONSOLE_API_PREFIX, CONSOLE_APPLY_PATH, DEFAULT_APPLY_SUBJECT,
   createApplyHandler, createConsoleApiHandler, mountConsoleRoutes,
-  CONSOLE_COMM_PATH, CONSOLE_DESIGN_DOCS_PATH, CONSOLE_INTAKE_PATH,
-  createCommHandler, createCommState, createDesignDocsHandler, createIntakeHandler,
+  CONSOLE_COMM_PATH, CONSOLE_DESIGN_DOCS_PATH, CONSOLE_INTAKE_PATH, CONSOLE_SERVICE_PROJECTS_PATH,
+  createCommHandler, createCommState, createDesignDocsHandler, createIntakeHandler, createServiceProjectsHandler,
   type FetchLike, type HttpReqLike, type HttpResLike,
 } from '../src/index.ts'
 import { makeErrorReply } from '../src/agent-comm.ts'
+import { mkdtempSync, existsSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
   const calls: string[] = []
@@ -106,7 +109,8 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['prefix', CONSOLE_DRAFTS_PATH],
     ['prefix', CONSOLE_DESIGN_DOCS_PATH],
     ['prefix', CONSOLE_INTAKE_PATH],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）成套注册')
+    ['exact', CONSOLE_SERVICE_PROJECTS_PATH],
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ Service project 映射（exact，能力 C）成套注册')
   assert.equal(disposed, 0)
 
   // 依赖缺席（headless）：回调体不注册、不抛错
@@ -387,4 +391,39 @@ test('对话录入路由：/turn 与 /generate 主体宿主注入剥除客户端
   await createIntakeHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: okFetch({}), subject: DEFAULT_APPLY_SUBJECT })(
     { method: 'POST', url: CONSOLE_INTAKE_PATH + '/turn', headers: {}, body: '{}' }, res5)
   assert.equal(res5.statusCode, 401)
+})
+
+test('Service project 路由：GET 从 cored ServiceDesc 投影；POST 只为已声明 Service 准备目录；越界/非法名=400；栅栏缺席=401', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'cc-projects-'))
+  const bridge = {
+    url: 'http://127.0.0.1:9/',
+    list: async () => ({ ok: true as const, data: [
+      { kind: 'ServiceDesc', name: 'self-recursive-core', scope: 'systems/self-recursive-core', resourceVersion: 1 },
+    ] }),
+    get: async () => ({ ok: true as const, data: {
+      kind: 'ServiceDesc', name: 'self-recursive-core', scope: 'systems/self-recursive-core', resourceVersion: 1,
+      content: 'spec:\n  instances:\n    - {name: default, agents: [agent://core-headless]}\n',
+    } }),
+  }
+  const h = createServiceProjectsHandler({ bridge: bridge as any, reject: () => undefined, root })
+  const r1 = makeRes()
+  await h({ method: 'GET', headers: {} }, r1)
+  assert.equal(r1.statusCode, 200)
+  const listed = JSON.parse(r1.body)
+  assert.equal(listed.count, 1)
+  assert.deepEqual(listed.services[0].agents, ['core-headless'])
+  const r2 = makeRes()
+  await h({ method: 'POST', headers: {}, body: JSON.stringify({ services: ['self-recursive-core'] }) }, r2)
+  assert.equal(r2.statusCode, 200)
+  const made = JSON.parse(r2.body)
+  assert.equal(made.projects[0].service, 'self-recursive-core')
+  assert.ok(existsSync(made.projects[0].path))
+  const r3 = makeRes()
+  await h({ method: 'POST', headers: {}, body: JSON.stringify({ services: ['../escape'] }) }, r3)
+  assert.equal(r3.statusCode, 400, '非法 Service 名不得建目录')
+  const noGate = createServiceProjectsHandler({ bridge: bridge as any, root })
+  const r4 = makeRes()
+  await noGate({ method: 'GET', headers: {} }, r4)
+  assert.equal(r4.statusCode, 401)
+  rmSync(root, { recursive: true, force: true })
 })

@@ -187,3 +187,331 @@
 .cc-app .scheme-switch{ display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
 .cc-app .intake-preview-pane{ margin-top: 16px; background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 @media (max-width: 1200px){ .cc-app .intake-grid{ grid-template-columns: 1fr; } }
+
+/* ===== §11 原生风格覆盖层（console-adoption.md §1.23）=====
+ * 只作用域于 .cc-app；宿主侧栏由 entry.js 的 Slot/native CSS 负责。
+ * token 缺席时保留原深色 fallback，宿主提供 token 时自动继承深浅色。 */
+.cc-app{
+  --bg: var(--dsw-alias-bg-base, #0b0e14);
+  --panel: var(--dsw-alias-card-fill, var(--dsw-alias-bg-layer-1, #11151c));
+  --panel-2: var(--dsw-alias-bg-layer-2, #161b24);
+  --panel-3: var(--dsw-alias-bg-layer-3, #1a2029);
+  --border: var(--dsw-alias-border-l2, #1e2530);
+  --border-2: var(--dsw-alias-border-l3, #273041);
+  --text: var(--dsw-alias-label-primary, #e6e9ef);
+  --text-2: var(--dsw-alias-label-secondary, #8b93a7);
+  --text-3: var(--dsw-alias-label-tertiary, #5b6378);
+  --accent: var(--dsw-alias-state-business, var(--dsw-alias-state-business-primary, #3b82f6));
+  --ok: var(--dsw-alias-state-success, var(--dsw-alias-state-success-primary, #22c55e));
+  --warn: var(--dsw-alias-state-warn, var(--dsw-alias-state-warn-primary, #f59e0b));
+  --danger: var(--dsw-alias-state-error, var(--dsw-alias-state-error-primary, #ef4444));
+  --esc: var(--danger);
+  --llm: var(--accent);
+  --accent-dim: color-mix(in srgb, var(--accent) 16%, transparent);
+  --ok-dim: color-mix(in srgb, var(--ok) 14%, transparent);
+  --warn-dim: color-mix(in srgb, var(--warn) 14%, transparent);
+  --danger-dim: color-mix(in srgb, var(--danger) 12%, transparent);
+  --on-color: var(--dsw-alias-label-on-color, #fff);
+  --sans: var(--dsw-font-family, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+  --mono: var(--ds-font-family-code, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace);
+  --radius-xs: var(--dsw-radius-xs, 4px);
+  --radius-sm: var(--dsw-radius-sm, 6px);
+  --radius-md: var(--dsw-radius-md, 8px);
+  --radius-lg: var(--dsw-radius-lg, 10px);
+  --radius-xl: var(--dsw-radius-xl, 12px);
+  --radius-full: var(--dsw-radius-full, 999px);
+  --rad: var(--dsw-radius-lg, 10px);
+  --shadow: none;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+}
+
+/* 壳与导航：内容区独占宿主主面板，旧第二列 nav 即使有残留 DOM 也不渲染。 */
+.cc-app .app{ display: block !important; height: 100% !important; }
+.cc-app .main{ display: flex !important; flex-direction: column; height: 100%; min-width: 0; }
+.cc-app :is(.sidebar, .side-logo, .side-nav, .side-foot, .side-rail, .side-collapse, .nav-item, .nav-sec, .nav-badge){
+  display: none !important;
+}
+.cc-app .view{ min-width: 0; padding: var(--space-6) !important; }
+.cc-app .view.nopad{ padding: 0 !important; }
+.cc-app .view-inner{ width: 100%; min-width: 0; }
+
+/* 字号阶梯只保留 11/13/15/20/28；通配规则同时压平旧类与行内 font-size。 */
+.cc-app{ font: 13px/1.55 var(--sans) !important; word-spacing: .25em; font-variant-numeric: tabular-nums; }
+.cc-app *{ font-size: 13px !important; }
+.cc-app h1{ font-size: 28px !important; }
+.cc-app h2{ font-size: 20px !important; }
+.cc-app h3{ font-size: 15px !important; }
+.cc-app .dh-title h1{ font-size: 20px !important; }
+.cc-app :is(.st-num, .w-health-num, .w-insync-num, .cm-value){ font-size: 28px !important; line-height: 1.1; }
+.cc-app .sec-title{ font-size: 15px !important; }
+.cc-app :is(.small, .tiny, caption, .cm-label, .cm-note, .cm-unit, .st-label, .ws-sub, .ws-note, .h-sub,
+  .logo-sub, .nav-sec, .side-conn, .avatar, .chip, .chip.lg, .tag, .kbd, .badge-dot, .draft-dot,
+  .crumbs, .crumb, .top-search, .ev-count, .tbl th, .tbl-mini, .tab, .path-mono, .count-note,
+  .sc-meta, .sc-foot, .mini-row .mr-sub, .tree-row .t-meta, .ji-sub, .cx-h, .cr-k, .ss-sub,
+  .w-ev-obj, .w-ev-time, .refresh-state, .svc-projects, .cc-conn-header, .host-sessions summary,
+  .intake-ctx-bar, .intake-msg-role, .ifr-status, .field-err-msg, .set-card-sub, .set-row,
+  .conncard .cc-desc, .op-card .oc-desc, .runner-card .rc-desc, .pal-sec, .pal-foot, .pal-item .pi-sub){
+  font-size: 11px !important;
+}
+.cc-app :is(.btn, .btn.sm, .btn.xs, .btn.lg, input, textarea, select, .tbl, .vrow, .card-h .h-title,
+  .dh-sub, .ws-name, .sc-name, .tree-row, .w-ev-title, .cc-prose, .cc-disclosure summary,
+  .intake-msg, .ifr-top, .ifr-label, .scheme-switch, .m-title, .pal-input-row input){
+  font-size: 13px !important;
+}
+.cc-app :is(.cc-prose, .intake-msg, .dh-sub, .empty, .modal-b > :not(pre):not(.diff):not(textarea)){
+  max-width: 72ch;
+}
+.cc-app :is(.mono, .num, .cm-value, .st-num, .w-health-num, .ev-count, .refresh-state, .svc-projects, time, [data-count]){
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* 4 基数间距与原生控件密度。 */
+.cc-app :is(.grid, .cols-2, .cols-3){ display: grid; gap: var(--space-4) !important; }
+.cc-app :is(.statbar, .syscards, .w-services, .conncards, .op-cards, .runner-cards, .cc-metrics){
+  display: grid; gap: var(--space-3) !important;
+}
+.cc-app :is(.btn-group, .filter-bar, .tabs, .w-ev-filter, .tree-toolbar, .top-right){ gap: var(--space-2) !important; }
+.cc-app .topbar{ height: auto !important; min-height: 48px; padding: 0 var(--space-4) !important; gap: var(--space-3); }
+.cc-app :is(.card-h, .modal-h, .modal-f, .drawer-h){ padding: var(--space-3) var(--space-4) !important; }
+.cc-app .card-b{ padding: var(--space-4) !important; }
+.cc-app :is(.intake-wrap, .intake-chat-pane, .intake-card-pane, .intake-preview-pane, .intake-field-row){
+  padding: var(--space-4) !important;
+}
+.cc-app :is(.intake-head, .intake-input-area){ padding-top: var(--space-3) !important; padding-bottom: var(--space-3) !important; }
+.cc-app :is(.intake-chat-pane, .intake-card-pane, .intake-field-list, .intake-act-row){ gap: var(--space-3) !important; }
+.cc-app :is(.stat, .syscard, .w-svc, .conncard, .runner-card, .set-card){ padding: var(--space-4) !important; }
+.cc-app .w-stages{ padding: var(--space-4) !important; }
+.cc-app .btn{
+  min-height: 32px; padding: var(--space-2) var(--space-3) !important; border-radius: var(--radius-md);
+  font-family: var(--sans); line-height: 1.2;
+}
+.cc-app .btn.sm, .cc-app .btn.xs{ min-height: 24px; padding: var(--space-1) var(--space-2) !important; }
+.cc-app .btn.lg{ min-height: 40px; padding: var(--space-3) var(--space-4) !important; }
+.cc-app .icon-btn{ width: 32px; height: 32px; padding: var(--space-2) !important; border-radius: var(--radius-md); }
+.cc-app :is(.chip, .fchip, .kbd, .tag, .ev-count){ padding: var(--space-1) var(--space-2) !important; }
+.cc-app .top-search{ width: min(330px, 32vw); height: 32px; padding: 0 var(--space-3) !important; }
+.cc-app :is(.statbar, .syscards, .w-services, .conn-group){ margin-bottom: var(--space-6) !important; }
+.cc-app :is(.tabs, .dh){ margin-bottom: var(--space-4) !important; }
+.cc-app :is(.sec-title, .filter-bar, .tree-toolbar, .w-ev-filter){ margin-bottom: var(--space-2) !important; }
+.cc-app .hr{ margin: var(--space-3) 0 !important; }
+.cc-app :is(.jobs-layout, .dd-layout, .chat-layout){ gap: var(--space-3) !important; }
+.cc-app .intake-wrap{ margin-bottom: var(--space-6) !important; }
+.cc-app .intake-msg{ padding: var(--space-3) var(--space-4) !important; }
+.cc-app :is(.intake-msg-list, .intake-field-list, .intake-field-row, .scheme-list-editor, .scheme-map-editor, .sle-row, .sme-row){
+  gap: var(--space-2) !important;
+}
+.cc-app .intake-field-list{ padding-right: 0 !important; }
+.cc-app .intake-msg-list{ padding: var(--space-1) !important; }
+.cc-app .empty{ padding: var(--space-6) var(--space-4) !important; }
+.cc-app .w-ev-dot{ margin-top: var(--space-1); }
+
+/* 统一卡片：10px 圆角、1px neutral border、无重阴影。 */
+.cc-app :is(.card, .panel, .stat, .syscard, .w-svc, .w-stages, .tree-box, .vlist, .jobs-list, .job-detail,
+  .doc-collab, .dd-tree, .intake-wrap, .intake-chat-pane, .intake-card-pane, .intake-field-row,
+  .intake-preview-pane, .conncard, .op-card, .runner-card, .set-card, .cc-metric, .cc-empty-inline,
+  .host-sessions, .sess-row){
+  background: var(--panel) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+.cc-app .card{ padding: 0 !important; }
+
+/* 按钮三级：primary / secondary / ghost；语义动作只改颜色，不改层级。 */
+.cc-app .btn{
+  background: var(--panel-2) !important; border: 1px solid var(--border-2) !important; color: var(--text) !important;
+}
+.cc-app .btn:hover{ background: var(--panel-3) !important; border-color: var(--accent) !important; }
+.cc-app :is(.btn.primary, .btn[data-cc-primary="true"]){
+  background: var(--accent) !important; border-color: var(--accent) !important; color: var(--on-color) !important;
+}
+.cc-app :is(.btn.primary, .btn[data-cc-primary="true"]):hover{ filter: brightness(1.06); }
+.cc-app .btn.ghost{ background: transparent !important; border-color: transparent !important; color: var(--text-2) !important; }
+.cc-app .btn.ghost:hover{ background: var(--panel-2) !important; color: var(--text) !important; }
+.cc-app .btn.ok{ background: var(--ok-dim) !important; border-color: color-mix(in srgb, var(--ok) 45%, var(--border)) !important; color: var(--ok) !important; }
+.cc-app .btn.warn{ background: var(--warn-dim) !important; border-color: color-mix(in srgb, var(--warn) 45%, var(--border)) !important; color: var(--warn) !important; }
+.cc-app .btn.danger{ background: var(--danger-dim) !important; border-color: color-mix(in srgb, var(--danger) 45%, var(--border)) !important; color: var(--danger) !important; }
+.cc-app .btn.llm{ background: var(--accent-dim) !important; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)) !important; color: var(--accent) !important; }
+.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }
+
+/* 图标、焦点与基础表面全部继承宿主 token。 */
+.cc-app .ic{ width: 16px !important; height: 16px !important; flex: none; }
+.cc-app :is(a, button, [role="button"], [tabindex], input, textarea, select, summary):focus-visible{
+  outline: 2px solid var(--accent) !important; outline-offset: 2px !important; box-shadow: none !important;
+}
+.cc-app :is(.topbar, .card, .panel, .stat, .syscard, .w-svc, .w-stages, .tree-box, .vlist, .jobs-list,
+  .job-detail, .doc-collab, .dd-tree, .intake-wrap, .intake-chat-pane, .intake-card-pane, .conncard,
+  .op-card, .runner-card, .set-card){
+  color: var(--text) !important;
+}
+.cc-app .topbar{ background: var(--panel) !important; border-bottom-color: var(--border) !important; backdrop-filter: none; }
+.cc-app :is(.doc-editor, .diff, .yaml-block, .term, .intake-ctx-bar, .path-mono, .top-search){
+  background: var(--bg) !important; border-color: var(--border-2) !important; color: var(--text) !important;
+}
+.cc-app :is(.doc-editor, .diff, .yaml-block, .term){ font-family: var(--mono) !important; }
+.cc-app .term .t-cmd{ color: var(--accent) !important; }
+.cc-app .term .t-dim{ color: var(--text-3) !important; }
+.cc-app .term .caret{ background: var(--accent) !important; }
+.cc-app .avatar{ background: var(--accent-dim) !important; color: var(--accent) !important; }
+.cc-app ::selection{ background: var(--accent-dim); }
+.cc-app ::-webkit-scrollbar-thumb{ background: var(--border-2); border-color: var(--bg); }
+
+/* 语义色：success / warn / danger / neutral；事件计数保持中性。 */
+.cc-app .chip{ background: var(--panel-2) !important; border-color: var(--border-2) !important; color: var(--text-2) !important; }
+.cc-app .chip.ok{ background: var(--ok-dim) !important; border-color: color-mix(in srgb, var(--ok) 40%, var(--border)) !important; color: var(--ok) !important; }
+.cc-app .chip.warn{ background: var(--warn-dim) !important; border-color: color-mix(in srgb, var(--warn) 40%, var(--border)) !important; color: var(--warn) !important; }
+.cc-app :is(.chip.danger, .chip.esc){ background: var(--danger-dim) !important; border-color: color-mix(in srgb, var(--danger) 40%, var(--border)) !important; color: var(--danger) !important; }
+.cc-app :is(.chip.acc, .chip.llm){ background: var(--accent-dim) !important; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)) !important; color: var(--accent) !important; }
+.cc-app :is(.chip.mute, .chip.kind, .tag){ background: var(--panel-2) !important; border-color: var(--border) !important; color: var(--text-3) !important; }
+.cc-app .lamp.ok{ background: var(--ok) !important; }
+.cc-app .lamp.warn{ background: var(--warn) !important; }
+.cc-app :is(.lamp.danger, .lamp.esc){ background: var(--danger) !important; }
+.cc-app .lamp.acc{ background: var(--accent) !important; }
+.cc-app .lamp.off{ background: var(--text-3) !important; }
+.cc-app :is(.badge-dot, .nav-badge){ background: var(--danger) !important; color: var(--on-color) !important; }
+.cc-app .draft-dot{ color: var(--warn) !important; }
+.cc-app :is(.ev-count, .ev-count b){
+  background: var(--panel-2) !important; border-color: var(--border) !important; color: var(--text-2) !important;
+}
+.cc-app :is(.refresh-state, .svc-projects, .svc-projects b, .cc-conn-header){
+  background: transparent !important; border-color: transparent !important; color: var(--text-2) !important;
+}
+.cc-app .ev-count b{ color: var(--text) !important; }
+.cc-app .stat.alert .st-num{ color: var(--danger) !important; }
+.cc-app .w-health.good{ color: var(--ok) !important; }
+.cc-app .w-health.mid{ color: var(--warn) !important; }
+.cc-app .w-health.bad{ color: var(--danger) !important; }
+.cc-app .w-insync-cell{ background: var(--panel-3) !important; }
+.cc-app .w-insync-cell.lit-ok{ background: var(--ok) !important; }
+.cc-app .w-insync-cell.lit-warn{ background: var(--warn) !important; }
+.cc-app :is(.w-insync-cell.lit-acc, .w-insync-cell.lit-esc){ background: var(--accent) !important; }
+.cc-app .w-stage.done .w-stage-dot{ background: var(--ok-dim) !important; border-color: var(--ok) !important; color: var(--ok) !important; }
+.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent) !important; color: var(--accent) !important; }
+.cc-app .w-stage.wait .w-stage-dot{ background: var(--panel-3) !important; border-color: var(--border-2) !important; color: var(--text-3) !important; }
+.cc-app .w-stage.bad .w-stage-dot{ background: var(--danger-dim) !important; border-color: var(--danger) !important; color: var(--danger) !important; }
+.cc-app .w-ev-dot{ background: var(--text-3) !important; }
+.cc-app .w-ev-dot.critical{ background: var(--danger) !important; }
+.cc-app .w-ev-dot.high{ background: var(--warn) !important; }
+.cc-app .w-ev-dot.info{ background: var(--accent) !important; }
+.cc-app .fchip{ background: var(--panel-2) !important; border-color: var(--border-2) !important; color: var(--text-2) !important; }
+.cc-app .fchip.on{ background: var(--accent-dim) !important; border-color: var(--accent) !important; color: var(--accent) !important; }
+.cc-app .toast{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }
+.cc-app .toast.ok{ border-left-color: var(--ok) !important; }
+.cc-app .toast.warn{ border-left-color: var(--warn) !important; }
+.cc-app .toast.err{ border-left-color: var(--danger) !important; }
+.cc-app .diff-line.add{ background: var(--ok-dim) !important; color: var(--ok) !important; }
+.cc-app .diff-line.del{ background: var(--danger-dim) !important; color: var(--danger) !important; }
+
+/* §11 C1：三张同基线指标卡。 */
+.cc-app .cc-metrics{ grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 var(--space-6); }
+.cc-app .cc-metric{
+  appearance: none; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2);
+  width: 100%; min-width: 0; min-height: 112px; padding: var(--space-4); text-align: left; cursor: pointer;
+  font-family: var(--sans); color: var(--text);
+}
+.cc-app .cc-metric:hover{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }
+.cc-app .cm-label{ color: var(--text-2); }
+.cc-app .cm-value{ display: block; color: var(--text); font-weight: 700; letter-spacing: -.02em; }
+.cc-app .cm-unit{ color: var(--text-3); font-weight: 500; }
+.cc-app .cm-note{ color: var(--text-2); line-height: 1.45; }
+.cc-app .cc-metric.success .cm-value{ color: var(--ok); }
+.cc-app .cc-metric.warn .cm-value{ color: var(--warn); }
+.cc-app .cc-metric.danger{ border-color: color-mix(in srgb, var(--danger) 45%, var(--border)) !important; }
+.cc-app .cc-metric.danger .cm-value{ color: var(--danger); }
+.cc-app .cc-metric.neutral .cm-value{ color: var(--text); }
+
+/* §11 C2/C3/C4：显式空态、待接入与有 run 才出现的阶段条。 */
+.cc-app .cc-empty-inline{
+  display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-6);
+  color: var(--text-2); line-height: 1.5;
+}
+.cc-app .cc-empty-inline .empty-icon{
+  display: grid; place-items: center; width: 32px; height: 32px; flex: none;
+  border-radius: var(--radius-md); background: var(--panel-2); color: var(--text-3);
+}
+.cc-app .cc-empty-inline b{ display: block; margin-bottom: var(--space-1); color: var(--text); font-size: 13px !important; }
+.cc-app .cc-empty-inline .btn{ margin-left: auto; }
+.cc-app .w-services{ grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.cc-app .w-svc{
+  appearance: none; display: flex; align-items: center; gap: var(--space-3); width: 100%; min-width: 0;
+  text-align: left; cursor: pointer; color: var(--text);
+}
+.cc-app .w-svc:hover{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }
+.cc-app .w-svc[data-service-state="neutral"] .lamp{ background: var(--text-3) !important; }
+.cc-app .w-svc[data-service-state="success"] .lamp{ background: var(--ok) !important; }
+.cc-app .w-svc[data-service-state="warn"] .lamp{ background: var(--warn) !important; }
+.cc-app .w-svc[data-service-state="danger"] .lamp{ background: var(--danger) !important; }
+.cc-app .w-stagebar{ margin-bottom: var(--space-6); }
+.cc-app .w-stages{ display: flex; gap: var(--space-2); }
+.cc-app .w-stage{
+  appearance: none; min-width: 0; padding: var(--space-2); border: 0; background: transparent !important;
+  color: var(--text); cursor: pointer;
+}
+.cc-app .w-stage-dot{ width: 32px; height: 32px; line-height: 1; }
+.cc-app .w-stage-dot .ic{ width: 16px !important; height: 16px !important; }
+
+/* §11 C5/C6：事件两行制、对象链右截断、相对时间与计数 chip。 */
+.cc-app .cc-event-list{ padding: var(--space-4) !important; }
+.cc-app .w-ev-item{
+  appearance: none; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: start; gap: var(--space-3);
+  width: 100%; padding: var(--space-3) 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
+  background: transparent !important; color: var(--text); text-align: left; font-family: var(--sans);
+}
+.cc-app .w-ev-item:last-child{ border-bottom: 0; }
+.cc-app .w-ev-item:hover{ background: var(--panel-2) !important; }
+.cc-app .w-ev-dot{ width: 8px; height: 8px; margin-top: var(--space-1); }
+.cc-app .w-ev-main{ display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.cc-app .w-ev-title{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-app .w-ev-obj{ min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }
+.cc-app .w-ev-time{ color: var(--text-3); white-space: nowrap; }
+.cc-app .w-ev-filter{ margin-bottom: var(--space-3); }
+
+/* §11 B8/D6：展开说明、Workspace/连接/刷新状态与窄屏菜单。 */
+.cc-app .cc-disclosure{ margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.cc-app .cc-disclosure summary{ width: fit-content; padding: var(--space-1) 0; color: var(--text-2); cursor: pointer; }
+.cc-app .cc-disclosure summary::marker{ color: var(--accent); }
+.cc-app .cc-prose{ padding: var(--space-3) 0; color: var(--text-2); line-height: 1.7; white-space: normal; }
+.cc-app .svc-projects, .cc-app .refresh-state{
+  display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; white-space: nowrap;
+  font-family: var(--mono); color: var(--text-3);
+}
+.cc-app .refresh-state[data-pending="true"]{ color: var(--warn) !important; }
+.cc-app .cc-conn-header{ display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.cc-app .cc-narrow-menu{ display: none; flex: none; }
+.cc-app .host-sessions{ margin-top: var(--space-3); padding: var(--space-3); }
+.cc-app .host-sessions summary{ color: var(--text-2); cursor: pointer; }
+.cc-app .host-session-list{ display: flex; flex-direction: column; gap: var(--space-2); max-height: 240px; overflow-y: auto; margin-top: var(--space-2); }
+.cc-app .host-sessions .sess-row{ padding: var(--space-2) var(--space-3); background: var(--panel-2) !important; }
+.cc-app .host-sessions .sess-row.sel{ border-color: var(--accent) !important; background: var(--accent-dim) !important; }
+
+/* <1200：宿主侧栏收起后不挤压内容；指标卡自适应。 */
+@media (max-width: 1199px){
+  .cc-app .top-search{ display: none !important; }
+  .cc-app .cc-metrics{ grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+  .cc-app .topbar{ padding: 0 var(--space-3) !important; gap: var(--space-2) !important; }
+  .cc-app .top-right{ min-width: 0; gap: var(--space-2) !important; }
+  .cc-app .refresh-state{ max-width: 132px; overflow: hidden; text-overflow: ellipsis; }
+  .cc-app .cc-narrow-menu{ display: inline-flex !important; }
+}
+
+/* <900：双栏/三栏改单栏，长内容可换行而不是横向挤压。 */
+@media (max-width: 899px){
+  .cc-app .view{ padding: var(--space-4) !important; }
+  .cc-app :is(.grid, .cols-2, .cols-3, .jobs-layout, .dd-layout, .chat-layout, .intake-grid){
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .cc-app .chat-layout{ display: block !important; }
+  .cc-app :is(.chat-sub, .chat-main, .chat-ctx){ margin-bottom: var(--space-3); }
+  .cc-app .cc-metrics{ grid-template-columns: 1fr !important; }
+  .cc-app :is(.svc-projects, .ev-count){ display: none !important; }
+  .cc-app .topbar{ flex-wrap: wrap; padding: var(--space-2) var(--space-3) !important; }
+  .cc-app .crumbs{ flex: 1; min-width: 0; }
+  .cc-app .w-stages{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cc-app .w-stage::before{ display: none; }
+  .cc-app .cc-empty-inline{ align-items: flex-start; flex-wrap: wrap; }
+  .cc-app .cc-empty-inline .btn{ margin-left: 0; }
+}

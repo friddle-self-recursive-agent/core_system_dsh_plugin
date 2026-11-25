@@ -8,6 +8,9 @@
 //   5. 插件退场时回收子进程
 // 部署锚点一律经配置或环境注入，不内置真实路径（rule.md R-PUB-1/2）。
 import { spawn, type ChildProcess } from 'node:child_process'
+import { mkdirSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, resolve, sep } from 'node:path'
 import { AGENT_COMM_KINDS, CommJournal, Mailbox, executeAgentCommOp, type AgentCommDeps, type AgentCommResult } from './agent-comm.ts'
 
 export interface Config {
@@ -26,6 +29,8 @@ export interface Config {
   /** console Apply 写路由的请求级主体（E3 起；缺省=内置 admin 全权字面量——
    *  cored-bridge.md §3 config.applySubject；主体注入属宿主行为，浏览器不携带主体）。 */
   applySubject?: ApplySubject
+  /** Service project 的本地目录根（Workspace 注册用）；缺省=$DSH_HOME/service-projects。 */
+  serviceProjectsRoot?: string
 }
 
 /** 对象引用（/v1/objects list 投影，瘦身载荷无正文；契约 cored-bridge.md §2）。 */
@@ -143,6 +148,10 @@ export const DEFAULT_DRAFT_FIELD_MANAGER = 'console:editor'
  *  出现于载荷**（落账面只记 hasToken 布尔——凭据红线）。 */
 export const CONSOLE_COMM_PATH = '/core-console/comm'
 
+/** Service → Workspace 最小映射读/准备路由（能力 C）：GET 列 Service；POST 仅确保本地
+ *  project 目录存在，Workspace 注册仍由客户端 ctx.workspaces.create 走 dsh 权威面。 */
+export const CONSOLE_SERVICE_PROJECTS_PATH = '/core-console/service-projects'
+
 /** agent-comm 运行时落账状态（一次插件激活一份；mailbox=v0.1 既有落账面，
  *  journal=E6 comm 流水——同族扩展，console 只渲染）。 */
 export interface CommState {
@@ -207,6 +216,88 @@ export function createCommHandler(opts: {
       return
     }
     sendJson(res, 200, commPayload(opts.state))
+  }
+}
+
+/** Service project 根：只由部署环境推导，公开仓不写真实路径。 */
+export function defaultServiceProjectsRoot(): string {
+  return process.env.DSH_SERVICE_PROJECTS_ROOT
+    || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'service-projects')
+}
+
+function safeServiceName(name: unknown): string | null {
+  if (typeof name !== 'string' || !/^[a-z0-9][a-z0-9._-]{0,127}$/.test(name)) return null
+  if (name === '.' || name === '..') return null
+  return name
+}
+
+/** Service→Workspace 路由（能力 C）。GET=cored ServiceDesc 投影；POST=只为已声明 Service
+ *  准备本地目录。真正的 Workspace 注册/会话绑定由 dsh ctx.workspaces/ctx.sessions 完成，
+ *  本路由不创造第二权威、不迁移旧会话、不触碰文档面。 */
+export function createServiceProjectsHandler(opts: {
+  bridge: CoreSystemQueryHandle & { url: string }
+  reject?: (req: { headers: unknown }) => 401 | 403 | undefined
+  root?: string
+}) {
+  const root = resolve(opts.root || defaultServiceProjectsRoot())
+  const services = async (): Promise<Array<{ name: string; scope: string; agents: string[] }>> => {
+    if (!opts.bridge.url) throw new Error('cored 未就绪（桥接未完成）')
+    const listed = await opts.bridge.list('ServiceDesc')
+    if (!listed.ok) throw new Error(listed.error)
+    const rows: Array<{ name: string; scope: string; agents: string[] }> = []
+    for (const ref of listed.data) {
+      const got = await opts.bridge.get('ServiceDesc', ref.scope, ref.name)
+      if (!got.ok) continue
+      const agents = [...new Set([...String(got.data.content).matchAll(/agent:\/\/([A-Za-z0-9_.-]+)/g)].map((m) => m[1]))]
+      rows.push({ name: ref.name, scope: ref.scope, agents })
+    }
+    return rows
+  }
+  return async function serviceProjectsHandler(req: HttpReqLike, res: HttpResLike): Promise<void> {
+    if (!opts.reject) { res.statusCode = 401; res.end(); return }
+    const rejection = opts.reject({ headers: req.headers })
+    if (rejection !== undefined) { res.statusCode = rejection; res.end(); return }
+    const method = req.method ?? 'GET'
+    if (method !== 'GET' && method !== 'POST') {
+      res.statusCode = 405
+      res.setHeader('allow', 'GET, POST')
+      res.end()
+      return
+    }
+    try {
+      const rows = await services()
+      if (method === 'GET') {
+        sendJson(res, 200, { count: rows.length, services: rows })
+        return
+      }
+      let requested: unknown
+      try { requested = JSON.parse((await readRequestBody(req)) || '{}') } catch {
+        sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' }); return
+      }
+      if (typeof requested !== 'object' || requested === null || Array.isArray(requested)) {
+        sendJson(res, 400, { error: '请求体不可解析（需 JSON 对象）' }); return
+      }
+      const names = (requested as { services?: unknown }).services
+      if (names !== undefined && (!Array.isArray(names) || names.length > 500)) {
+        sendJson(res, 400, { error: 'services 需为 ≤500 项数组' }); return
+      }
+      const declared = new Set(rows.map((r) => r.name))
+      const selected = (names as unknown[] | undefined)?.map(safeServiceName) ?? rows.map((r) => r.name)
+      if (selected.some((n) => n === null || !declared.has(n as string))) {
+        sendJson(res, 400, { error: '只能为 cored 已声明的合法 Service 准备 project' }); return
+      }
+      mkdirSync(root, { recursive: true, mode: 0o700 })
+      const projects = selected.map((name) => {
+        const safe = name as string
+        const dir = resolve(root, safe)
+        if (dir !== join(root, safe)) throw new Error('project 路径越界')
+        mkdirSync(dir, { recursive: true, mode: 0o700 })
+        return { service: safe, path: dir }
+      })
+      sendJson(res, 200, { count: projects.length, projects })
+    } catch (e) {
+      sendJson(res, 502, { error: String((e as Error)?.message ?? e) })
+    }
   }
 }
 
@@ -841,7 +932,7 @@ function registerAgentCommTools(
  *  用 ctx.inject 等待依赖可用——依赖缺席的 profile 上回调永不启动，插件本体不受影响。 */
 export function mountConsoleRoutes(ctx: {
   inject?(deps: string[], apply: (sub: any) => void | (() => void)): unknown
-}, bridge: { url: string }, applySubject: ApplySubject = DEFAULT_APPLY_SUBJECT, comm?: CommState): void {  if (typeof ctx.inject !== 'function') return // 防御面：无 inject 能力的宿主（测试假体/极简壳）零影响
+}, bridge: { url: string }, applySubject: ApplySubject = DEFAULT_APPLY_SUBJECT, comm?: CommState, serviceProjectsRoot?: string): void {  if (typeof ctx.inject !== 'function') return // 防御面：无 inject 能力的宿主（测试假体/极简壳）零影响
   ctx.inject(['webServer', 'connection'], (sub: any) => {
     const webServer = Reflect.get(sub, 'webServer') as WebServerLike | undefined
     const connection = Reflect.get(sub, 'connection') as ConnectionLike | undefined
@@ -875,6 +966,10 @@ export function mountConsoleRoutes(ctx: {
         kind: 'exact', path: CONSOLE_COMM_PATH,
         handler: createCommHandler({ state: comm, reject }),
       })] : []),
+      webServer.register({
+        kind: 'exact', path: CONSOLE_SERVICE_PROJECTS_PATH,
+        handler: createServiceProjectsHandler({ bridge: bridge as CoreSystemBridge, reject, root: serviceProjectsRoot }),
+      }),
     ]
     return () => unregisters.forEach((u) => u())
   })
@@ -978,7 +1073,7 @@ export default async function apply(ctx: any, config: Config = {}) {
     const bridge = makeBridge()
     bridge.url = config.coredUrl
     ctx.provide('coreSystem', bridge)
-    mountConsoleRoutes(ctx, bridge, config.applySubject, comm)
+    mountConsoleRoutes(ctx, bridge, config.applySubject, comm, config.serviceProjectsRoot)
     mountAgentCommTools(ctx, bridge, comm)
     await probeScheme(bridge.url, bridge)
     ctx.logger.info('core-system: 已接入运行中的 cored %s（kinds=%s）', bridge.url, bridge.kinds?.length ?? '?')

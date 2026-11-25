@@ -16,10 +16,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 function loadBundle() {
   const factories = new Map()
   const window = { __ModuleLoader__: { load: (row) => factories.set(row.id, row.factory) } }
-  const reactStub = new Proxy({}, {
-    get: (_t, k) => (k === 'createElement'
-      ? (type, props, ...kids) => ({ $$type: type, props, kids })
-      : reactStub),
+  const reactStub: any = new Proxy({}, {
+    get: (_t, k) => {
+      if (k === 'createElement') return (type, props, ...kids) => ({ $$type: type, props, kids })
+      if (k === 'Fragment') return 'Fragment'
+      if (k === 'useState') return (v) => [v, () => {}]
+      if (k === 'useEffect') return () => {}
+      if (k === 'useSyncExternalStore') return (_sub, get) => get()
+      return reactStub
+    },
   })
   const sandboxLocation = { hash: '' }
   const req = (spec) => { if (spec === 'react') return reactStub; throw new Error('unexpected require: ' + spec) }
@@ -60,24 +65,26 @@ test('bundle 形态：ModuleLoader 工厂注册 + 依赖注入声明', () => {
   assert.equal(typeof exports.apply, 'function')
 })
 
-test('L36-02 Slots 注册面：main 面板键 + sidebar.panellist 入口成对注册', () => {
+test('L36-02 Slots 注册面：九个 main 面板键 + sidebar.panellist 入口成对注册（核心控制台原生整合）', () => {
   const { exports, sandboxLocation } = loadBundle()
   const { registrations } = runApply(exports, sandboxLocation, '')
-  const main = registrations.find((r) => r.opts.name === 'main')
-  const icon = registrations.find((r) => r.opts.name === 'sidebar.panellist')
-  assert.ok(main, '必须注册 main 面板（顶层导航扩展位）')
-  assert.equal(main.opts.key, 'core-console')
-  assert.equal(typeof main.comp, 'function')
-  assert.ok(icon, '必须注册 sidebar.panellist 入口（侧栏门）')
-  assert.equal(icon.opts.id, 'core-console')
-  assert.ok(icon.opts.label, '入口必须带展示文案')
-  assert.equal(typeof icon.comp, 'function')
+  const mains = registrations.filter((r) => r.opts.name === 'main')
+  const icons = registrations.filter((r) => r.opts.name === 'sidebar.panellist')
+  assert.equal(mains.length, 9)
+  assert.equal(icons.length, 9)
+  assert.deepEqual(icons.map((r) => r.opts.label), ['总览', '系统树', 'Workflows', '文档', '事件', '审批', '连接', '会话', '需求提案'])
+  for (let i = 0; i < icons.length; i++) {
+    assert.equal(mains[i].opts.key, icons[i].opts.id)
+    assert.equal(typeof mains[i].comp, 'function')
+    assert.equal(typeof icons[i].comp, 'function')
+  }
 })
 
-test('L36-04 静态面：console hash 判定恢复面板选择', () => {
+test('L36-04 静态面：console hash 判定恢复对应面板选择；空 hash 落总览（A3 默认落地页）', () => {
   const { exports, sandboxLocation } = loadBundle()
-  assert.equal(runApply(exports, sandboxLocation, '#/workflows').getSelected(), 'core-console', 'boot 时 hash=console 路由 → selectPanel 恢复')
-  assert.equal(runApply(exports, sandboxLocation, '').getSelected(), null, '无 hash → 不抢宿主默认面板')
+  assert.equal(runApply(exports, sandboxLocation, '#/workflows').getSelected(), 'core-console-workflows', 'boot 时 hash=console 路由 → 选对应面板')
+  assert.equal(runApply(exports, sandboxLocation, '#/overview').getSelected(), 'core-console-overview', 'overview=welcome 合并别名')
+  assert.equal(runApply(exports, sandboxLocation, '').getSelected(), 'core-console-overview', '空 hash → 默认总览')
   assert.equal(runApply(exports, sandboxLocation, '#/other/host/route').getSelected(), null, '非 console 路由段 → 不选面板')
 })
 
@@ -222,14 +229,18 @@ test('css 作用域：全局选择器全部收进 .cc-app 容器，keyframes 全
   for (const m of css.matchAll(/animation:\s*([a-z-]+)/g)) assert.ok(m[1].startsWith('cc-'), `animation 引用未加前缀：${m[1]}`)
 })
 
-test('壳模板：连接态灯/细条节点在册 + 图标 id 全部 cc- 前缀（不与宿主 SVG 碰撞）', () => {
+test('壳模板：原生整合后无第二列 nav；连接态在 header；分组标题与审批 badge 由 Slots 图标贡献', () => {
   const shellSrc = readFileSync(join(PLUGIN, 'client/console-shell.js'), 'utf8')
-  for (const id of ['cc-conn-lamp', 'cc-conn-dot', 'cc-conn-strip', 'cc-conn-strip-text', 'cc-conn-strip-lamp', 'cc-conn-label']) {
+  for (const id of ['cc-conn-dot', 'cc-conn-label', 'cc-conn-header', 'cc-conn-strip', 'btn-host-sidebar', 'refresh-state', 'svc-projects']) {
     assert.ok(shellSrc.includes(id), `壳模板缺节点 ${id}`)
   }
+  assert.ok(!shellSrc.includes('id="side-nav"'), '不得有第二列导航容器')
+  assert.ok(!shellSrc.includes('class="sidebar"'), '不得有 console 自有侧栏')
+  assert.ok(!shellSrc.includes('cc-conn-lamp'), '浮动 connected 徽标已移除')
+  assert.ok(SRC.includes('data-cc-sidebar-label'), '主侧栏分组标题贡献点在册')
+  assert.ok(SRC.includes('data-cc-approval-badge'), '审批 badge 常驻入口在册')
   assert.ok(!/id="i-/.test(shellSrc), 'SVG symbol id 未加前缀')
   assert.ok(!/href="#i-/.test(shellSrc), 'SVG use 引用未加前缀')
   assert.ok(SRC.includes('plugins/events'), 'bundle 含流面通道地址（活性判定源）')
-  assert.ok(SRC.includes('cc-conn-lamp'), 'bundle 内嵌壳含连接态灯节点')
   assert.ok(SRC.includes('.cc-app'), 'bundle 内嵌 css 已作用域化')
 })
