@@ -144,3 +144,12 @@ test('E6 详情页矩阵：event 详情 run 反查 + workflow 锚链 + ws/provid
   assert.ok(/route\('ws\/:name'/.test(appSrc) && /route\('provider\/:name'/.test(appSrc) &&
     /route\('ref\/:name'/.test(appSrc) && /route\('role\/:name'/.test(appSrc), '矩阵行落点路由在册')
 })
+
+test('能力 D + R-UX-1/R-UX-2：对话式录入默认模式 + scheme 驱动八类控件渲染器 + 降级表单同源在册', () => {
+  assert.ok(liveSrc.includes("'/core-console/intake/turn'"), '对话推进写通路在册')
+  assert.ok(liveSrc.includes("'/core-console/intake/generate'"), '提交节点生成与 dry-run 通路在册')
+  assert.ok(SRC.includes('function renderSchemeControlHtml'), 'R-UX-2 通用 scheme 控件渲染器在册')
+  assert.ok(SRC.includes('function renderProposalIntakeCard'), 'R-UX-1 对话录入组件在册')
+  assert.ok(SRC.includes("'console:propose:chat'"), '对话录入 Apply fieldManager=console:propose:chat 在册')
+  assert.ok(!SRC.includes('var PROP_PRIORITIES ='), '旧硬编码优先级列表已摘除（由 scheme 单一真相驱动）')
+})

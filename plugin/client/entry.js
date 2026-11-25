@@ -8,9 +8,9 @@ var PANEL_ID = 'core-console'
 
 // console 全部 hash 路由首段（console-ui.md §proto 对应关系表；E1 起全部入此集）
 var CONSOLE_SEGS = [
-  'welcome', 'overview', 'tree', 's', 'workflows', 'wf', 'docs', 'doc',
+  'welcome', 'overview', 'tree', 's', 'workflows', 'wf', 'docs', 'doc', 'designdoc',
   'chat', 'session', 'connectors', 'connector', 'ws', 'provider', 'ref', 'role',
-  'agent', 'event', 'events', 'approvals',
+  'agent', 'event', 'events', 'approvals', 'proposals', 'proposal',
 ]
 
 function isConsoleHash(h) {

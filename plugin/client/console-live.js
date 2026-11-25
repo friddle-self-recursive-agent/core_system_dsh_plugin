@@ -114,6 +114,22 @@
   /** 设计文档 Apply（POST /core-console/design-docs——dry-run/真落库；fromDraft=true 时
    *  content 须缺省；返回判别联合，409/403/400 状态码照传=三闸门判定面）。 */
   function designApply(payload) { return postJson('/core-console/design-docs', payload); }
+
+  /* ===== 对话式录入与准入预检面（v0.53 能力 D + R-UX-1/R-UX-2——cored-bridge.md §2.5） ===== */
+  /** 对话推进与字段卡双向同步（POST /core-console/intake/turn）。 */
+  function intakeTurn(payload) { return postJson('/core-console/intake/turn', payload); }
+  /** 提交节点对象生成与三重 dry-run 预检（POST /core-console/intake/generate）。 */
+  function intakeGenerate(payload) { return postJson('/core-console/intake/generate', payload); }
+  /** 会话留痕清单（GET /v1/intake/sessions——对话原文不入公共库）。 */
+  function intakeSessions() { return jget('v1/intake/sessions'); }
+  /** 单条会话留痕（GET /v1/intake/sessions/{id}）。 */
+  function intakeSession(id) { return jget('v1/intake/sessions/' + encodeURIComponent(id)); }
+  /** 按名称取已装载的 Kind 描述（含 R-UX-2 widgets 投影）。 */
+  function kindOf(name) {
+    var list = state.kinds || [];
+    for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i];
+    return null;
+  }
   /** POST 判别联合（不抛错——写通路统一返回形态，与 apply() 同款）。 */
   function postJson(p, payload) {
     return fetch(p, {
@@ -264,6 +280,11 @@
     designDraftPut: designDraftPut,
     designDraftDelete: designDraftDelete,
     designApply: designApply,
+    intakeTurn: intakeTurn,
+    intakeGenerate: intakeGenerate,
+    intakeSessions: intakeSessions,
+    intakeSession: intakeSession,
+    kindOf: kindOf,
     get: jget,
     refs: refList,
     docContent: docContent,

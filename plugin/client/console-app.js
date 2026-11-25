@@ -2173,8 +2173,8 @@
     // E6：ConnectorOps kind 专属第五 tab「运行面」（连接层运行态——缺省 tab=运行面）；
     // v0.52 能力 A：全 kind 增「设计文档」页签（整屏换设计文档工作台——文件树+编辑器+diff+Apply）。
     var tabs = kind === 'ConnectorOps'
-      ? [['ops', '运行面'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
-      : [['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
+      ? [['ops', '运行面'], ['scheme', '控件'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
+      : [['scheme', '控件'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
     var tab = S.docTab[key] || (kind === 'ConnectorOps' ? 'ops' : 'llm');
     view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' +
       '<div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
@@ -2324,6 +2324,7 @@
     var el = $('#collab-body');
     if (!el) return;
     if (tab === 'ops') { el.innerHTML = opsTabHtml(kind, scope, name); if (name === 'agent-comm') hydrateCommLive(kind, scope, name); return; }
+    if (tab === 'scheme') { el.innerHTML = schemeTabHtml(kind, scope, name); bindEditorSchemeControls(kind, scope, name); return; }
     if (tab === 'llm') { el.innerHTML = llmTabHtml(kind, scope, name); hydrateProposals(kind, scope, name); return; }
     if (tab === 'draft') { el.innerHTML = draftTabHtml(kind, scope, name); return; }
     if (tab === 'hist') { el.innerHTML = '<div id="ed-history" style="padding:8px 2px">' + liveSkeletonRows(2, 0) + '</div>'; hydrateHistory(kind, scope, name); return; } // 骨架带宿主 id——hydrate 注水点
@@ -4222,20 +4223,20 @@
       });
   };
 
-  /* ================= 需求提案（能力 B——console-adoption.md §1.24） ================= */
-  /* 提交=草稿→Apply 全流程（fieldManager=console:propose）；批准/驳回=对象态翻转稿
-   * （console:approve/console:reject——approval_log 判定行+审批信号族事件随行，cored 侧）；批准落库
-   * 即 apply-workflow 派单受理投影（kind=proposal 行——受理≠拉起，诚实投影）。 */
-  var PROP_PRIORITIES = [
-    { id: 'low', label: 'low（低危）' }, { id: 'normal', label: 'normal' },
-    { id: 'high', label: 'high（高危）' }, { id: 'critical', label: 'critical（高危）' }
-  ];
+  /* ================= 需求提案 & R-UX-1 通用对话录入 & R-UX-2 Scheme 驱动控件（能力 B/D——console-adoption.md §1.24/§1.27） ================= */
+  /* 规则来源：
+   *   - core_design/rule.md R-UX-1：所有与人交互默认对话（session 对话），表单仅降级/精修；
+   *     固定六步顺序：自由描述+自动上下文 → 自动补充 → 缺少询问（只问不明确/缺失/冲突字段，带默认值与示例）
+   *     → 提交节点生成 spec 对象 + R-PUB lint/spec 准入/权限 dry-run（失败精确定位到字段）
+   *     → 确认 diff 后系统自动补全并 Apply → 降级表单（同一对象无双源）。
+   *   - core_design/rule.md R-UX-2：一切录入/编辑面由 scheme 字段定义驱动（单一真相，UI 零硬编码）；
+   *     控件映射：枚举→selector（禁止手输）、字符串→input、长文本→textarea、数组→list 列表编辑器、
+   *     ref→对象选择器（显示 name+rv）、bool→switch、map→键值编辑器、数字→number input（带 min/max）。 */
   var PROP_STATUS_CLS = { draft: 'mute', submitted: 'warn', approved: 'ok', rejected: 'danger', landed: 'ok' };
   function propStatusChip(st, lg) {
     var cls = PROP_STATUS_CLS[st] || 'mute';
     return '<span class="chip ' + cls + (lg ? ' lg' : '') + '"><span class="lamp ' + cls + '"></span>' + esc(st || '?') + '</span>';
   }
-  /* yaml 标量安全化（含 ": " / 前导特殊符 / 空串=双引号包裹——console 生成形态确定，解析权威在 cored 闸门） */
   function propScalar(s) {
     s = String(s == null ? '' : s).trim();
     if (!s) return '""';
@@ -4245,43 +4246,933 @@
     return s;
   }
   function propYaml(f) {
-    var acc = (f.acceptance || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
-    return 'apiVersion: core/v1\nkind: Proposal\nmetadata: {name: ' + f.name + ', scope: ' + (f.scope || 'global') + '}\n' +
+    var acc = Array.isArray(f.acceptance)
+      ? f.acceptance.map(function (s) { return String(s || '').trim(); }).filter(Boolean)
+      : String(f.acceptance || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    var landingTarget = f['landing.target'] || f.landing || 'doc';
+    var yaml = 'apiVersion: core/v1\nkind: Proposal\nmetadata: {name: ' + f.name + ', scope: ' + (f.scope || 'global') + '}\n' +
       'spec:\n' +
       '  title: ' + propScalar(f.title) + '\n' +
       '  summary: ' + propScalar(f.summary) + '\n' +
       (acc.length ? '  acceptance:\n' + acc.map(function (s) { return '    - ' + propScalar(s); }).join('\n') + '\n' : '') +
       '  impact: ' + propScalar(f.impact) + '\n' +
-      '  priority: ' + (f.priority || 'normal') + '\n' +
-      '  proposer: ' + propScalar(f.proposer) + '\n' +
-      '  status: ' + f.status + '\n' +
-      '  landing: {target: ' + (f.landing || 'doc') + '}\n';
+      '  priority: ' + (f.priority || 'low') + '\n' +
+      '  proposer: ' + propScalar(f.proposer || 'console-operator') + '\n' +
+      '  status: ' + (f.status || 'submitted') + '\n' +
+      '  landing: {target: ' + landingTarget + '}\n';
+    var known = { name: 1, scope: 1, title: 1, summary: 1, acceptance: 1, impact: 1, priority: 1, proposer: 1, status: 1, landing: 1, 'landing.target': 1, 'landing.ref': 1 };
+    Object.keys(f).sort().forEach(function (k) {
+      if (!known[k] && f[k] != null && String(f[k]).trim() !== '') {
+        yaml += '  ' + k + ': ' + propScalar(f[k]) + '\n';
+      }
+    });
+    return yaml;
   }
   function propSlug(title) {
     var s = String(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     return s ? s.slice(0, 40) : '';
   }
+
+  /* ── R-UX-2：从 LIVE.state.kinds 实时获取/派生 scheme 字段控件描述符（零硬编码） ── */
+  var FIELD_LABELS = {
+    title: '标题', summary: '目标', acceptance: '验收标准', impact: '影响面',
+    priority: '优先级', proposer: '提出人', status: '状态', landing: '产物落点',
+    'landing.target': '产物落点', 'landing.ref': '产物引用', enabled: '启用状态',
+    workservice: '所属 WorkService', workflow: '绑定 Workflow', config: '配置映射 (map)',
+    ops: '操作列表 (ops)', goalRef: '目标文档引用', descRef: '描述文档引用',
+    docs: '关联文档引用', roles: '绑定角色', groups: '所属分组', providers: '账号包引用',
+    refs: '逻辑引用', autoLevel: '自治级别', kind: '类型', connector: '连接器引用',
+    display: '显示名称', purpose: '用途说明', ttl: '缓存时长', prompt: '提示词',
+    llmPrompt: 'LLM 提示词', observedGeneration: '观测代数', phase: '相位', limit: '阈值'
+  };
+  function parseDeclClient(kindName, name, path, raw) {
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      var subFields = Object.keys(raw).map(function (sk) {
+        return parseDeclClient(kindName, sk, path + '.' + sk, raw[sk]);
+      });
+      return { name: name, path: path, label: FIELD_LABELS[path] || FIELD_LABELS[name] || name, type: 'object', widget: 'object', required: false, fields: subFields };
+    }
+    var s = String(raw == null ? '' : raw).trim().replace(/^['"]|['"]$/g, '');
+    var req = false;
+    while (s.charAt(0) === '!' || s.charAt(s.length - 1) === '!' || s.charAt(0) === '?') {
+      if (s.charAt(0) === '!') { req = true; s = s.slice(1).trim(); }
+      else if (s.charAt(s.length - 1) === '!') { req = true; s = s.slice(0, -1).trim(); }
+      else if (s.charAt(0) === '?') { s = s.slice(1).trim(); }
+    }
+    var defMatch = /[(\uff08]\s*=\s*([^)\uff09]+)[)\uff09]/.exec(s);
+    var defVal = defMatch ? defMatch[1].trim() : undefined;
+    if (defVal === 'true') defVal = true;
+    else if (defVal === 'false') defVal = false;
+    var rangeMatch = /[(\uff08]\s*(-?\d+(?:\.\d+)?)\s*(?:-|\.\.)\s*(-?\d+(?:\.\d+)?)\s*[)\uff09]/.exec(s);
+    var minV = rangeMatch ? Number(rangeMatch[1]) : undefined;
+    var maxV = rangeMatch ? Number(rangeMatch[2]) : undefined;
+    s = s.replace(/[(\uff08][^)\uff09]*[)\uff09]/g, '').trim();
+    var fd = {
+      name: name, path: path, label: FIELD_LABELS[path] || FIELD_LABELS[name] || name,
+      rawDecl: String(raw || ''), required: req, default: defVal, min: minV, max: maxV
+    };
+    if (s.indexOf('[]') === 0) {
+      fd.type = 'list'; fd.widget = 'list';
+      fd.elem = parseDeclClient(kindName, name + 'Item', path + '[]', s.slice(2));
+    } else if (s.charAt(0) === '{' && s.charAt(s.length - 1) === '}') {
+      fd.type = 'object'; fd.widget = 'object'; fd.fields = [];
+      s.slice(1, -1).split(',').forEach(function (part) {
+        var idx = part.indexOf(':');
+        if (idx > 0) {
+          var sk = part.slice(0, idx).trim();
+          var sv = part.slice(idx + 1).trim();
+          fd.fields.push(parseDeclClient(kindName, sk, path + '.' + sk, sv));
+        }
+      });
+    } else if (s.indexOf('|') > 0 && !/\s/.test(s)) {
+      fd.type = 'enum'; fd.widget = 'selector';
+      fd.enum = s.split('|').map(function (p) { return p.replace(/^['"]|['"]$/g, '').trim(); }).filter(function (p) { return p && p !== '…' && p !== '...'; });
+    } else if (s === 'ref') {
+      fd.type = 'ref'; fd.widget = 'ref';
+      var low = name.toLowerCase();
+      fd.refKind = low.indexOf('workservice') >= 0 ? 'WorkService' : (low.indexOf('connector') >= 0 || low.indexOf('ops') >= 0 ? 'ConnectorOps' : (low.indexOf('provider') >= 0 ? 'Provider' : (low.indexOf('role') >= 0 ? 'Role' : (low.indexOf('group') >= 0 ? 'Group' : (low.indexOf('agent') >= 0 ? 'Agent' : (low.indexOf('system') >= 0 ? 'ServiceDesc' : ''))))));
+    } else if (s === 'bool') {
+      fd.type = 'bool'; fd.widget = 'switch';
+    } else if (s === 'map') {
+      fd.type = 'map'; fd.widget = 'map';
+    } else if (s === 'int' || s === 'number') {
+      fd.type = 'number'; fd.widget = 'number';
+    } else if (s === 'text' || ['summary', 'impact', 'prompt', 'llmPrompt', 'description', 'usage'].indexOf(name) >= 0) {
+      fd.type = 'text'; fd.widget = 'textarea';
+    } else {
+      fd.type = 'string'; fd.widget = 'input';
+    }
+    if (kindName === 'Proposal') {
+      if (fd.path === 'acceptance') { fd.required = true; fd.example = '1. 主题切换即时生效；2. 对比度满足 WCAG AA'; }
+      if (fd.path === 'title') fd.example = '编辑器深色模式';
+      if (fd.path === 'summary') fd.example = '对象编辑器提供深色主题，降低夜间巡检时的视觉疲劳';
+      if (fd.path === 'impact') { fd.default = 'console 前端组件（无写路径变更）'; fd.example = 'core_system_dsh_plugin console 编辑器屏'; }
+      if (fd.path === 'priority') { fd.default = 'low'; fd.autoFill = 'default'; fd.example = 'low'; }
+      if (fd.path === 'proposer') { fd.default = 'console-operator'; fd.autoFill = 'subject'; fd.example = 'console-operator'; }
+      if (fd.path === 'status') { fd.default = 'submitted'; fd.autoFill = 'system'; fd.example = 'submitted'; }
+      if (fd.path === 'landing.target') { fd.default = 'doc'; fd.autoFill = 'default'; fd.example = 'doc'; }
+    }
+    return fd;
+  }
+
+  function schemeWidgetsOf(kindName) {
+    var k = LIVE.kindOf(kindName);
+    if (k && Array.isArray(k.widgets) && k.widgets.length > 0) return k.widgets;
+    var src = (k && k.spec && Object.keys(k.spec).length) ? k.spec : (k && k.fields ? k.fields : null);
+    if (src) {
+      var order = kindName === 'Proposal' ? ['title', 'summary', 'acceptance', 'impact', 'priority', 'landing', 'proposer', 'status'] : [];
+      var keys = [];
+      order.forEach(function (p) { if (Object.prototype.hasOwnProperty.call(src, p)) keys.push(p); });
+      Object.keys(src).sort().forEach(function (p) { if (keys.indexOf(p) < 0) keys.push(p); });
+      return keys.map(function (name) { return parseDeclClient(kindName, name, name, src[name]); });
+    }
+    if (kindName === 'Proposal') {
+      return [
+        parseDeclClient('Proposal', 'title', 'title', '!string'),
+        parseDeclClient('Proposal', 'summary', 'summary', '!string'),
+        parseDeclClient('Proposal', 'acceptance', 'acceptance', '[]string'),
+        parseDeclClient('Proposal', 'impact', 'impact', '?string'),
+        parseDeclClient('Proposal', 'priority', 'priority', 'low|normal|high|critical'),
+        parseDeclClient('Proposal', 'landing', 'landing', '?{target: doc|task, ref: ?string}'),
+        parseDeclClient('Proposal', 'proposer', 'proposer', '!string'),
+        parseDeclClient('Proposal', 'status', 'status', '!draft|submitted|approved|rejected|landed')
+      ];
+    }
+    return [];
+  }
+
+  function flattenKindWidgets(kindName, ws) {
+    var out = [];
+    (ws || []).forEach(function (w) {
+      if (w.widget === 'object' && Array.isArray(w.fields) && w.fields.length) {
+        if (kindName === 'Proposal' && w.path === 'landing') {
+          w.fields.forEach(function (sf) { if (sf.name === 'target') out.push(sf); });
+          return;
+        }
+        out = out.concat(flattenKindWidgets(kindName, w.fields));
+        return;
+      }
+      out.push(w);
+    });
+    return out;
+  }
+
+  /* ── R-UX-2 通用控件渲染器：枚举→selector / 字符串→input / 长文本→textarea / 数组→list / ref→对象选择器 / bool→switch / map→键值编辑器 / 数字→number ── */
+  function renderSchemeControlHtml(kindName, w, val, idPrefix, legacyId) {
+    var cid = legacyId || ((idPrefix || 'sc-') + w.path.replace(/[^a-zA-Z0-9_-]/g, '-'));
+    var baseAttr = 'id="' + esc(cid) + '" data-widget="' + esc(w.widget) + '" data-scheme-kind="' + esc(kindName) + '" data-scheme-field="' + esc(w.path) + '"';
+    if (w.widget === 'selector') {
+      var opts = (w.enum || []).map(function (opt) {
+        var sel = String(val != null ? val : (w.default != null ? w.default : '')) === String(opt) ? ' selected' : '';
+        return '<option value="' + esc(opt) + '"' + sel + '>' + esc(opt) + '</option>';
+      }).join('');
+      return '<select class="inp scheme-ctrl" style="width:100%" ' + baseAttr + '>' + opts + '</select>';
+    }
+    if (w.widget === 'textarea') {
+      return '<textarea class="inp scheme-ctrl" rows="2" style="width:100%" ' + baseAttr +
+        ' placeholder="' + esc(w.example || w.label || '') + '">' + esc(val != null ? String(val) : '') + '</textarea>';
+    }
+    if (w.widget === 'list') {
+      var items = Array.isArray(val) ? val : (typeof val === 'string' && val.trim() ? val.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean) : []);
+      var itemRows = items.map(function (it, idx) {
+        return '<div class="sle-row"><input type="text" class="inp sm sle-item" style="flex:1" data-scheme-list-item="' + esc(w.path) + '" data-idx="' + idx + '" value="' + esc(it) + '">' +
+          '<button type="button" class="btn sm" data-act="scheme-list-del" data-kind="' + esc(kindName) + '" data-field="' + esc(w.path) + '" data-idx="' + idx + '" aria-label="删除条目">✕</button></div>';
+      }).join('');
+      return '<div class="scheme-list-editor" ' + baseAttr + '>' + itemRows +
+        '<div class="sle-row"><input type="text" class="inp sm" style="flex:1" id="' + esc(cid) + '-new" placeholder="' + esc(w.example || '输入条目后点 + 添加') + '">' +
+        '<button type="button" class="btn sm" data-act="scheme-list-add" data-kind="' + esc(kindName) + '" data-field="' + esc(w.path) + '" data-input="' + esc(cid) + '-new">+ 添加</button></div></div>';
+    }
+    if (w.widget === 'ref') {
+      var rKind = w.refKind || '';
+      var candObjs = rKind ? LIVE.refs(rKind) : [];
+      if (!candObjs.length) {
+        Object.keys(LIVE.state.objects || {}).forEach(function (k) {
+          candObjs = candObjs.concat(LIVE.state.objects[k] || []);
+        });
+      }
+      var curRef = val != null ? String(val) : '';
+      var refOpts = '<option value="">-- 选择引用对象' + (rKind ? ' (' + esc(rKind) + ')' : '') + ' --</option>' +
+        candObjs.map(function (o) {
+          var rvStr = o.name;
+          var sel = (curRef === o.name || curRef === (o.kind.toLowerCase() + '/' + o.name)) ? ' selected' : '';
+          return '<option value="' + esc(rvStr) + '"' + sel + '>' + esc(o.name) + ' (' + esc(o.scope || 'global') + ' · r' + (o.resourceVersion || 0) + ')</option>';
+        }).join('');
+      return '<select class="inp scheme-ctrl" style="width:100%" data-ref-kind="' + esc(rKind) + '" ' + baseAttr + '>' + refOpts + '</select>';
+    }
+    if (w.widget === 'switch') {
+      var checked = (val === true || val === 'true' || (val == null && w.default === true));
+      return '<label class="scheme-switch" ' + baseAttr + '>' +
+        '<input type="checkbox" class="scheme-ctrl-cb" data-widget="switch" data-scheme-kind="' + esc(kindName) + '" data-scheme-field="' + esc(w.path) + '"' + (checked ? ' checked' : '') + '>' +
+        '<span>' + (checked ? '启用 (true)' : '停用 (false)') + '</span></label>';
+    }
+    if (w.widget === 'map') {
+      var mapObj = (val && typeof val === 'object' && !Array.isArray(val)) ? val : {};
+      var mRows = Object.keys(mapObj).map(function (mk) {
+        return '<div class="sme-row"><input type="text" class="inp sm mono" style="width:38%" data-map-k="' + esc(w.path) + '" value="' + esc(mk) + '" placeholder="key">' +
+          '<input type="text" class="inp sm" style="flex:1" data-map-v="' + esc(w.path) + '" data-for-k="' + esc(mk) + '" value="' + esc(mapObj[mk]) + '" placeholder="value">' +
+          '<button type="button" class="btn sm" data-act="scheme-map-del" data-kind="' + esc(kindName) + '" data-field="' + esc(w.path) + '" data-mkey="' + esc(mk) + '">✕</button></div>';
+      }).join('');
+      return '<div class="scheme-map-editor" ' + baseAttr + '>' + mRows +
+        '<div class="sme-row"><input type="text" class="inp sm mono" style="width:38%" id="' + esc(cid) + '-mk" placeholder="新键 key">' +
+        '<input type="text" class="inp sm" style="flex:1" id="' + esc(cid) + '-mv" placeholder="新值 value">' +
+        '<button type="button" class="btn sm" data-act="scheme-map-add" data-kind="' + esc(kindName) + '" data-field="' + esc(w.path) + '" data-mk="' + esc(cid) + '-mk" data-mv="' + esc(cid) + '-mv">+ 键值</button></div></div>';
+    }
+    if (w.widget === 'number') {
+      var minAttr = w.min != null ? ' min="' + w.min + '"' : '';
+      var maxAttr = w.max != null ? ' max="' + w.max + '"' : '';
+      return '<input type="number" class="inp scheme-ctrl" style="width:100%" ' + baseAttr + minAttr + maxAttr +
+        ' value="' + esc(val != null ? String(val) : '') + '" placeholder="' + esc(w.example || '0') + '">';
+    }
+    return '<input type="text" class="inp scheme-ctrl" style="width:100%" ' + baseAttr +
+      ' value="' + esc(val != null ? String(val) : '') + '" placeholder="' + esc(w.example || w.label || '') + '" autocomplete="off">';
+  }
+
+  /* ── 控件级即时校验（R-UX-2 双保险第一层） ── */
+  function validateSchemeFieldClient(w, val) {
+    if (!w) return '';
+    var isEmpty = val == null || (typeof val === 'string' && !val.trim()) || (Array.isArray(val) && val.length === 0);
+    if (isEmpty) {
+      if (w.required) return w.label + ' (' + w.path + ') 为必填项';
+      return '';
+    }
+    if (w.widget === 'selector' && Array.isArray(w.enum) && w.enum.length && !w.hasWildcard) {
+      if (w.enum.indexOf(String(val)) < 0) return '值 "' + val + '" 不在合法枚举 [' + w.enum.join('|') + '] 中';
+    }
+    if (w.widget === 'number') {
+      var num = Number(val);
+      if (isNaN(num)) return '须为数值';
+      if (w.min != null && num < w.min) return '不得小于 ' + w.min;
+      if (w.max != null && num > w.max) return '不得大于 ' + w.max;
+    }
+    var txt = Array.isArray(val) ? val.join('\n') : String(val);
+    if (/(\d{1,3}\.){3}\d{1,3}/.test(txt) && !/127\.0\.0\.1|0\.0\.0\.0|255\.255\.255\.255|192\.0\.2\.|198\.51\.100\.|203\.0\.113\./.test(txt)) {
+      return 'R-PUB-1 校验：禁止包含真实 IP 地址';
+    }
+    if (/\/root\/|\/home\/[a-zA-Z0-9._-]+\//.test(txt)) {
+      return 'R-PUB-1 校验：禁止包含真实部署绝对路径';
+    }
+    if (/\bsk-[A-Za-z0-9_-]{10,}\b/.test(txt) || (/\b(api[_-]?key|secret[_-]?key|access[_-]?token|password)\s*[:=]\s*([^\s,;]+)/i.test(txt) && !/\b(secret:|env:|vault:|keychain:)/.test(txt))) {
+      return 'R-PUB-1 校验：敏感项禁止手填明文，只允许 secret:/env:/vault:/keychain: 引用式';
+    }
+    return '';
+  }
+
+  /* ── R-UX-1 通用对话录入会话状态机（S.intake[kindName]） ── */
+  S.intake = S.intake || {};
+  function intakeStateOf(kindName) {
+    kindName = kindName || 'Proposal';
+    if (!S.intake[kindName]) {
+      S.intake[kindName] = {
+        kind: kindName,
+        mode: 'chat', // 默认进入对话模式（R-UX-1 / console-ui.md §12）
+        sessionId: '',
+        scope: 'global',
+        name: '',
+        proposer: 'console-operator',
+        turns: 0,
+        ready: false,
+        askingField: 'title',
+        initialized: false,
+        loading: false,
+        messages: [
+          {
+            role: 'assistant',
+            text: '已结合当前上下文自动补充缺省项：提出人=console-operator、优先级=low、产物落点=doc（右侧字段卡可随时修改，不会重复盘问已推断项）。\n请提供【标题 (title)】（默认：无（必填）；示例：编辑器深色模式；也可一段话自由描述标题/目标/验收标准/影响面）：'
+          }
+        ],
+        fields: {
+          title: '',
+          summary: '',
+          acceptance: [],
+          impact: '',
+          priority: 'low',
+          'landing.target': 'doc',
+          proposer: 'console-operator',
+          status: 'submitted'
+        },
+        fieldStates: [],
+        missingFields: ['title', 'summary', 'acceptance', 'impact'],
+        conflictFields: [],
+        fieldErrors: {},
+        preview: null
+      };
+    }
+    return S.intake[kindName];
+  }
+
+  function applyIntakeTurnResponse(st, data) {
+    if (!data) return;
+    if (data.sessionId) st.sessionId = data.sessionId;
+    if (data.scope) st.scope = data.scope;
+    if (data.name && !st.nameTouched) st.name = data.name;
+    if (data.proposer) st.proposer = data.proposer;
+    if (typeof data.turns === 'number') st.turns = data.turns;
+    st.ready = data.ready === true;
+    st.askingField = data.askingField || '';
+    if (data.fields && typeof data.fields === 'object') {
+      Object.keys(data.fields).forEach(function (k) {
+        st.fields[k] = data.fields[k];
+      });
+    }
+    if (Array.isArray(data.fieldStates)) st.fieldStates = data.fieldStates;
+    if (Array.isArray(data.missingFields)) st.missingFields = data.missingFields;
+    if (Array.isArray(data.conflictFields)) st.conflictFields = data.conflictFields;
+  }
+
+  function ensureIntakeSession(kindName) {
+    var st = intakeStateOf(kindName);
+    if (st.initialized || st.loading) return;
+    st.loading = true;
+    LIVE.intakeTurn({ kind: kindName, scope: st.scope || 'global', fields: st.fields }).then(function (res) {
+      st.loading = false;
+      if (res && res.ok && res.data) {
+        st.initialized = true;
+        applyIntakeTurnResponse(st, res.data);
+        if (res.data.reply && st.messages.length <= 1) {
+          st.messages = [{ role: 'assistant', text: res.data.reply }];
+        }
+        if (S.route === 'proposals') render();
+      }
+    }).catch(function () { st.loading = false; });
+  }
+
+  function computeLocalFieldState(kindName, w, st) {
+    var val = st.fields[w.path];
+    if (val === undefined && w.default !== undefined && w.autoFill) val = w.default;
+    var srvState = null;
+    (st.fieldStates || []).forEach(function (fs) { if (fs.path === w.path) srvState = fs; });
+    var fe = st.fieldErrors && st.fieldErrors[w.path];
+    var clientErr = validateSchemeFieldClient(w, val);
+    var isEmpty = val == null || (typeof val === 'string' && !val.trim()) || (Array.isArray(val) && val.length === 0);
+    if (fe) {
+      return { status: 'conflict', badge: '✕ 校验未过', cls: 'st-conflict', error: fe.message };
+    }
+    if (!isEmpty && clientErr) {
+      return { status: 'conflict', badge: '✕ 冲突', cls: 'st-conflict', error: clientErr };
+    }
+    if (srvState && srvState.status === 'conflict') {
+      return { status: 'conflict', badge: '✕ 冲突', cls: 'st-conflict', error: srvState.error || '字段校验未过' };
+    }
+    if (isEmpty) {
+      var needAsk = w.required || (kindName === 'Proposal' && w.path === 'impact');
+      if (w.autoFill === 'system') needAsk = false;
+      if (needAsk) return { status: 'missing', badge: '○ 待补', cls: 'st-missing', error: '' };
+      return { status: 'default', badge: '◐ 默认 ' + String(w.default || ''), cls: 'st-default', error: '' };
+    }
+    var isDefaultSrc = (srvState && srvState.status === 'default') ||
+      (w.autoFill && String(val) === String(w.default));
+    if (isDefaultSrc) {
+      return { status: 'default', badge: '◐ 默认 ' + String(val) + '（可改）', cls: 'st-default', error: '' };
+    }
+    var disp = Array.isArray(val) ? ('已填（' + val.length + ' 条）') : '已填';
+    return { status: 'filled', badge: '● ' + disp, cls: 'st-filled', error: '' };
+  }
+
+  function renderProposalIntakeCard(kindName) {
+    var st = intakeStateOf(kindName);
+    var rawWidgets = schemeWidgetsOf(kindName);
+    var flatW = flattenKindWidgets(kindName, rawWidgets);
+
+    // 降级表单模式（R-UX-1 第 6 条 + R-UX-2 scheme 驱动控件，与对话共享同一 st.fields，产同一对象无双源）
+    if (st.mode === 'form') {
+      var legacyIdMap = {
+        title: 'pf-title', summary: 'pf-summary', acceptance: 'pf-acceptance',
+        impact: 'pf-impact', priority: 'pf-priority', 'landing.target': 'pf-landing',
+        proposer: 'pf-proposer', status: 'pf-status'
+      };
+      var formFieldsHtml = flatW.filter(function (w) { return w.path !== 'status'; }).map(function (w) {
+        var spanFull = (w.widget === 'textarea' || w.widget === 'list' || w.path === 'impact');
+        var val = st.fields[w.path] != null ? st.fields[w.path] : (w.default != null ? w.default : '');
+        var lid = legacyIdMap[w.path] || ('pf-' + w.path.replace(/[^a-zA-Z0-9_-]/g, '-'));
+        var controlHtml;
+        if (w.path === 'acceptance') {
+          // 降级表单同时支持 #pf-acceptance textarea（兼容 loop-52 既有表单测试选择器）与列表解析
+          var accText = Array.isArray(val) ? val.join('\n') : String(val || '');
+          controlHtml = '<textarea id="pf-acceptance" class="inp scheme-ctrl" rows="3" style="width:100%" data-widget="list" data-scheme-kind="' + esc(kindName) + '" data-scheme-field="acceptance" placeholder="' + esc(w.example || '每行一条可验证标准') + '">' + esc(accText) + '</textarea>';
+        } else {
+          controlHtml = renderSchemeControlHtml(kindName, w, val, 'pf-', lid);
+        }
+        return '<div' + (spanFull ? ' style="grid-column:1/-1"' : '') + '>' +
+          '<label class="small muted">' + esc(w.label) + (w.required ? ' *' : '') + ' <span class="mono faint">(' + esc(w.widget) + ')</span></label>' +
+          controlHtml + '</div>';
+      }).join('');
+
+      return '<div class="intake-wrap" id="proposal-intake-root" data-mode="form">' +
+        '<div class="intake-head">' +
+        '<div><div class="set-card-h">提交需求提案 · 直接填表（降级表单 · R-UX-2 Scheme 驱动）</div>' +
+        '<div class="set-card-sub">降级表单与对话模式共享同一份 scheme 字段定义与对象生成管线（无双源）。提交=草稿→Apply 全流程（对象入库 status=submitted）；高危=人审（ApprovalNeeded），低危可自动（--proposal-auto-approve）。R-PUB：禁真实 IP/凭据/内网路径，secret 只引用式。</div></div>' +
+        '<div style="display:flex;gap:8px;align-items:center">' +
+        '<span class="chip warn small">降级表单模式</span>' +
+        '<button class="btn sm llm" id="btn-intake-toggle-chat" data-act="intake-toggle-mode" data-kind="' + esc(kindName) + '">切换回对话式录入（默认）</button>' +
+        '</div></div>' +
+        '<div class="prop-form" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:4px 4px 8px">' +
+        '<div><label class="small muted">名称（slug）</label><input id="pf-name" class="inp mono" style="width:100%" value="' + esc(st.name || '') + '" placeholder="add-dark-mode" autocomplete="off"></div>' +
+        formFieldsHtml +
+        '<div style="align-self:end"><button class="btn primary" data-act="prop-submit">提交提案（草稿→Apply）</button></div>' +
+        '</div></div>';
+    }
+
+    // 默认：对话式录入模式（左 2/3 对话区 + 右 1/3 实时 scheme 驱动字段卡 + 预览确认区）
+    var readyCount = 0;
+    var totalCount = 0;
+    var fieldCardRowsHtml = flatW.map(function (w) {
+      totalCount++;
+      var info = computeLocalFieldState(kindName, w, st);
+      if (info.status === 'filled' || info.status === 'default') readyCount++;
+      var isAsking = st.askingField === w.path;
+      var val = st.fields[w.path] != null ? st.fields[w.path] : (w.default != null ? w.default : '');
+      var rowCls = 'intake-field-row' + (isAsking ? ' asking' : '') + (info.status === 'conflict' ? ' field-row-error' : '');
+      return '<div class="' + rowCls + '" data-card-field="' + esc(w.path) + '">' +
+        '<div class="ifr-top">' +
+        '<span class="ifr-label">' + esc(w.label) + (w.required ? ' <span style="color:var(--warn)">*</span>' : '') +
+        '<span class="chip mute small mono" style="font-size:10px;padding:0 5px">' + esc(w.widget) + '</span></span>' +
+        '<span class="ifr-status ' + info.cls + '" data-field-status="' + esc(w.path) + '">' + esc(info.badge) + '</span>' +
+        '</div>' +
+        renderSchemeControlHtml(kindName, w, val, 'ic-') +
+        (info.error ? '<div class="field-err-msg" data-err-field="' + esc(w.path) + '">✕ ' + esc(info.error) + '</div>' : '') +
+        '</div>';
+    }).join('');
+
+    var allGreen = readyCount === totalCount && totalCount > 0;
+    var msgsHtml = (st.messages || []).map(function (m, idx) {
+      return '<div class="intake-msg ' + esc(m.role) + '" data-msg-idx="' + idx + '">' +
+        '<div class="intake-msg-role">' + (m.role === 'assistant' ? '● 录入 Agent (R-UX-1)' : '▸ 用户') + '</div>' +
+        '<div>' + esc(m.text) + '</div></div>';
+    }).join('');
+
+    var previewHtml = '';
+    if (st.preview) {
+      var pv = st.preview;
+      var ch = pv.checks || {};
+      var rpubOk = ch.rpubLint && ch.rpubLint.ok;
+      var specOk = ch.specAdmission && ch.specAdmission.ok;
+      var permOk = ch.permission && ch.permission.ok;
+      var ac = pv.autoCompleted || {};
+      var feList = pv.fieldErrors || [];
+      var diffHtml = renderDiff(diffLines('', String(pv.yaml || '')), 40);
+
+      previewHtml = '<div class="intake-preview-pane" id="intake-preview-pane">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">' +
+        '<div><span style="font-weight:700;font-size:14px">提交节点预览确认（Proposal YAML + 三重 Dry-Run）</span> ' +
+        '<span class="chip ' + (pv.ok ? 'ok' : 'danger') + ' small">' + (pv.ok ? '✓ 准入预检全绿（可提交）' : '✕ 准入预检未过（已定位字段）') + '</span></div>' +
+        '<div class="mono small faint">会话=' + esc(pv.sessionId || st.sessionId || '—') + ' · 生成版本=v' + (pv.genVersion || 1) + ' · reasonRef=' + esc(pv.reasonRef || '') + '</div>' +
+        '</div>' +
+        '<div class="intake-ctx-bar">' +
+        '<span><b>系统自动补全：</b></span>' +
+        '<span class="chip mute small mono">proposer=' + esc(ac.proposer || st.proposer) + '</span>' +
+        '<span class="chip mute small mono">status=' + esc(ac.status || 'submitted') + '</span>' +
+        '<span class="chip mute small mono">priority=' + esc(ac.priority || st.fields.priority || 'low') + '</span>' +
+        '<span class="chip mute small mono">landing.target=' + esc(ac['landing.target'] || st.fields['landing.target'] || 'doc') + '</span>' +
+        '<span class="chip mute small mono">timestamp=' + esc(ac.timestamp || 'auto') + '</span>' +
+        '<span class="small faint">（敏感项禁手填，secret 只引用式；高危=人审 ApprovalNeeded，低危可自动）</span>' +
+        '</div>' +
+        '<div id="intake-dryrun-checks" style="display:grid;gap:6px">' +
+        '<div class="check-item ' + (rpubOk ? 'pass' : 'fail') + '" data-c="rpub"><span class="ci-ic">' + (rpubOk ? '✓' : '✕') + '</span><span>1. R-PUB-1 脱敏与 secret 引用式检查</span><span class="ci-note">' + (rpubOk ? '通过（零真实 IP/部署路径/明文凭据）' : '未通过（见字段错误定位）') + '</span></div>' +
+        '<div class="check-item ' + (specOk ? 'pass' : 'fail') + '" data-c="spec"><span class="ci-ic">' + (specOk ? '✓' : '✕') + '</span><span>2. Scheme Spec 结构与枚举闭合集准入</span><span class="ci-note">' + (specOk ? '通过（scheme.ValidateDoc 准入）' : '未通过（见字段错误定位）') + '</span></div>' +
+        '<div class="check-item ' + (permOk ? 'pass' : 'fail') + '" data-c="perm"><span class="ci-ic">' + (permOk ? '✓' : '✕') + '</span><span>3. 权限准入与审批分流预览</span><span class="ci-note">' + esc(pv.triagePreview || ((ch.permission && ch.permission.message) || '')) + '</span></div>' +
+        '</div>' +
+        (feList.length ? '<div style="background:rgba(239,68,68,.1);border:1px solid var(--danger);border-radius:8px;padding:10px 12px" id="intake-field-errors">' +
+          '<div style="font-weight:600;color:var(--danger);margin-bottom:4px">✕ Dry-Run 失败字段定位（共 ' + feList.length + ' 项）：</div>' +
+          feList.map(function (fe) {
+            return '<div class="small" style="margin-top:3px">• 字段 <b class="mono">[' + esc(fe.field) + ']</b> (' + esc(fe.rule) + ')：' + esc(fe.message) + '</div>';
+          }).join('') + '</div>' : '') +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+        '<div><div class="small muted" style="margin-bottom:4px">生成的 Proposal 对象 YAML（rv=0）</div>' +
+        '<pre class="yaml-block mono small" id="intake-yaml-preview" style="max-height:220px;overflow:auto;padding:10px">' + esc(pv.yaml || '') + '</pre></div>' +
+        '<div><div class="small muted" style="margin-bottom:4px">变更 Diff 预览（确认后经草稿→Apply 入库）</div>' +
+        '<div style="max-height:220px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px">' + diffHtml + '</div></div>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:flex-end;gap:10px">' +
+        '<button class="btn" id="btn-intake-back" data-act="intake-back-edit" data-kind="' + esc(kindName) + '">返回对话修改</button>' +
+        '<button class="btn primary" id="btn-intake-confirm-apply" data-act="intake-confirm-apply" data-kind="' + esc(kindName) + '"' + (pv.ok ? '' : ' disabled') + '>确认提交（草稿→Apply）</button>' +
+        '</div></div>';
+    }
+
+    return '<div class="intake-wrap" id="proposal-intake-root" data-mode="chat">' +
+      '<div class="intake-head">' +
+      '<div><div class="set-card-h">提交需求提案 · 对话式录入（Proposal Chat · R-UX-1 / R-UX-2）</div>' +
+      '<div class="set-card-sub">默认对话式录入（替代静态表单）：支持一段话自由描述自动抽取字段，或按缺失/冲突项逐轮回答（带默认值与示例）；字段齐后由提交节点生成 Proposal YAML 并执行 R-PUB lint + spec 准入 dry-run，确认 diff 后系统自动补全并经草稿→Apply 入库（高危=人审，低危可自动）。对话过程留痕，对话原文不入公共库。</div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<span class="chip ok small">默认对话模式</span>' +
+      '<span class="chip ' + (allGreen ? 'ok' : 'warn') + ' small" id="intake-ready-chip">字段就绪 ' + readyCount + '/' + totalCount + (allGreen ? '（全绿）' : '') + '</span>' +
+      '<span class="chip mute small mono" id="intake-turn-chip">轮次 ' + (st.turns || 1) + '/≤6</span>' +
+      '<button class="btn sm" id="btn-intake-reset" data-act="intake-reset" data-kind="' + esc(kindName) + '">重置对话</button>' +
+      '<button class="btn sm" id="btn-intake-toggle-form" data-act="intake-toggle-mode" data-kind="' + esc(kindName) + '">直接填表（降级表单）</button>' +
+      '</div></div>' +
+      '<div class="intake-grid">' +
+      '<div class="intake-chat-pane" id="intake-chat-pane">' +
+      '<div class="intake-ctx-bar">' +
+      '<span><b>自动上下文：</b></span>' +
+      '<span class="chip mute small mono">proposer=' + esc(st.proposer || 'console-operator') + '</span>' +
+      '<span class="chip mute small mono">scope=' + esc(st.scope || 'global') + '</span>' +
+      '<span class="chip mute small mono">priority 缺省=low</span>' +
+      '<span class="chip mute small mono">landing 缺省=doc</span>' +
+      (st.sessionId ? '<span class="chip mute small mono">session=' + esc(st.sessionId) + '</span>' : '') +
+      '</div>' +
+      '<div class="intake-msg-list" id="intake-messages">' + msgsHtml + '</div>' +
+      '<div class="intake-input-area">' +
+      '<textarea id="intake-chat-input" class="inp" rows="2" placeholder="输入一段话自由描述需求（如：标题：…；目标：…；验收标准：1. … 2. …；影响面：…），或直接回答当前提问…"></textarea>' +
+      '<div class="intake-act-row">' +
+      '<button class="btn primary" id="btn-intake-send" data-act="intake-send" data-kind="' + esc(kindName) + '">发送 / 抽取字段</button>' +
+      (st.askingField ? '<button class="btn" id="btn-intake-skip" data-act="intake-skip" data-kind="' + esc(kindName) + '">跳过此项（使用默认/示例）</button>' : '') +
+      '<button class="btn ' + (allGreen ? 'llm' : '') + '" id="btn-intake-generate" data-act="intake-generate" data-kind="' + esc(kindName) + '" style="margin-left:auto">生成提案预览（LLM + Dry-Run）</button>' +
+      '</div></div></div>' +
+      '<div class="intake-card-pane" id="intake-field-card">' +
+      '<div class="intake-card-h"><span>字段卡（Scheme 驱动 · 双向同步）</span><span class="mono small faint">kind=' + esc(kindName) + '</span></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 110px;gap:8px">' +
+      '<div><label class="small muted">对象名称（slug）</label><input id="ic-obj-name" class="inp sm mono" style="width:100%" value="' + esc(st.name || '') + '" placeholder="由标题自动生成"></div>' +
+      '<div><label class="small muted">作用域 (scope)</label><select id="ic-obj-scope" class="inp sm" style="width:100%"><option value="global"' + (st.scope === 'global' ? ' selected' : '') + '>global</option>' +
+      LIVE.refs('ServiceDesc').map(function (sd) {
+        return '<option value="' + esc(sd.name) + '"' + (st.scope === sd.name ? ' selected' : '') + '>' + esc(sd.name) + '</option>';
+      }).join('') + '</select></div></div>' +
+      '<div class="intake-field-list" id="intake-field-list">' + fieldCardRowsHtml + '</div>' +
+      '</div></div>' +
+      previewHtml +
+      '</div>';
+  }
+
+  function bindIntakeEvents(kindName) {
+    var st = intakeStateOf(kindName);
+    var root = $('#proposal-intake-root');
+    if (!root) return;
+
+    // 降级表单标题->slug 自动派生
+    var tEl = $('#pf-title'), nEl = $('#pf-name');
+    if (tEl && nEl) {
+      tEl.addEventListener('input', function () {
+        st.fields.title = tEl.value;
+        if (nEl.dataset.touched) return;
+        var s = propSlug(tEl.value);
+        if (s) { nEl.value = s; st.name = s; }
+      });
+    }
+    if (nEl) {
+      nEl.addEventListener('input', function () {
+        nEl.dataset.touched = '1';
+        st.nameTouched = true;
+        st.name = nEl.value.trim();
+      });
+    }
+
+    // 对话态字段卡名称/scope 绑定
+    var icName = $('#ic-obj-name');
+    if (icName) {
+      icName.addEventListener('input', function () {
+        st.nameTouched = true;
+        st.name = icName.value.trim();
+      });
+    }
+    var icScope = $('#ic-obj-scope');
+    if (icScope) {
+      icScope.addEventListener('change', function () {
+        st.scope = icScope.value;
+      });
+    }
+
+    // 绑定所有 .scheme-ctrl / .scheme-ctrl-cb / .sle-item 双向同步
+    root.querySelectorAll('.scheme-ctrl').forEach(function (ctrl) {
+      var fld = ctrl.dataset.schemeField;
+      if (!fld || ctrl.tagName === 'DIV') return;
+      ctrl.addEventListener('change', function () {
+        if (fld === 'acceptance' && ctrl.id === 'pf-acceptance') {
+          st.fields.acceptance = ctrl.value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+        } else {
+          st.fields[fld] = ctrl.value;
+        }
+        if (fld === 'title' && !st.nameTouched) {
+          var slug = propSlug(ctrl.value);
+          if (slug) st.name = slug;
+        }
+        if (st.fieldErrors) delete st.fieldErrors[fld];
+        if (st.mode === 'chat') {
+          syncFieldCardToTurn(kindName, fld, st.fields[fld]);
+        }
+      });
+      if (ctrl.tagName === 'INPUT' || ctrl.tagName === 'TEXTAREA') {
+        ctrl.addEventListener('input', function () {
+          if (fld === 'acceptance' && ctrl.id === 'pf-acceptance') {
+            st.fields.acceptance = ctrl.value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+          } else {
+            st.fields[fld] = ctrl.value;
+          }
+          if (fld === 'title' && !st.nameTouched) {
+            var slug = propSlug(ctrl.value);
+            if (slug) {
+              st.name = slug;
+              if ($('#ic-obj-name')) $('#ic-obj-name').value = slug;
+            }
+          }
+        });
+      }
+    });
+    root.querySelectorAll('.scheme-ctrl-cb').forEach(function (cb) {
+      var fld = cb.dataset.schemeField;
+      if (!fld) return;
+      cb.addEventListener('change', function () {
+        st.fields[fld] = cb.checked;
+        if (st.mode === 'chat') syncFieldCardToTurn(kindName, fld, cb.checked);
+      });
+    });
+    root.querySelectorAll('[data-scheme-list-item]').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var fld = inp.dataset.schemeListItem;
+        var idx = Number(inp.dataset.idx);
+        var arr = Array.isArray(st.fields[fld]) ? st.fields[fld].slice() : [];
+        arr[idx] = inp.value.trim();
+        st.fields[fld] = arr.filter(Boolean);
+        if (st.mode === 'chat') syncFieldCardToTurn(kindName, fld, st.fields[fld]);
+      });
+    });
+  }
+
+  function syncFieldCardToTurn(kindName, changedField, newVal) {
+    var st = intakeStateOf(kindName);
+    var delta = {};
+    delta[changedField] = newVal;
+    LIVE.intakeTurn({
+      sessionId: st.sessionId,
+      kind: kindName,
+      scope: st.scope,
+      name: st.name,
+      fields: delta
+    }).then(function (res) {
+      if (res && res.ok && res.data) {
+        applyIntakeTurnResponse(st, res.data);
+        if (S.route === 'proposals') render();
+      }
+    });
+  }
+
+  ACTIONS['scheme-list-add'] = function (el) {
+    var kindName = el.dataset.kind || 'Proposal';
+    var fld = el.dataset.field;
+    var inp = document.getElementById(el.dataset.input);
+    var val = inp ? inp.value.trim() : '';
+    if (!val) return;
+    var st = intakeStateOf(kindName);
+    var arr = Array.isArray(st.fields[fld]) ? st.fields[fld].slice() : [];
+    arr.push(val);
+    st.fields[fld] = arr;
+    if (st.fieldErrors) delete st.fieldErrors[fld];
+    if (inp) inp.value = '';
+    syncFieldCardToTurn(kindName, fld, arr);
+    render();
+  };
+
+  ACTIONS['scheme-list-del'] = function (el) {
+    var kindName = el.dataset.kind || 'Proposal';
+    var fld = el.dataset.field;
+    var idx = Number(el.dataset.idx);
+    var st = intakeStateOf(kindName);
+    var arr = Array.isArray(st.fields[fld]) ? st.fields[fld].slice() : [];
+    arr.splice(idx, 1);
+    st.fields[fld] = arr;
+    syncFieldCardToTurn(kindName, fld, arr);
+    render();
+  };
+
+  ACTIONS['scheme-map-add'] = function (el) {
+    var kindName = el.dataset.kind || 'Proposal';
+    var fld = el.dataset.field;
+    var kInp = document.getElementById(el.dataset.mk);
+    var vInp = document.getElementById(el.dataset.mv);
+    var mk = kInp ? kInp.value.trim() : '';
+    var mv = vInp ? vInp.value.trim() : '';
+    if (!mk) return;
+    var st = intakeStateOf(kindName);
+    var m = (st.fields[fld] && typeof st.fields[fld] === 'object' && !Array.isArray(st.fields[fld])) ? Object.assign({}, st.fields[fld]) : {};
+    m[mk] = mv;
+    st.fields[fld] = m;
+    render();
+  };
+
+  ACTIONS['scheme-map-del'] = function (el) {
+    var kindName = el.dataset.kind || 'Proposal';
+    var fld = el.dataset.field;
+    var mk = el.dataset.mkey;
+    var st = intakeStateOf(kindName);
+    var m = (st.fields[fld] && typeof st.fields[fld] === 'object' && !Array.isArray(st.fields[fld])) ? Object.assign({}, st.fields[fld]) : {};
+    delete m[mk];
+    st.fields[fld] = m;
+    render();
+  };
+
+  ACTIONS['intake-toggle-mode'] = function (el) {
+    var kindName = (el && el.dataset.kind) || 'Proposal';
+    var st = intakeStateOf(kindName);
+    st.mode = st.mode === 'chat' ? 'form' : 'chat';
+    render();
+  };
+
+  ACTIONS['intake-reset'] = function (el) {
+    var kindName = (el && el.dataset.kind) || 'Proposal';
+    delete S.intake[kindName];
+    ensureIntakeSession(kindName);
+    render();
+  };
+
+  ACTIONS['intake-send'] = function (el) {
+    var kindName = (el && el.dataset.kind) || 'Proposal';
+    var st = intakeStateOf(kindName);
+    var inp = $('#intake-chat-input');
+    var msg = inp ? inp.value.trim() : '';
+    if (!msg) { toast('请输入描述或回答', '可一段话自由描述，或点击「跳过此项」使用默认值', 'warn'); return; }
+    st.messages.push({ role: 'user', text: msg });
+    if (inp) inp.value = '';
+    st.preview = null;
+    st.fieldErrors = {};
+    LIVE.intakeTurn({
+      sessionId: st.sessionId,
+      kind: kindName,
+      scope: st.scope,
+      name: st.name,
+      message: msg,
+      fields: st.fields
+    }).then(function (res) {
+      if (res && res.ok && res.data) {
+        st.initialized = true;
+        applyIntakeTurnResponse(st, res.data);
+        if (res.data.reply) st.messages.push({ role: 'assistant', text: res.data.reply });
+      } else {
+        st.messages.push({ role: 'assistant', text: '对话录入服务暂不可用（' + String((res && res.error) || '请切换降级表单直接填表') + '）' });
+      }
+      render();
+    });
+  };
+
+  ACTIONS['intake-skip'] = function (el) {
+    var kindName = (el && el.dataset.kind) || 'Proposal';
+    var st = intakeStateOf(kindName);
+    st.messages.push({ role: 'user', text: '跳过（采用默认值）' });
+    st.preview = null;
+    LIVE.intakeTurn({
+      sessionId: st.sessionId,
+      kind: kindName,
+      scope: st.scope,
+      name: st.name,
+      skipCurrent: true,
+      fields: st.fields
+    }).then(function (res) {
+      if (res && res.ok && res.data) {
+        st.initialized = true;
+        applyIntakeTurnResponse(st, res.data);
+        if (res.data.reply) st.messages.push({ role: 'assistant', text: res.data.reply });
+      }
+      render();
+    });
+  };
+
+  ACTIONS['intake-generate'] = function (el) {
+    var kindName = (el && el.dataset.kind) || 'Proposal';
+    var st = intakeStateOf(kindName);
+    // 若列表新增框中有未点 + 的输入，自动收入列表
+    var newAccInp = document.getElementById('ic-acceptance-new');
+    if (newAccInp && newAccInp.value.trim()) {
+      var arr = Array.isArray(st.fields.acceptance) ? st.fields.acceptance.slice() : [];
+      arr.push(newAccInp.value.trim());
+      st.fields.acceptance = arr;
+      newAccInp.value = '';
+    }
+    LIVE.intakeGenerate({
+      sessionId: st.sessionId,
+      kind: kindName,
+      scope: st.scope,
+      name: st.name,
+      fields: st.fields
+    }).then(function (res) {
+      if (!res || !res.ok || !res.data) {
+        toast('生成预览失败', String((res && res.error) || '可切换至降级表单提交'), 'danger');
+        return;
+      }
+      var d = res.data;
+      if (d.sessionId) st.sessionId = d.sessionId;
+      if (d.name && !st.name) st.name = d.name;
+      st.preview = d;
+      st.fieldErrors = {};
+      if (Array.isArray(d.fieldErrors) && d.fieldErrors.length > 0) {
+        d.fieldErrors.forEach(function (fe) {
+          st.fieldErrors[fe.field] = fe;
+        });
+        var errSummary = d.fieldErrors.map(function (fe) { return '[' + fe.field + '] ' + fe.message; }).join('；');
+        st.messages.push({
+          role: 'assistant',
+          text: '提交节点 Dry-Run 准入预检未通过，已定位到具体字段：' + errSummary + '。请在对话或右侧字段卡修正后再重新生成预览。'
+        });
+      } else {
+        st.messages.push({
+          role: 'assistant',
+          text: '已生成标准 ' + kindName + ' 对象（版本 v' + (d.genVersion || 1) + '），R-PUB-1 lint、Scheme spec 准入与权限预检全部通过！请核对下方 YAML 与 Diff 后点击【确认提交（草稿→Apply）】。'
+        });
+      }
+      render();
+    });
+  };
+
+  ACTIONS['intake-back-edit'] = function (el) {
+    var kindName = (el && el.dataset.kind) || 'Proposal';
+    var st = intakeStateOf(kindName);
+    st.preview = null;
+    render();
+  };
+
+  ACTIONS['intake-confirm-apply'] = function (el) {
+    var kindName = (el && el.dataset.kind) || 'Proposal';
+    var st = intakeStateOf(kindName);
+    var pv = st.preview;
+    if (!pv || !pv.ok) {
+      toast('准入预检未通过', '请先修正标红字段并通过 Dry-Run 预检', 'warn');
+      return;
+    }
+    var targetScope = pv.scope || st.scope || 'global';
+    var targetName = pv.name || st.name || propSlug(st.fields.title) || ('prop-' + Date.now());
+    var reasonRef = pv.reasonRef || ('intake:' + (st.sessionId || 'chat') + ':v' + (pv.genVersion || 1));
+    var fm = 'console:propose:chat';
+    fetch('/core-console/drafts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        kind: kindName,
+        scope: targetScope,
+        name: targetName,
+        content: pv.yaml,
+        fieldManager: fm,
+        reasonRef: reasonRef,
+        baseResourceVersion: pv.baseResourceVersion || 0
+      })
+    }).then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+      .then(function (d) {
+        if (!d.ok) { toast('落稿失败', String((d.body && d.body.error) || 'HTTP 错误'), 'danger'); return null; }
+        return LIVE.apply({
+          kind: kindName,
+          scope: targetScope,
+          name: targetName,
+          fromDraft: true,
+          fieldManager: fm,
+          reasonRef: reasonRef
+        });
+      })
+      .then(function (res) {
+        if (!res) return;
+        if (res.ok) {
+          var pri = st.fields.priority || 'low';
+          toast('提案已确认提交（r' + res.data.rv + ' status=submitted）',
+            targetName + ' · 会话留痕 ' + reasonRef + (pri === 'high' || pri === 'critical' ? ' · 高危待人审（ApprovalNeeded 已产）' : ''),
+            'ok');
+          delete S.intake[kindName];
+          LIVE.load().then(function () {
+            if (kindName === 'Proposal') go('proposal/' + targetScope + '/' + targetName);
+            else render();
+          });
+        } else {
+          toast('Apply 失败（' + (res.status == null ? '传输层' : 'HTTP ' + res.status) + '）', String(res.error || ''), 'danger');
+        }
+      });
+  };
+
+  /* ── 屏幕 6 对象编辑器「控件 (R-UX-2)」tab：任意注册 Kind 的 scheme 驱动控件面板 + R-UX-1 对话辅助 ── */
+  function schemeTabHtml(kind, scope, name) {
+    var ws = schemeWidgetsOf(kind);
+    var flatW = flattenKindWidgets(kind, ws);
+    var ed = edOf(kind, scope, name);
+    var working = ed ? ed.working : '';
+    if (!flatW.length) {
+      return '<div class="empty" style="padding:18px"><div class="e-title">该类型 (' + esc(kind) + ') 无 spec 字段声明</div></div>';
+    }
+    var rowsHtml = flatW.map(function (w) {
+      var val = extractYamlFieldSimple(working, w.path, w.default);
+      return '<div class="intake-field-row" data-ed-scheme-field="' + esc(w.path) + '">' +
+        '<div class="ifr-top"><span class="ifr-label">' + esc(w.label) + (w.required ? ' *' : '') +
+        ' <span class="chip mute small mono">' + esc(w.widget) + '</span></span>' +
+        '<span class="mono faint small">' + esc(w.path) + '</span></div>' +
+        renderSchemeControlHtml(kind, w, val, 'ed-sc-') +
+        '</div>';
+    }).join('');
+    return '<div style="padding:6px 2px;display:flex;flex-direction:column;gap:10px" id="ed-scheme-panel">' +
+      '<div class="small faint">R-UX-2 Scheme 驱动编辑控件（字段集/类型/必填/枚举均由 <span class="mono">core/scheme.yaml</span> 实时派生，改动同步更新左侧草稿）：</div>' +
+      rowsHtml +
+      '</div>';
+  }
+
+  function extractYamlFieldSimple(yamlText, path, defVal) {
+    if (!yamlText) return defVal != null ? defVal : '';
+    var leaf = path.split('.').pop();
+    var re = new RegExp('^\\s*' + leaf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':\\s*(.+)$', 'm');
+    var m = re.exec(yamlText);
+    if (!m) return defVal != null ? defVal : '';
+    var v = m[1].replace(/#.*$/, '').trim().replace(/^['"]|['"]$/g, '');
+    return v;
+  }
+
+  function bindEditorSchemeControls(kind, scope, name) {
+    var panel = $('#ed-scheme-panel');
+    if (!panel) return;
+    panel.querySelectorAll('.scheme-ctrl, .scheme-ctrl-cb').forEach(function (ctrl) {
+      ctrl.addEventListener('change', function () {
+        var fld = ctrl.dataset.schemeField;
+        if (!fld) return;
+        var val = ctrl.type === 'checkbox' ? ctrl.checked : ctrl.value;
+        var ta = $('#doc-editor');
+        if (!ta || ta.disabled) return;
+        var leaf = fld.split('.').pop();
+        var re = new RegExp('^(\\s*' + leaf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':\\s*)([^\\n#]+)(.*)$', 'm');
+        var cur = ta.value;
+        var updated = re.test(cur)
+          ? cur.replace(re, '$1' + propScalar(String(val)) + '$3')
+          : (cur.replace(/\s*$/, '') + '\n  ' + leaf + ': ' + propScalar(String(val)) + '\n');
+        ta.value = updated;
+        ta.dispatchEvent(new Event('input'));
+      });
+    });
+  }
+
   function screenProposals(view) {
     LIVE.ensure();
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '提案' }]);
     var props = (LIVE.state.proposals || []);
     var loading = LIVE.state.status !== 'ok';
-    var form =
-      '<div class="settings-cards" style="margin-bottom:20px"><div class="set-card" style="grid-column:1/-1">' +
-      '<div class="set-card-h">提交需求提案</div><div class="set-card-sub">提交=草稿→Apply 全流程（对象入库 status=submitted）；高危=人审（ApprovalNeeded 自产→审批屏），低危可自动（部署侧分流配置 --proposal-auto-approve）。提案内容过 R-PUB：禁真实 IP/凭据/内网信息，secret 只引用式。</div>' +
-      '<div class="prop-form" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:8px 16px 16px">' +
-      '<div><label class="small muted">名称（slug）</label><input id="pf-name" class="inp mono" style="width:100%" placeholder="add-dark-mode" autocomplete="off"></div>' +
-      '<div><label class="small muted">标题 *</label><input id="pf-title" class="inp" style="width:100%" placeholder="一句话说清做什么" autocomplete="off"></div>' +
-      '<div style="grid-column:1/-1"><label class="small muted">目标 *</label><textarea id="pf-summary" class="inp" rows="2" style="width:100%" placeholder="做什么/为什么（批准后随派单载荷交给执行体）"></textarea></div>' +
-      '<div style="grid-column:1/-1"><label class="small muted">验收标准 *（每行一条）</label><textarea id="pf-acceptance" class="inp" rows="3" style="width:100%" placeholder="可验证条目（Goal.acceptance 同词汇）"></textarea></div>' +
-      '<div style="grid-column:1/-1"><label class="small muted">影响面</label><input id="pf-impact" class="inp" style="width:100%" placeholder="涉及系统/对象/风险说明（禁真实 IP/凭据——R-PUB）" autocomplete="off"></div>' +
-      '<div><label class="small muted">优先级</label><select id="pf-priority" class="inp" style="width:100%">' +
-      PROP_PRIORITIES.map(function (p) { return '<option value="' + p.id + '">' + esc(p.label) + '</option>'; }).join('') + '</select></div>' +
-      '<div><label class="small muted">产物落点</label><select id="pf-landing" class="inp" style="width:100%">' +
-      '<option value="doc">doc（docsRoot 对象草稿）</option><option value="task">task（部署侧任务文件）</option></select></div>' +
-      '<div><label class="small muted">提出人</label><input id="pf-proposer" class="inp" style="width:100%" value="console-operator" autocomplete="off"></div>' +
-      '<div style="align-self:end"><button class="btn primary" data-act="prop-submit">提交提案（草稿→Apply）</button></div>' +
-      '</div></div></div>';
+    if (!loading) ensureIntakeSession('Proposal');
+    var intakeCard = renderProposalIntakeCard('Proposal');
     var rows = loading ? liveSkeletonRows(3, 0) : (props.length ?
       '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>标题</th><th>状态</th><th>优先级</th><th>提出人</th><th>验收</th><th>rv</th><th>落点</th></tr></thead><tbody>' +
       props.map(function (p) {
@@ -4297,16 +5188,10 @@
       : '<div class="empty" style="padding:6vh"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">提案库为空（提交第一条需求即入册）</div></div>');
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>需求提案</h1><span class="chip ' + (props.length ? 'kind' : 'mute') + '">' + props.length + ' 条在册</span></div>' +
-      '<div class="dh-sub">需求先成为一等对象再成为工作（kind: Proposal）：标题/目标/验收/影响面/优先级/提出人入库 → 审批分流 → 批准即 apply-workflow 派单受理（受理≠拉起）→ 产物落盘回写 landed。</div></div>' +
+      '<div class="dh-sub">需求先成为一等对象再成为工作（kind: Proposal）：默认对话式录入（R-UX-1）+ Scheme 驱动控件（R-UX-2）→ 提交节点生成格式与 Dry-Run 准入 → 确认后自动补全入库 → 审批分流（高危=人审，低危可自动）→ 批准即 apply-workflow 派单受理（受理≠拉起）。</div></div>' +
       '<div class="dh-actions"><button class="btn" data-act="go" data-go="approvals">审批屏 →</button></div></div>' +
-      form + '<div class="sec-title">提案库</div>' + rows + '</div>';
-    // 标题→slug 预填（名称留空时提交自动生成；手填优先）。
-    var tEl = $('#pf-title'), nEl = $('#pf-name');
-    if (tEl && nEl) tEl.addEventListener('input', function () {
-      if (nEl.dataset.touched) return;
-      var s = propSlug(tEl.value); if (s) nEl.value = s;
-    });
-    if (nEl) nEl.addEventListener('input', function () { nEl.dataset.touched = '1'; });
+      intakeCard + '<div class="sec-title">提案库</div>' + rows + '</div>';
+    bindIntakeEvents('Proposal');
   }
   ACTIONS['prop-submit'] = function () {
     var f = {

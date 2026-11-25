@@ -9,7 +9,8 @@ import assert from 'node:assert/strict'
 import {
   CONSOLE_API_PREFIX, CONSOLE_APPLY_PATH, DEFAULT_APPLY_SUBJECT,
   createApplyHandler, createConsoleApiHandler, mountConsoleRoutes,
-  CONSOLE_COMM_PATH, CONSOLE_DESIGN_DOCS_PATH, createCommHandler, createCommState, createDesignDocsHandler,
+  CONSOLE_COMM_PATH, CONSOLE_DESIGN_DOCS_PATH, CONSOLE_INTAKE_PATH,
+  createCommHandler, createCommState, createDesignDocsHandler, createIntakeHandler,
   type FetchLike, type HttpReqLike, type HttpResLike,
 } from '../src/index.ts'
 import { makeErrorReply } from '../src/agent-comm.ts'
@@ -104,7 +105,8 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_APPLY_PATH],
     ['prefix', CONSOLE_DRAFTS_PATH],
     ['prefix', CONSOLE_DESIGN_DOCS_PATH],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）成套注册')
+    ['prefix', CONSOLE_INTAKE_PATH],
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）成套注册')
   assert.equal(disposed, 0)
 
   // 依赖缺席（headless）：回调体不注册、不抛错
@@ -349,4 +351,40 @@ test('设计文档路由：栅栏缺席 fail-closed 拒全部；cored 未就绪 
     reject: () => undefined })(
     { method: 'POST', url: CONSOLE_DESIGN_DOCS_PATH, headers: {}, body: '{}' }, res2)
   assert.equal(res2.statusCode, 503)
+})
+
+// ─────── v0.53 能力 D：/core-console/intake 对话式录入与准入预检路由（cored-bridge.md §2.5）───────
+
+test('对话录入路由：/turn 与 /generate 主体宿主注入剥除客户端声明；方法分立 405；栅栏缺席 fail-closed 401', async () => {
+  const f1 = okFetch({ sessionId: 's1', ready: false, askingField: 'title' })
+  const res1 = makeRes()
+  await createIntakeHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: f1, subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'POST', url: CONSOLE_INTAKE_PATH + '/turn', headers: {}, body: JSON.stringify({ kind: 'Proposal', subject: { user: 'spoofed' } }) }, res1)
+  assert.equal(res1.statusCode, 200)
+  const sent1 = JSON.parse(String((f1 as any).lastBody))
+  assert.equal(sent1.subject.user, DEFAULT_APPLY_SUBJECT.user, '主体由宿主注入（剥除客户端声明）')
+  assert.equal(f1.calls[0], 'http://127.0.0.1:9/v1/intake/turn')
+
+  const f2 = okFetch({ ok: true, sessionId: 's1', genVersion: 1 })
+  const res2 = makeRes()
+  await createIntakeHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: f2, subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'POST', url: CONSOLE_INTAKE_PATH + '/generate', headers: {}, body: JSON.stringify({ kind: 'Proposal', fields: {} }) }, res2)
+  assert.equal(res2.statusCode, 200)
+  assert.equal(f2.calls[0], 'http://127.0.0.1:9/v1/intake/generate')
+
+  // GET → 405；未知子路径 → 404；栅栏缺席 → 401
+  const res3 = makeRes()
+  await createIntakeHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: okFetch({}), subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'GET', url: CONSOLE_INTAKE_PATH + '/turn', headers: {} }, res3)
+  assert.equal(res3.statusCode, 405)
+
+  const res4 = makeRes()
+  await createIntakeHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: okFetch({}), subject: DEFAULT_APPLY_SUBJECT, reject: () => undefined })(
+    { method: 'POST', url: CONSOLE_INTAKE_PATH + '/unknown', headers: {}, body: '{}' }, res4)
+  assert.equal(res4.statusCode, 404)
+
+  const res5 = makeRes()
+  await createIntakeHandler({ bridge: { url: 'http://127.0.0.1:9/' }, fetchImpl: okFetch({}), subject: DEFAULT_APPLY_SUBJECT })(
+    { method: 'POST', url: CONSOLE_INTAKE_PATH + '/turn', headers: {}, body: '{}' }, res5)
+  assert.equal(res5.statusCode, 401)
 })
