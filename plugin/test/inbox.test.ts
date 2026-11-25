@@ -113,10 +113,10 @@ test('E6 积压族扩：approvalBacklog 三源单一真相函数在册+聚合面
   assert.ok(appSrc.includes("d.approval && d.approval.state === 'pending'"), '派单批准投影 pending 源消费（v0.56/0.57 dispatches 读面——approval 键所在面）')
   assert.ok(appSrc.includes("st.dispatches || []"), '派单受理投影行集消费在册（live 层 dispatches 快照）')
   assert.ok(appSrc.includes("p.status === 'submitted'"), '提案 submitted 源消费（v0.51 读面）')
-  assert.ok(appSrc.includes('approvalBacklog().length + submitted + dispatchPending') || appSrc.includes('total: pendingApprovals().length + submitted + dispatchPending'), '族=三源和（归档∪提案∪派单）单一真相')
+  assert.ok(/total: drafts \+ archive \+ submitted \+ dispatchPending/.test(appSrc), '族=源和（草稿∪归档∪提案∪派单——loop-63 分化为四源）单一真相')
   assert.ok(appSrc.includes('back.total'), '事件流聚合面板积压行消费族总数')
-  assert.ok(appSrc.includes('族=ApprovalNeeded 归档'), '族构成词形标注在册（三源分解可见）')
-  assert.ok(appSrc.includes('操作面落点：审批屏/提案详情/wf 配置'), '操作面落点词形在册')
+  assert.ok(appSrc.includes('族=草稿待审（DocReview）'), '族构成词形标注在册（四源分解可见——loop-63 分化）')
+  assert.ok(appSrc.includes('操作面落点：审批屏∪编辑器/提案详情/wf 配置'), '操作面落点词形在册（草稿双落点——loop-63）')
 })
 
 test('E6 链点顺延：收件箱 ApprovalNeeded 族内落点分化（dispatch 行→wf 配置 tab 批准动作面；归档行→审批屏/editor 深链）', () => {
@@ -124,4 +124,46 @@ test('E6 链点顺延：收件箱 ApprovalNeeded 族内落点分化（dispatch �
   assert.ok(appSrc.includes("data-cc-inbox-tab"), 'tab 预置判据锚在册（落地即配置 tab=动作行可见）')
   assert.ok(appSrc.includes("S.wfTab[decodeURIComponent(segs[1])] = tab"), 'ACTIONS.go tab 预置消费在册（落地即配置 tab）')
   assert.ok(/it\.class === 'ApprovalNeeded' && \(it\.kind === 'dispatch' \|\| it\.kind === 'dispatch-legacy'\)/.test(appSrc), '族内分化逻辑在 inboxOpOf 单点（零散用）')
+})
+
+// ── E6 族源分化核验收口（console-adoption.md §1.35 余量注记顺延——loop-63 队列 1） ──
+// 判据：积压族=四源单一真相（草稿待审∪ApprovalNeeded 归档∪submitted 提案∪派单 pending）
+// 分解词形在册；聚合面板/backlogCount 顶部常驻入口（badge/updateCounters/palette/Welcome
+// 卡）同一函数消费无双源；DocReview 收件箱行深链=编辑器屏（cored link 原值）∪审批屏 diff
+// 双落点；审批屏 header 注记「已批 N 稿不出现」；四点族源守卫测试锚。
+
+test('E6 族源分化核验：approvalBacklog 四源分解单一真相+族构成词形四源标注（回潮即红）', () => {
+  const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
+  assert.ok(appSrc.includes('function approvalBacklog'), '积压族单一真相函数在册（loop-62 既有）')
+  assert.ok(/total: drafts \+ archive \+ submitted \+ dispatchPending/.test(appSrc), '族=四源和单一真相（草稿∪归档∪提案∪派单——loop-63 分化）')
+  assert.ok(appSrc.includes("p.status === 'submitted'"), '提案 submitted 源消费（v0.51 读面）')
+  assert.ok(appSrc.includes("d.approval && d.approval.state === 'pending'"), '派单批准投影 pending 源消费（v0.56/0.57 dispatches 读面）')
+  assert.ok(/x\.kind === 'event'/.test(appSrc), '归档子源分化消费在册（drafts∪归档两子源分解——pendingApprovals 不再整集入族）')
+  assert.ok(appSrc.includes('族=草稿待审（DocReview）'), '聚合面板族构成词形=四源分解标注（回潮即红）')
+  assert.ok(appSrc.includes('审批屏∪编辑器'), '族操作面落点词形（草稿双落点）在册')
+})
+
+test('E6 族源分化核验：backlogCount 单点——顶部常驻入口/聚合面板同一族总数（无双源漂移）', () => {
+  const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
+  assert.ok(appSrc.includes('function backlogCount'), '族总数单点函数在册（loop-63）')
+  assert.ok(appSrc.includes('function backlogCount() { return approvalBacklog().total; }'), '单点=approvalBacklog().total 直读（零重算）')
+  assert.ok(appSrc.includes('var pend = backlogCount()'), 'updateCounters（badge 常驻入口）与 Welcome 卡同一单点消费')
+  assert.ok(appSrc.includes("backlogCount() + ' 条积压待办"), 'palette 积压行同一单点消费')
+  assert.ok(appSrc.includes('四源积压'), 'Welcome「待审批」卡 note 词形=四源（旧「需要你处理」词形摘除）')
+})
+
+test('E6 族源分化核验：DocReview 收件箱行深链=编辑器屏∪审批屏双落点+审批屏「已批 N 稿不出现」注记', () => {
+  const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
+  assert.ok(appSrc.includes("审批屏（草稿行深链=编辑器屏双落点）"), 'DocReview 行 tag 词形=双落点（回潮即红）')
+  assert.ok(!new RegExp('function inboxOpOf[\\s\\S]{0,1200}link\\.replace').test(appSrc), 'cored link 原值不改写（红线 2 无双源——inboxOpOf 内零 link 改写）')
+  assert.ok(appSrc.includes('已批 N 稿不出现'), '审批屏 header「已批 N 稿不出现」注记在册')
+  assert.ok(appSrc.includes('DocReview→编辑器屏（apply dock，cored link 原值）∪审批屏 diff'), '收件箱屏 dh-sub DocReview 落点词形在册')
+})
+
+test('E6 族源分化核验：四点族源守卫（drafts/proposals/dispatches/events——旧代读面缺席=该源归零诚实不冒充）', () => {
+  const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
+  assert.ok(appSrc.includes('st.drafts || []'), '草稿子源缺席=零（旧代读面诚实词形）')
+  assert.ok(appSrc.includes('st.proposals || []'), '提案子源缺席=零（v0.51 前旧代诚实词形）')
+  assert.ok(appSrc.includes('st.dispatches || []'), '派单子源缺席=零（v0.56 前旧代诚实词形）')
+  assert.ok(appSrc.includes('pendingApprovals()'), '归档子源=approvalNeededObjects 现读（读面缺席窗=空集不冒充）')
 })

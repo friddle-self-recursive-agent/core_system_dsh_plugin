@@ -2303,11 +2303,11 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   }
   function pendingApprovals() { return approvalNeededObjects(); }
   /* E6 审批积压族扩（console-adoption.md §1.13 余量注记收口——loop-62；§1.25 ApprovalNeeded
-   * 类同口径顺延）：族=ApprovalNeeded 归档行 ∪ status=submitted 提案（v0.51 读面）∪
-   * 派单批准投影 pending 行（v0.56/0.57 读面）——三源各带操作面落点（审批屏/提案详情/
-   * wf 配置 tab）。零 Go 改动零新写路径（既有读面族语义扩展）；countDownLatch 口径=
-   * 「待判定动作数」非族员数（归档行可能已有稿=同窗可批——聚合面板计数与详情页解析
-   * 同一函数单一真相，无双源）。 */
+   * 类同口径顺延）+族源分化核验（§1.35 余量注记核验收口——loop-63）：族=草稿待审（DocReview
+   * 收件箱类同源=st.drafts）∪ ApprovalNeeded 归档行 ∪ status=submitted 提案（v0.51 读面）∪
+   * 派单批准投影 pending 行（v0.56/0.57 读面）——四源各带操作面落点（审批屏∪编辑器/提案详情/
+   * wf 配置 tab）。零 Go 改动零新写路径（既有读面族语义扩展）；聚合面板计数与详情页解析
+   * 同一函数单一真相，无双源。 */
   function approvalBacklog() {
     var st = LIVE.state;
     // 派单批准投影行集=派单受理投影（/v1/agents/dispatches——v0.56/0.57 approval 键所在面；
@@ -2315,8 +2315,14 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     // 在读面缺席窗=族第三源归零，不冒充存量）。
     var dispatchPending = (st.dispatches || []).filter(function (d) { return d.approval && d.approval.state === 'pending'; }).length;
     var submitted = (st.proposals || []).filter(function (p) { return p.status === 'submitted'; }).length;
-    return { total: pendingApprovals().length + submitted + dispatchPending, archive: pendingApprovals().length, submitted: submitted, dispatchPending: dispatchPending };
+    var drafts = (st.drafts || []).length; // 草稿待审子源（DocReview 收件箱类=cored 同源读面投影）
+    var archive = pendingApprovals().filter(function (x) { return x.kind === 'event'; }).length; // ApprovalNeeded 归档子源（drafts∪归档两子源已分化——§1.13 待审区口径）
+    return { total: drafts + archive + submitted + dispatchPending, drafts: drafts, archive: archive, submitted: submitted, dispatchPending: dispatchPending };
   }
+  /* 审批积压族总数单点（loop-63——顶部常驻入口 badge/updateCounters/palette/Welcome 卡
+   * 同一函数消费：原先只数 pendingApprovals()（草稿∪归档两子源）=提案与派单两源计数
+   * 缺席，与聚合面板族总数双源漂移——loop-63 实现拓扑③收口）。 */
+  function backlogCount() { return approvalBacklog().total; }
   /* 通知中心收件箱计数（v0.56 R-10——§1.25 四类待办汇总）：数据源=/v1/inbox 投影（读面机械
    * 自分类）；读面缺席（旧代 cored/超时）=回落草稿+ApprovalNeeded 归档现读（同一判定词形——
    * console 零自建持久状态，计数口径不翻倍：inbox 面在册即唯一口径）。 */
@@ -2588,7 +2594,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     add('动作', '新建 Goal', 'global scope 草稿', 'act:newgoal', 'i-plus');
     var rootAgent = liveChatAgents()[0] || 'core-headless'; // 文档面在册 agent（缺省=builtin root 名）
     add('动作', '与 root（' + rootAgent + '）对话', '#/chat/' + rootAgent, 'chat/' + rootAgent, 'i-chat');
-    add('动作', '打开审批页', pendingApprovals().length + ' 条待审', 'approvals', 'i-check');
+    add('动作', '打开审批页', backlogCount() + ' 条积压待办（族总数四源）', 'approvals', 'i-check');
     add('动作', '待你处理收件箱', inboxCount() + ' 条四类待办汇总', 'inbox', 'i-check');
     add('动作', '打开事件流', (liveHealth().events24) + ' events/24h（归档窗）', 'events', 'i-pulse');
     // 导航
@@ -2819,7 +2825,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     return false;
   }
   function updateCounters() {
-    var pend = pendingApprovals().length;
+    var pend = backlogCount(); // 族总数四源（含提案/派单——loop-63 单点 backlogCount 既往只数草稿∪归档两子源）
     __CC.approvalCount = pend;
     if (typeof window !== 'undefined' && window.dispatchEvent) window.dispatchEvent(new Event('cc-approvals'));
     var ec = $('#ev-count');
@@ -2984,7 +2990,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var st = LIVE.state;
     setCrumbs([{ label: '总览' }]);
     var h = liveHealth();
-    var pend = pendingApprovals().length;
+    var pend = backlogCount(); // 族总数四源（loop-63 单点——与聚合面板同源无双源漂移）
     var metric = function (key, label, value, note, cls, action) {
       return '<button type="button" class="cc-metric ' + (cls || '') + '" data-cc-metric="' + key + '"' +
         (action ? ' data-act="go" data-go="' + action + '"' : '') + '>' +
@@ -2993,7 +2999,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var metrics = '<div class="cc-metrics" aria-label="顶部指标">' +
       metric('insync', 'InSync 系统数', fmtNum(h.insyncSystems) + '<span class="cm-unit"> / ' + fmtNum(h.systems.length) + '</span>',
         h.instances.length ? '实例相位 ' + fmtNum(h.insyncCount) + '/' + fmtNum(h.instances.length) + ' 同步' : '暂无实例，待接入', h.instances.length ? 'success' : 'neutral', 'tree') +
-      metric('approvals', '待审批', fmtNum(pend), pend ? '需要你处理，点击进入审批' : '当前没有待审批事项', pend ? 'danger' : 'neutral', 'approvals') +
+      metric('approvals', '待审批', fmtNum(pend), pend ? '四源积压（草稿/归档/提案/派单），点击进入审批' : '四源积压均无挂起项（空态显式）', pend ? 'danger' : 'neutral', 'approvals') +
       metric('inbox', '待你处理', fmtNum(inboxCount()), inboxCount() ? '四类待办汇总，点击进入收件箱' : '四类待办均无挂起项（空态显式）', inboxCount() ? 'warn' : 'neutral', 'inbox') +
       metric('failure', '24h 失败率', h.failedRate == null ? '—' : fmtPct(h.failedRate),
         h.started ? '失败 ' + fmtNum(h.failed) + ' / 运行 ' + fmtNum(h.started) : '暂无 run，等待触发', h.failedRate == null ? 'neutral' : (h.failedRate > 0 ? 'warn' : 'success'), 'workflows') +
@@ -4590,8 +4596,18 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       }
     }
     if (!ref) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
-      return;
+      // 在册稿×面缺席（loop-63 族源分化核验收口——acceptance 纪律「缺陷即修」）：DocReview
+      // 行深链=编辑器屏（inboxDocLinkOf #/doc/:kind/:scope/:name 原值），新对象首稿（草稿先于
+      // 文档面落库——发现路径全走 DocReview 类）=「对象不在册」死面，草稿行操作面缺席。
+      // 收口=在册稿窗降级草稿基座编辑器（draft-only 工作副本——hydrateEditor face 404 信封
+      // 配套；Apply=创建通路语义，apply 闸门既有面判定不变）；非稿缺席=既有不在册词形零
+      // 变更（URL 手输名不冒充创建窗）。name-only 解析路由不入此窗（草稿键歧义不发明解析）。
+      var dRow = (kind && scope) ? draftRowOf(kind, scope, name) : null;
+      if (!dRow) {
+        view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
+        return;
+      }
+      ref = { kind: kind, scope: scope, name: name };
     }
     renderEditorShell(view, ref.kind, ref.scope, ref.name);
     hydrateEditor(ref.kind, ref.scope, ref.name);
@@ -4632,6 +4648,17 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var row = draftRowOf(kind, scope, name); // 草稿存在性=清单判别（无稿零请求——404 fetch 会进浏览器 console error，违 L36-06）
     var draftP = row ? LIVE.get('v1/drafts/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) +
       (scope ? '?scope=' + encodeURIComponent(scope) : '')).catch(function () { return null; }) : Promise.resolve(null);
+    // 在册稿×面缺席死面缺口（loop-63 族源分化核验收口——acceptance 纪律「缺陷即修」）：
+    // DocReview 行深链=编辑器屏，草稿先于文档面落库（新对象首稿=发现路径全走 DocReview 类）
+    // 时 face GET 404→Promise 链 reject→编辑器死面（陈旧 catch 词形）——探针活体实证。
+    // 收口=不拒单：face 缺席在册稿窗=降级基座（draft-only 工作副本）——E4 语义零变更
+    // （draft-only 稿 Apply 落库=创建通路，apply 闸门既有面判定不变）；非稿缺席=既有 404
+    // 词形零变更（URL 手输名不冒充创建窗——409/400 兜底未变）。face 缺席词形入信封
+    // {status,content:''}（读面键语义沿用——404 词形=content 缺席降级基座）。
+    if (row) faceP = faceP.catch(function (e) {
+      if (e && e.status === 404) return { status: 404, content: '' };
+      throw e;
+    });
     Promise.all([faceP, draftP]).then(function (rs) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return; // 路由已变=丢弃（不跨屏串数据）
       var face = rs[0], dr = rs[1];
@@ -4649,7 +4676,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       S.ED[key] = {
         kind: kind, scope: scope, name: name,
         working: working, base: base,
-        faceRV: Number(face.resourceVersion),
+        faceAbsent: !!(face && face.status === 404), // 在册稿×面缺席=草稿基座窗（Apply=创建通路语义）
+        faceRV: (face && face.status === 404) ? 0 : Number(face.resourceVersion),
         baseRV: dr ? Number(dr.baseResourceVersion) : Number(face.resourceVersion), // 乐观锁期望值（不静默重基——409 走稿保留语义）
         draftFM: dr ? String(dr.fieldManager || '') : '',
         reasonRef: dr ? String(dr.reasonRef || '') : '',
@@ -4677,7 +4705,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     ta.value = ed.working;
     ta.disabled = false;
     var rev = $('#ed-rev-chip');
-    if (rev) rev.textContent = 'r' + ed.faceRV + '（乐观锁基准）';
+    if (rev) rev.textContent = ed.faceAbsent ? '面缺席（在册稿基座——Apply=创建通路）' : 'r' + ed.faceRV + '（乐观锁基准）';
   }
 
   // —— 徽章/dock 的原位更新（编辑中不整屏重渲染——textarea 焦点保真）——
@@ -6265,7 +6293,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       sidePanel = '<div style="display:grid;gap:12px;align-self:start">' +
         '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span><span class="h-sub">归档窗内实数</span></div><div class="card-b" style="display:grid;gap:10px">' +
         '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (back.total ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + back.total + '</span></span>' +
-        '<span class="small faint">族=ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作面落点：审批屏/提案详情/wf 配置）</span></div>' +
+        '<span class="small faint">族=草稿待审（DocReview）' + back.drafts + ' ∪ ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作面落点：审批屏∪编辑器/提案详情/wf 配置）</span></div>' +
         '<div class="kv"><span class="k">死信率</span><span class="v mono">' + dead + '%</span></div>' +
         '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">n/a</span><span class="small faint">run 终态事件未落归档（declared 余量，不冒充）</span></div>' +
         '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据面余量</span></div>' +
@@ -6382,7 +6410,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>审批</h1><span class="chip ' + (draftItems.length || evItems.length ? 'warn' : 'ok') + '">' +
       (draftItems.length + evItems.length) + ' 条待审</span></div>' +
-      '<div class="dh-sub">待审区=草稿缓存（代改代审的家）∪ ApprovalNeeded 归档行。批准/驳回均=人点（LLM 只提案）；diff=稿 vs 文档面现值现读。</div></div>' +
+      '<div class="dh-sub">待审区=草稿缓存（DocReview 类同源——代改代审的家，apply.md §6）∪ ApprovalNeeded 归档行（已批 N 稿不出现）。批准/驳回均=人点（LLM 只提案）；diff=稿 vs 文档面现值现读；草稿行深链=编辑器屏（apply dock 在册）∪ 本屏 diff 卡双落点。</div></div>' +
       '<div class="dh-actions"><button class="btn ok" data-act="ap-batch"' + (draftItems.length ? '' : ' disabled') + '>批量批准（' + draftItems.length + ' 稿）</button></div></div>' +
       draftItems.map(approvalItemHtml).join('') + evItems.map(approvalItemHtml).join('') +
       '<div id="ap-ledger" style="margin-top:24px">' + liveSkeletonRows(2, 0) + '</div>' +
@@ -7853,7 +7881,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     NeedsHuman: { label: '需人接管', cls: 'danger', why: 'NeedsHuman/Escalate——需求决策/文档定稿/权限提升/外部动作（acceptance.md §9 接管判定）' },
     ApprovalNeeded: { label: '待批准', cls: 'warn', why: '审批提升与人注意终态族（ApprovalNeeded 归档）+派单 ask 批准投影挂起（批准=Apply 判定）' },
     Proposal: { label: '提案待批', cls: 'acc', why: '需求提案 status=submitted——批准/驳回=Apply（console:approve|console:reject）' },
-    DocReview: { label: '文档待审', cls: 'mute', why: '草稿缓存（代改代审的家，apply.md §6）——diff 预览在审批屏' }
+    DocReview: { label: '文档待审', cls: 'mute', why: '草稿缓存（代改代审的家，apply.md §6）——行深链=编辑器屏（apply dock 在册）∪审批屏 diff 卡双落点' }
   };
   /* 类内 op 深链落点（v0.57 R-10 续段——console-adoption.md §1.32 收口：四类各自的操作面
    * 落点活体判定——L58-UI-10 类级跳过词形废除）。落点只按 class 兜底派生（link 键在册=
@@ -7877,7 +7905,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     // link 缺席=按 class 兜底（读面深链缺席的诚实词形——不发明对象键）。
     if (it.class === 'NeedsHuman') return { go: 'events', tag: '事件流' };
     if (it.class === 'Proposal') return { go: 'proposals', tag: '提案库' };
-    if (it.class === 'DocReview') return { go: 'approvals', tag: '审批屏' };
+    // DocReview 行（草稿缓存——loop-63 族源分化核验）：cored link 原值=#/doc/… 或 #/designdoc/…
+    // （inboxDocLinkOf——编辑器屏/设计文档工作台，apply dock 在册=真操作面），核验判据=not
+    // '#/approvals'；仅 link 缺席（旧代 cored 词形）兜底审批屏（diff 卡第二落点）。
+    if (it.class === 'DocReview') return { go: 'approvals', tag: '审批屏（草稿行深链=编辑器屏双落点）' };
     return { go: 'inbox', tag: '' };
   }
   function inboxItemHtml(it) {
@@ -7934,7 +7965,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     view.innerHTML = '<div class="view-inner" data-cc-screen="inbox">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>待你处理</h1><span class="chip ' + ((box && box.count) ? 'warn' : 'ok') + '" data-cc-inbox-count="true">' +
       fmtNum((box && box.count) || 0) + ' 条待办</span></div>' +
-      '<div class="dh-sub">四类汇总+计数+深链（console-adoption.md §1.25/§1.32——类内 op 落点：NeedsHuman→事件详情/Escalate→wf 锚、ApprovalNeeded→编辑器∪审批屏∪wf 派单行、Proposal→提案详情批准/驳回、DocReview→审批屏 diff∪编辑器；操作完成=事件回链，下一次装载反映）：接管路径=①提交需求（提案）②编辑文档（设计文档/对象编辑器）③审批（ApprovalNeeded）；未配置通知通道=本页兜底展示（notification.md 规则 6）。</div></div>' +
+      '<div class="dh-sub">四类汇总+计数+深链（console-adoption.md §1.25/§1.32——类内 op 落点：NeedsHuman→事件详情/Escalate→wf 锚、ApprovalNeeded→编辑器∪审批屏∪wf 派单行、Proposal→提案详情批准/驳回、DocReview→编辑器屏（apply dock，cored link 原值）∪审批屏 diff；操作完成=事件回链，下一次装载反映）：接管路径=①提交需求（提案）②编辑文档（设计文档/对象编辑器）③审批（ApprovalNeeded）；未配置通知通道=本页兜底展示（notification.md 规则 6）。</div></div>' +
       '<div class="dh-actions"><button type="button" class="btn secondary" data-act="go" data-go="proposals">提交需求</button></div></div>' +
       '<div class="fbar">' + chips + '</div>' +
       '<div class="card"><div class="card-b cc-inbox-list" data-cc-inbox-list="true">' + listHtml + '</div></div>' + degraded +
