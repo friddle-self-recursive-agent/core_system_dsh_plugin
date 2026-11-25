@@ -1729,6 +1729,38 @@
     }
     return involved ? '<span class="chip mute small mono">' + esc(involved) + '</span>' : '';
   }
+  // 生效链判别 chip（v0.55 R-9——console-adoption.md §1.29 构建生效链判别面）：骨架 rv（产物
+  // digest）↔ 最近绑定 apply 行 rv 对账（chain=consistent|divergent|absent）。consistent=ok mute
+  // chip；divergent=warn chip（人写演进后未再物化——实现侧 diff 基线=lastBindRv）；absent=
+  // faint；面缺席=—。判据=「构建产物 digest ↔ 生效对象 rv ↔ execution 绑定态」三者联动一致
+  // 或缺口可见（unbound/skeleton=true 即缺口词形）。
+  function wfReconcileChip(rc) {
+    if (!rc || !rc.chain) return '<span class="faint small" title="生效链判别面缺席（旧代/apply_log 缺——不冒充）">—</span>';
+    var head = 'digest r' + (rc.skeletonRv || 0) + ' ↔ bind r' + (rc.lastBindRv != null ? rc.lastBindRv : 0);
+    if (rc.chain === 'consistent') {
+      return '<span class="chip mute small mono" title="生效链一致（' + head +
+        '；apply_log=' + esc(rc.lastBindApply || '—') + ' ' + esc(String(rc.lastBindAt || '').replace('T', ' ').slice(0, 19)) + '）">链·r' + (rc.skeletonRv || 0) + '</span>';
+    }
+    if (rc.chain === 'divergent') {
+      return '<span class="chip warn small mono" title="生效链分裂（' + head + '——对象在绑定器之外演进过：' +
+        '骨架翻转为实现后物化器零盲写，实现侧 diff 基线=绑定行 rv）">链·分裂</span>';
+    }
+    return '<span class="faint small mono" title="' + head + '——绑定对象缺席（unbound 同窗缺口）">链·absent</span>';
+  }
+  // 生效链详情行（wf 详情配置 tab——骨架/实现态下现读 reconcile 投影：digest、绑定行、链态、
+  // history 深链三件联动可查；unbound 不渲染=execution warn chip 已承载缺口词形）。
+  function wfReconcileLine(row) {
+    var rc = row.reconcile;
+    if (!rc || !rc.chain) return '';
+    var ex = row.execution || {};
+    var hist = row.executionHistory || '';
+    var histHtml = hist ? '<span class="lk small" data-act="go" data-go="doc/ConnectorOps/' +
+      encodeURIComponent(ex.connectorScope || '') + '/' + encodeURIComponent(ex.connector || '') + '">应用史 →</span>' : '';
+    var chainWord = rc.chain === 'consistent' ? '一致' : (rc.chain === 'divergent' ? '分裂（对象在绑定器之外演进——实现侧 diff 基线=r' + (rc.lastBindRv || 0) + '）' : 'absent');
+    return '<div class="small faint" style="padding:4px 0 0">生效链：骨架 digest <b class="mono">r' + (rc.skeletonRv || 0) + '</b> ↔ 最近绑定 apply <b class="mono">r' +
+      (rc.lastBindRv != null ? rc.lastBindRv : 0) + '</b>（' + esc(rc.lastBindApply || '—') + ' · ' +
+      esc(String(rc.lastBindAt || '').replace('T', ' ').slice(0, 19)) + '）→ <b>' + esc(chainWord) + '</b> ' + histHtml + '</div>';
+  }
   function wfToggleTarget(row) {
     var eff = null, body = null;
     (row.objects || []).forEach(function (o) {
@@ -1816,15 +1848,16 @@
           '<td>' + scopeCell + '</td>' +
           '<td>' + switchCell + '</td>' +
           '<td>' + wfExecChip(w.execution) + '</td>' +
+          '<td>' + wfReconcileChip(w.reconcile) + '</td>' +
           '<td>' + (w.latest ? runStatusChip(w.latest.status, w.latest.phase) : '<span class="faint small">无现势 run</span>') + '</td>' +
           '<td class="mono num">' + w.runsTotal + ' <span class="faint">/ ' + w.runs24h + 'h</span></td>' +
           '<td><span class="faint small" title="成功率不投影：run 终态事件未落归档（declared 余量）——n/a 不冒充">n/a</span></td>' +
           '<td class="mono faint">' + (w.latest ? fmtAgo(new Date(w.latest.startedAt)) : '—') + '</td>' +
           '<td style="max-width:280px">' + docsChips + '</td></tr>';
       }).join('');
-      inner = '<div class="card"><table class="tbl"><thead><tr><th>名称</th><th>生效 scope</th><th>启用 (=Apply)</th><th>执行绑定</th><th>当前相位</th>' +
+      inner = '<div class="card"><table class="tbl"><thead><tr><th>名称</th><th>生效 scope</th><th>启用 (=Apply)</th><th>执行绑定</th><th>生效链</th><th>当前相位</th>' +
         '<th>运行次数 总/24h</th><th>成功率</th><th>最近运行</th><th>涉及文档</th></tr></thead><tbody>' + (rowsHtml || '') + '</tbody></table></div>' +
-        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）；执行绑定=同名/spec.connector 覆写 ConnectorOps（apply 即实现骨架物化——unbound=缺口可见）</div>';
+        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）；执行绑定=同名/spec.connector 覆写 ConnectorOps（apply 即实现骨架物化——unbound=缺口可见）；生效链=骨架 digest ↔ apply_log 绑定行 rv 对账（R-9 判别面——分裂=人写演进可见）</div>';
     }
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>Workflows</h1>' +
@@ -1963,19 +1996,57 @@
       '</div>';
   }
 
-  /* --- 流程图 tab：生效相位序列线性渲染，当前落点高亮（相位态机=声明序列） --- */
+  /* --- 流程图 tab：骨架节点 × run 相位对账投影（v0.55 R-9 流程图骨架节点升格——零新写面）：
+     数据面=骨架 spec.flow.nodes（executionFlow 投影）× run 现势相位序列，节点态四词着色
+     {passed|current|pending|off-flow}；节点在骨架而 run 相位序列不含=off-flow（对账缺口可见，
+     不静默）；骨架缺席=回退声明相位序列线性渲染（既有形态零翻转）。run 现势=最新 run（环内）。 */
+  function wfFlowNodeState(nodeName, runPhases, curPhase) {
+    var idx = (runPhases || []).indexOf(nodeName);
+    if (idx < 0) return 'off-flow';
+    if (nodeName === curPhase) return 'current';
+    return idx < (runPhases || []).indexOf(curPhase) ? 'passed' : 'pending';
+  }
   function wfLiveTabFlow(row) {
     var phases = row.phases || [];
     var cur = row.latest ? row.latest.phase : '';
-    var steps = phases.map(function (p, i) {
-      var cls = p === cur ? 'cur' : (p === 'Failed' ? 'abn' : '');
-      return '<div class="fstep ' + cls + '"><div class="fs-dot"></div><div class="fs-name mono">' + esc(p) + '</div></div>';
-    }).join('<div class="fs-arrow">→</div>');
-    if (!phases.length) steps = '<div class="small faint">相位未投影（声明 spec.phases 余量）</div>';
-    return '<div class="card"><div class="card-h"><span class="h-title">相位态机（声明序列）</span>' +
+    var ex = row.execution || {};
+    var nodes = row.executionFlow || [];
+    var bound = ex.state === 'bound';
+    var head = '<div class="card"><div class="card-h"><span class="h-title">相位态机（声明序列）</span>' +
       '<span class="h-sub">' + (row.latest ? '现势 run #' + row.latest.run + ' · ' + esc(row.latest.status) : '无现势 run——落点不假画（诚实空态）') + '</span></div>' +
-      '<div class="card-b"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0">' + steps + '</div></div></div>' +
+      '<div class="card-b"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0">' +
+      phases.map(function (p) {
+        var cls = p === cur ? 'cur' : (p === 'Failed' ? 'abn' : '');
+        return '<div class="fstep ' + cls + '"><div class="fs-dot"></div><div class="fs-name mono">' + esc(p) + '</div></div>';
+      }).join('<div class="fs-arrow">→</div>') + '</div></div></div>' +
       '<div class="small faint" style="margin-top:8px">声明表=transitions（物化相邻行+审批边——runs 载荷 transitions 键可查）；当前相位=' + esc(cur || '无') + '</div>';
+    var recon = '';
+    if (bound) {
+      // run 相位序列=runs 面该锚最新 run 的 phases 投影（聚合面 latest 无 phases 键——
+      // runs 载荷同源取相位序列，零前端拼凑）。
+      var lastRun = liveRunsOf(row.name)[0] || null;
+      var runPhases = lastRun ? (lastRun.phases || []) : [];
+      var nodeChips = nodes.map(function (n) {
+        var st = wfFlowNodeState(n.name, runPhases, cur);
+        var cls = st === 'current' ? 'acc' : (st === 'passed' ? 'ok' : (st === 'off-flow' ? 'warn' : 'mute'));
+        var word = st === 'current' ? '当前落点' : (st === 'passed' ? '已过' : (st === 'off-flow' ? '不在现势 run 相位序列（对账缺口可见）' : '未至'));
+        return '<span class="chip ' + cls + ' small mono" title="骨架节点 ' + esc(n.name) + '（unit=' + esc(n.unit || 'session') +
+          (n.connector ? ' · connector=' + esc(n.connector) : '') + (n.provider ? ' · provider=' + esc(n.provider) : '') +
+          '）× run 相位对账=' + word + '">' + esc(n.name) + '·' + esc(n.unit || 'session') + '·' +
+          (st === 'current' ? '◉' : (st === 'passed' ? '✓' : (st === 'off-flow' ? '⤫' : '○'))) + '</span>';
+      }).join(' ');
+      recon = '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">骨架节点 × run 相位对账投影</span>' +
+        '<span class="h-sub">数据面=spec.flow.nodes（executionFlow）× run 现势相位——节点态着色：◉ 当前落点 · ✓ 已过 · ○ 未至 · ⤫ 不在序列</span></div>' +
+        '<div class="card-b"><div style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 0">' +
+        (nodeChips || '<span class="faint small">骨架节点零投影（absent——缺口可见）</span>') + '</div>' +
+        '<div class="small faint" style="padding:4px 0 0">对账口径：节点在骨架而 run 相位序列不含=off-flow（缺口词形可见不静默）；' +
+        (lastRun ? '现势 run #' + lastRun.run + ' 相位序列=' + esc(runPhases.join(' → ') || '未投影') : '无现势 run——节点态不假画（全部不冒充）') +
+        '</div></div></div>';
+    } else {
+      recon = '<div class="card" style="margin-top:12px"><div class="card-b"><div class="small faint" style="padding:6px 0">骨架节点对账面缺席：execution=' +
+        esc(ex.state || '—') + '（' + (ex.state === 'unbound' ? '绑定对象缺席=unbound 缺口可见' : '绑定面缺席——不冒充') + '）——物化后骨架节点接线在此对账呈现</div></div></div>';
+    }
+    return head + recon;
   }
 
   /* --- 事件 tab：该 workflow 触发与消费的事件流=触发留痕过滤（route→该锚） --- */
@@ -2066,13 +2137,27 @@
         '<div class="card-b"><div class="small faint" style="padding:4px 0">声明随运行时 builtin 注册表（相位词汇映射表同源，concepts/workflow.md §1）；override 编辑=E4 编辑器轮余量。</div>' +
         '<div class="yaml-block">' + esc('phases: [' + (row.phases || []).join(', ') + ']\nspecSource: ' + row.specSource) + '</div>' +
         '<div class="small faint" style="padding:6px 0 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——apply 即实现骨架物化，workflow-runtime.md §11.1）</span></div>' +
+        wfReconcileLine(row) +
         (exSkel ? wfDispatchLine() : '') + '</div></div>';
     }
     var obj = tt.target;
+    var boundSkel = !!(row.execution && row.execution.state === 'bound');
+    var nodes = (row.executionFlow || []);
+    var nodesHtml = boundSkel ? (nodes.length
+      ? '<div class="sec-title" style="margin-top:6px">骨架节点接线（spec.flow.nodes——实现接线契约）</div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        nodes.map(function (n) {
+          return '<span class="chip ' + (n.unit === 'agent' ? 'acc' : 'mute') + ' small mono" title="节点 ' +
+            esc(n.name) + '：unit=' + esc(n.unit || 'session') + (n.connector ? ' · connector=' + esc(n.connector) : '') +
+            (n.provider ? ' · provider=' + esc(n.provider) : '') + (n.op ? ' · op=' + esc(n.op) : '') + '">' +
+            esc(n.name) + '·' + esc(n.unit || 'session') + '</span>';
+        }).join(' ') + '</div>'
+      : '<div class="small faint" style="padding:4px 0">骨架节点零投影（absent——缺口可见）</div>') : '';
     return '<div class="card"><div class="card-h"><span class="h-title">spec yaml（' + esc(obj.scope) + ' r' + obj.resourceVersion + ' · origin ' + esc(obj.origin) + '）</span>' +
       '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '">编辑（→ 对象 viewer，E4 起 Apply 全链）</span></span></div>' +
       '<div class="card-b" id="wf-config-yaml"><div class="skel-row"><div class="skel" style="width:220px"></div></div></div>' +
       '<div class="card-b" style="border-top:1px solid var(--line)"><div class="small faint" style="padding:2px 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——骨架=apply 即实现物化面，实现代码=apply-workflow agent 余量）</span></div>' +
+      nodesHtml +
+      '<div class="card-b" style="border-top:1px solid var(--line)">' + wfReconcileLine(row) +
       (exSkel ? wfDispatchLine() : '') + '</div></div>';
   }
   function hydrateWfConfig(row) {
@@ -2093,10 +2178,11 @@
           return;
         }
         var last = recs[recs.length - 1];
+        var nodes = (last.nodes || []).map(function (n) { return esc(n.name); }).join('·');
         el.innerHTML = '<span class="chip mute small mono">apply-workflow ×' + recs.length + '</span> ' +
           '<span>最近 ' + esc(String(last.at || '').replace('T', ' ').slice(0, 19)) + ' · action=' + esc(last.action) +
           ' · rv=' + esc(last.rv) + ' · autoLevel=' + esc(last.autoLevel) +
-          '（受理投影≠会话已拉起——真实拉起 deferred，workflow-runtime.md §11.2）</span>';
+          '（受理投影≠会话已拉起——拉起接线=§11.2 第三段声明；节点输入=' + esc(nodes || '—') + '）</span>';
       });
     }
   }
