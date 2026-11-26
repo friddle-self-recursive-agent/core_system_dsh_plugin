@@ -126,6 +126,7 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_CHATFACES_CLIENT_PATH],
     ['exact', CONSOLE_EVENT_PUB_PATH],
     ['exact', CONSOLE_V2_PREFIX],
+    ['exact', CONSOLE_V2_PREFIX + '/'],
     ['prefix', CONSOLE_V2_ASSETS_PREFIX],
   ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ web v2 载体面（exact+prefix，产物在册）成套注册')
   assert.equal(disposed, 0)
@@ -484,4 +485,48 @@ test('Service project 路由：GET 从 cored ServiceDesc 投影；POST 只为已
   await noGate({ method: 'GET', headers: {} }, r4)
   assert.equal(r4.statusCode, 401)
   rmSync(root, { recursive: true, force: true })
+})
+
+// ─────── §19 R3：/core-console/event-pub（批闸/点火/取消白名单通路）───────
+import { createEventPubHandler } from '../src/index.ts'
+
+function pubRes(): HttpResLike {
+  return { statusCode: 0, setHeader() {}, end() {} }
+}
+
+test('createEventPubHandler：白名单四类型 ∧ involved 三段强制 ∧ 透传 dedupKey/data ∧ origin 注入', async () => {
+  const allow = () => undefined as 401 | 403 | undefined
+  const seen: Array<{ url: string; body: string }> = []
+  const h = createEventPubHandler({
+    bridge: { url: 'http://127.0.0.1:9/' },
+    reject: allow,
+    subject: DEFAULT_APPLY_SUBJECT,
+    fetchImpl: (async (url: any, init: any) => {
+      seen.push({ url: String(url), body: String(init?.body ?? '') })
+      return new Response('{"id":"evt-1"}', { status: 200 })
+    }) as FetchLike,
+  })
+  // 受理：ApprovalGranted（批闸信号——run 恢复的唯一人工通路）
+  const r1 = pubRes()
+  await h({ method: 'POST', url: CONSOLE_EVENT_PUB_PATH, headers: {}, body: JSON.stringify({ type: 'ApprovalGranted', involved: 'Workflow/global/core-workflow', dedupKey: 'd1', data: { note: 'ok' } }) }, r1)
+  assert.equal(r1.statusCode, 200, '白名单类型受理')
+  assert.ok(seen[0].url.endsWith('/v1/events'), '上游=/v1/events')
+  const up1 = JSON.parse(seen[0].body)
+  assert.equal(up1.type, 'ApprovalGranted')
+  assert.equal(up1.involved, 'Workflow/global/core-workflow')
+  assert.equal(up1.dedupKey, 'd1')
+  assert.equal(up1.data.note, 'ok')
+  assert.equal(up1.data.origin, 'console-ui', 'origin 注入')
+  // 非白名单类型=400
+  const r2 = pubRes()
+  await h({ method: 'POST', url: CONSOLE_EVENT_PUB_PATH, headers: {}, body: JSON.stringify({ type: 'DocApplied', involved: 'Rule/global/x' }) }, r2)
+  assert.equal(r2.statusCode, 400, '非白名单=400（防通用发射器）')
+  // involved 非三段词形=400
+  const r3 = pubRes()
+  await h({ method: 'POST', url: CONSOLE_EVENT_PUB_PATH, headers: {}, body: JSON.stringify({ type: 'ApprovalGranted', involved: 'core-workflow' }) }, r3)
+  assert.equal(r3.statusCode, 400, 'involved 词形强制（信号按锚寻径）')
+  // 非 POST=405
+  const r4 = pubRes()
+  await h({ method: 'GET', url: CONSOLE_EVENT_PUB_PATH, headers: {}, body: '' }, r4)
+  assert.equal(r4.statusCode, 405, '非 POST=405')
 })

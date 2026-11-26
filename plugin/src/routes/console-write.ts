@@ -446,8 +446,11 @@ export function createSessionHeartbeatHandler(opts: {
   }
 }
 
-/** 事件注入通路（点火族——浏览器 LoopRequested → cored /v1/events；宿主注入主体与 apply 同族）。
- * 只放行白名单类型（LoopRequested）——防浏览器变通用事件发射器。 */
+/** 事件注入通路（点火/批闸/取消族——浏览器 → cored /v1/events；宿主注入主体与 apply 同族）。
+ * 白名单类型（§19 R3）：LoopRequested（点火）/ ApprovalGranted+ApprovalRejected（人工批闸——
+ * run 闸锚挂起的恢复/终态信号，involved=Workflow 锚）/ TaskCancelRequested（卡住任务取消）。
+ * involved 客户端携（信号按 involved 的 workflow/task 锚寻径——路径强制校验词形），
+ * dedupKey/data 透传可选；其余类型一律 400——防浏览器变通用事件发射器。 */
 export function createEventPubHandler(opts: {
   bridge: { url: string }
   reject?: (req: { headers: unknown }) => 401 | 403 | undefined
@@ -455,7 +458,8 @@ export function createEventPubHandler(opts: {
   subject: ApplySubject
 }) {
   const fetchImpl = opts.fetchImpl ?? fetch
-  const ALLOWED = new Set(['LoopRequested'])
+  const ALLOWED = new Set(['LoopRequested', 'ApprovalGranted', 'ApprovalRejected', 'TaskCancelRequested'])
+  const INVOLVED_RE = /^[A-Za-z][A-Za-z0-9]*\/[A-Za-z0-9_.-]*\/[A-Za-z0-9_.\-\u4e00-\u9fff]+$/
   return async function eventPubHandler(req: HttpReqLike, res: HttpResLike): Promise<void> {
     if (!opts.reject) { res.statusCode = 401; res.end(); return }
     const rejection = opts.reject({ headers: req.headers })
@@ -466,14 +470,17 @@ export function createEventPubHandler(opts: {
       res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end('{"error":"载荷不可解析"}'); return
     }
     const type = String(body.type ?? '')
+    const involved = String(body.involved ?? '')
     const dedupKey = String(body.dedupKey ?? '')
-    if (!ALLOWED.has(type)) { res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: '类型不在白名单（LoopRequested）' })); return }
+    const data = (body.data && typeof body.data === 'object' && !Array.isArray(body.data)) ? body.data as Record<string, unknown> : {}
+    if (!ALLOWED.has(type)) { res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: '类型不在白名单（LoopRequested/ApprovalGranted/ApprovalRejected/TaskCancelRequested）' })); return }
+    if (!involved || !INVOLVED_RE.test(involved)) { res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: 'involved 须为 Kind/scope/name 三段词形（信号按锚寻径）' })); return }
     if (!opts.bridge.url) { res.statusCode = 503; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: 'cored 未就绪' })); return }
     try {
       const up = await fetchImpl(opts.bridge.url.replace(/\/+$/, '') + '/v1/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Core-Subject': JSON.stringify(opts.subject) },
-        body: JSON.stringify({ type, dedupKey, involved: 'ServiceDesc/core/core_system', data: { origin: 'console-ui' } }),
+        body: JSON.stringify({ type, involved, ...(dedupKey ? { dedupKey } : {}), data: { origin: 'console-ui', ...data } }),
       })
       const text = await up.text()
       res.statusCode = up.status

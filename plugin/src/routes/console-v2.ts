@@ -42,6 +42,7 @@ function shellHtml(): string {
   const bases = `window.__CORE_CONSOLE_BASES__={api:'/core-console/api',ws:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/core-console/ws',apply:'/core-console/apply',drafts:'/core-console/drafts'};`
   return '<!doctype html>\n<html lang="zh">\n<head>\n<meta charset="utf-8">\n' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +
+    '<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%234d6bfe%22/%3E%3Ctext x=%2216%22 y=%2222%22 font-size=%2218%22 font-family=%22sans-serif%22 font-weight=%22700%22 fill=%22white%22 text-anchor=%22middle%22%3EC%3C/text%3E%3C/svg%3E">\n' +
     '<title>Core Console v2（web 重构载体·并行验收面）</title>\n' +
     '<link rel="stylesheet" href="' + CONSOLE_V2_ASSETS_PREFIX + '/console.css?v=' + v + '">\n' +
     '<script>' + bases + '</script>\n</head>\n<body>\n' +
@@ -121,6 +122,9 @@ export function mountConsoleV2(
   if (!haveAll) return []
   const out = [
     webServer.register({ kind: 'exact', path: CONSOLE_V2_PREFIX, handler: createConsoleV2ShellHandler({ reject }) }),
+    // 尾斜杠词形同壳（§19.4 转正毛刺：dsh 前缀匹配 url===path||path+'/' 会吃掉
+    // /core-console/v2/ 落到 404——显式注册 exact 斜杠词形=同壳 200）。
+    webServer.register({ kind: 'exact', path: CONSOLE_V2_PREFIX + '/', handler: createConsoleV2ShellHandler({ reject }) }),
     webServer.register({ kind: 'prefix', path: CONSOLE_V2_ASSETS_PREFIX, handler: createConsoleV2AssetHandler({ reject }) }),
   ]
   console.error(`[core-system-diag] console-v2 registered=${out.length}`)
