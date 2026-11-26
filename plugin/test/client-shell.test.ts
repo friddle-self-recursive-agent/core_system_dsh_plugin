@@ -65,14 +65,14 @@ test('bundle 形态：ModuleLoader 工厂注册 + 依赖注入声明', () => {
   assert.equal(typeof exports.apply, 'function')
 })
 
-test('L36-02 Slots 注册面：九个 main 面板键 + sidebar.panellist 入口成对注册（核心控制台原生整合）', () => {
+test('L36-02 Slots 注册面：十一个 main 面板键 + sidebar.panellist 入口成对注册（核心控制台原生整合）', () => {
   const { exports, sandboxLocation } = loadBundle()
   const { registrations } = runApply(exports, sandboxLocation, '')
   const mains = registrations.filter((r) => r.opts.name === 'main')
   const icons = registrations.filter((r) => r.opts.name === 'sidebar.panellist')
-  assert.equal(mains.length, 9)
-  assert.equal(icons.length, 9)
-  assert.deepEqual(icons.map((r) => r.opts.label), ['总览', '系统树', 'Workflows', '文档', '事件', '审批', '连接', '会话', '需求提案'])
+  assert.equal(mains.length, 11)
+  assert.equal(icons.length, 11)
+  assert.deepEqual(icons.map((r) => r.opts.label), ['总览', '关注报告', '任务中心', '系统树', 'Workflows', '文档', '事件', '审批', '连接', '会话', '需求提案'])
   for (let i = 0; i < icons.length; i++) {
     assert.equal(mains[i].opts.key, icons[i].opts.id)
     assert.equal(typeof mains[i].comp, 'function')

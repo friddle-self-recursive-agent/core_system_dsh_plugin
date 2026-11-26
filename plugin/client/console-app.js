@@ -666,6 +666,8 @@
     var id = n.id;
     if (id === 'welcome') return S.route === 'welcome';
     if (id === 'overview') return S.route === 'overview';
+    if (id === 'report') return S.route === 'report';
+    if (id === 'tasks') return S.route === 'tasks' || S.route === 'task';
     if (id === 'tree') return S.route === 'tree';
     if (id === 'workflows') return S.route === 'workflows' || S.route === 'wf' || S.route === 'wf-run';
     if (id === 'docs') return S.route === 'docs' || S.route === 'doc';
@@ -2132,6 +2134,179 @@
       '<button class="btn primary sm" data-act="obj-chat" data-obj-chat="1">与 ' + esc(agent) + ' 开聊（带本对象）</button></div>' +
       '<div class="faint small" style="margin-top:6px">会话=原生会话机制；就地开聊=深链进入会话屏并携带对象引用（不新建概念、不复制状态）。</div>';
   }
+
+  /* ================= 任务中心/任务详情/关注报告（R-UX-6：#/tasks #/task/:id #/report——console-ui.md §16） =================
+   * 任务状态单一写者=调度器；本侧只做人话投影（分组词形固定=正在做/等人/卡住/完成/排队）。
+   * 数据=GET /v1/tasks、/v1/tasks/{scope}/{name}、/v1/attention（经既有只读代理，零新写路径）；
+   * 词形层在 console-tasks 模块（loader 注入于 mountConsole——同 obj/ctx 范式）；
+   * contract 未携带的口径（并发上限/完成时刻/下一步）显式「—」不装假。 */
+  function screenTasks(view) {
+    var TK = __CC.tasks;
+    setCrumbs([{ label: '总览', go: 'welcome' }, { label: '任务中心' }]);
+    view.innerHTML = '<div class="view-inner" data-cc-screen="tasks"><div class="card"><div class="card-b">' + liveSkeletonRows(4) + '</div></div></div>';
+    TK.ensureTasks().then(function (list) {
+      if (S.route !== 'tasks') return;
+      paintTasks(view, list);
+    });
+  }
+  function paintTasks(view, list) {
+    var TK = __CC.tasks;
+    var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>任务中心</h1>' +
+      '<span class="chip ' + (list && list.length ? 'acc' : 'mute') + ' tiny" data-tasks-running="1">运行中 ' + fmtNum(TK.runningCount(list || [])) + '</span>' +
+      (list ? '<span class="chip mute tiny">在册 ' + fmtNum(list.length) + '</span>' : '') + '</div>' +
+      '<div class="dh-sub">一处看到现在在做什么、卡在哪、谁在做——并发上限不在读清单中（不显示分母，不装假）；每行可点进任务详情，会话锚直达完整对话。</div></div>' +
+      '<div class="dh-actions"><button class="btn sm" data-act="tasks-refresh" data-tasks-refresh="1">刷新</button></div></div>';
+    var body = '';
+    if (list === null) {
+      body = '<div class="card"><div class="card-b" data-tasks-degraded="1"><div class="empty"><svg class="ic"><use href="#cc-i-warn"/></svg>' +
+        '<div class="e-title">任务清单暂不可达</div><div>清单通道未就绪或暂时不可达——点「刷新」或稍后自动恢复；不展示过期清单冒充现势。</div>' +
+        '<div class="e-act"><button class="btn primary sm" data-act="tasks-refresh">重试读取</button></div></div></div></div>';
+    } else if (!list.length) {
+      body = '<div class="card"><div class="card-b" data-tasks-empty="1"><div class="empty"><svg class="ic"><use href="#cc-i-check"/></svg>' +
+        '<div class="e-title">暂无在册任务</div><div>任务由调度器按依赖与写集派发（提交需求→提案→派工）；当前无任务在账。</div>' +
+        '<div class="e-act"><button class="btn sm" data-act="go" data-go="proposals">去提交需求</button></div></div></div></div>';
+    } else {
+      var groups = TK.groupTasks(list);
+      var secs = TK.GROUPS.map(function (g) {
+        var rows = groups[g.id] || [];
+        if (!rows.length) return '';
+        return '<div class="task-group" data-task-group="' + esc(g.id) + '"><div class="task-group-h">' + esc(g.label) +
+          ' <span class="chip mute tiny">' + fmtNum(rows.length) + '</span></div>' +
+          rows.map(TK.taskRow).join('') + '</div>';
+      }).filter(Boolean).join('');
+      body = '<div class="task-groups" data-task-groups="1">' + (secs || '<div class="small faint">任务行均在未知状态——原词如实显示。</div>') + '</div>';
+    }
+    view.innerHTML = '<div class="view-inner" data-cc-screen="tasks">' + head + body + '</div>';
+  }
+  ACTIONS['tasks-refresh'] = function () {
+    __CC.tasks.refreshTasks().then(function () { if (S.route === 'tasks') render(); });
+  };
+
+  function screenTaskDetail(view) {
+    var TK = __CC.tasks;
+    var id = String(S.params.id || '');
+    setCrumbs([{ label: '任务中心', go: 'tasks' }, { label: id }]);
+    view.innerHTML = '<div class="view-inner" data-cc-screen="task"><div class="card"><div class="card-b">' + liveSkeletonRows(4) + '</div></div></div>';
+    TK.ensureTask(id).then(function (t) {
+      if (S.route !== 'task') return;
+      paintTaskDetail(view, id, t);
+    });
+  }
+  function touchesItems(touches) {
+    // touches 结构 contract 未细化——防御式投影：数组直列/对象按键值展开/字符串直列（不编结构）
+    if (touches == null || touches === '') return [];
+    if (Array.isArray(touches)) return touches.map(String);
+    if (typeof touches === 'object') {
+      var out = [];
+      Object.keys(touches).forEach(function (k) {
+        var v = touches[k];
+        if (Array.isArray(v)) v.forEach(function (x) { out.push(k + ':' + x); });
+        else out.push(k + ':' + v);
+      });
+      return out;
+    }
+    return [String(touches)];
+  }
+  function paintTaskDetail(view, id, t) {
+    var TK = __CC.tasks;
+    if (!t || !t.name) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('任务不在册（清单通道未就绪或已不在账）', id) +
+        '<div class="e-act" style="margin-top:8px"><button class="btn sm" data-act="go" data-go="tasks">返回任务中心</button></div></div>';
+      return;
+    }
+    var spec = t.spec || {};
+    var st = t.status || {};
+    var deps = (spec.dependsOn || []);
+    var touches = touchesItems(spec.touches);
+    var sess = String(st.agentSession || '').trim();
+    var doing = String(spec.summary || '').trim() || String(spec.title || '').trim() || '—';
+    var stuckAt = String(st.lastError || '').trim() || '—';
+    var meta = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1 style="font-size:18px">' + esc(TK.taskTitle(t)) + '</h1>' +
+      TK.phaseChip(t) +
+      '<span class="chip mute tiny">' + esc(id) + '</span>' +
+      (st.attempts != null ? '<span class="chip mute tiny">尝试 ' + esc(st.attempts) + ' 次</span>' : '') + '</div>' +
+      '<div class="dh-sub">任务详情——声明（spec）与状态（调度器单一写者）同屏；会话锚直达完整对话。</div></div>' +
+      '<div class="dh-actions">' +
+      (sess ? '<button class="btn primary sm" data-act="go" data-go="' + esc(TK.sessionRoute(sess)) + '">对话</button>' : '') +
+      '<button class="btn sm" data-act="go" data-go="tasks">返回任务中心</button></div></div>';
+    var three = '<div class="task-three" data-task-three="1">' +
+      '<div class="task-three-row"><span class="k">在做什么</span><span>' + esc(doing) + '</span></div>' +
+      '<div class="task-three-row"><span class="k">卡在哪</span><span>' + esc(stuckAt) + '</span></div>' +
+      '<div class="task-three-row"><span class="k">下一步</span><span class="faint">—（调度器未在状态中给出——不编造）</span></div></div>';
+    var specCard = '<div class="card ob-panel"><div class="card-h" style="padding:8px 16px 0"><span class="small muted">任务声明</span></div><div class="card-b" style="padding:8px 16px 12px" data-task-spec="1">' +
+      '<div class="task-kv"><span class="k">标题</span><span>' + esc(String(spec.title || '—')) + '</span></div>' +
+      '<div class="task-kv"><span class="k">摘要</span><span>' + esc(String(spec.summary || '—')) + '</span></div>' +
+      '<div class="task-kv"><span class="k">优先级</span><span>' + esc(String(spec.priority || '—')) + '</span></div>' +
+      '<div class="task-kv"><span class="k">负责</span><span>' + esc(String(spec.agent || st.agent || '—')) + '</span></div>' +
+      '<div class="task-kv"><span class="k">依赖</span><span>' + (deps.length ? deps.map(function (d) {
+        return '<span class="chip mute tiny click" data-act="go" data-go="' + esc(TK.taskRoute(d)) + '">' + esc(d) + '</span>';
+      }).join(' ') : '—') + '</span></div>' +
+      '<div class="task-kv"><span class="k">写集</span><span>' + (touches.length ? touches.map(function (x) {
+        return '<span class="chip mute tiny">' + esc(x) + '</span>';
+      }).join(' ') : '—') + '</span></div>' +
+      '</div></div>';
+    var statusCard = '<div class="card ob-panel"><div class="card-h" style="padding:8px 16px 0"><span class="small muted">任务状态（调度器单一写者）</span></div><div class="card-b" style="padding:8px 16px 12px" data-task-status="1">' +
+      '<div class="task-kv"><span class="k">当前</span><span>' + TK.phaseChip(t) + '</span></div>' +
+      '<div class="task-kv"><span class="k">最近动作</span><span>' + esc(String(st.lastAction || '—')) + '</span></div>' +
+      '<div class="task-kv"><span class="k">阻塞/失败原因</span><span>' + esc(String(st.lastError || '—')) + '</span></div>' +
+      '<div class="task-kv"><span class="k">会话</span><span>' + (sess
+        ? '<span class="lk mono" data-act="go" data-go="' + esc(TK.sessionRoute(sess)) + '">' + esc(sess) + '</span>（完整对话直达）'
+        : '—（尚未拉起会话或会话锚未回填）') + '</span></div>' +
+      '</div></div>';
+    view.innerHTML = '<div class="view-inner" data-cc-screen="task">' + meta + three +
+      '<div class="task-cards">' + specCard + statusCard + '</div></div>';
+  }
+
+  function screenReport(view) {
+    setCrumbs([{ label: '总览', go: 'welcome' }, { label: '关注报告' }]);
+    view.innerHTML = '<div class="view-inner" data-cc-screen="report"><div class="card"><div class="card-b">' + liveSkeletonRows(4) + '</div></div></div>';
+    __CC.tasks.ensureAttention().then(function (body) {
+      if (S.route !== 'report') return;
+      paintReport(view, body);
+    });
+  }
+  function paintReport(view, body) {
+    var TK = __CC.tasks;
+    var b = body || {};
+    var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>关注报告</h1>' +
+      (b.window ? '<span class="chip mute tiny">窗口 ' + esc(String(b.window)) + '</span>' : '') +
+      (b.asOf ? '<span class="chip mute tiny">截至 ' + esc(String(b.asOf)) + '</span>' : '') + '</div>' +
+      '<div class="dh-sub">一眼看到：状态、异常、值得关注的提案——每条带证据与去处；报告旁常驻对话（可就地开聊）。</div></div>' +
+      '<div class="dh-actions"><button class="btn sm" data-act="report-refresh" data-report-refresh="1">刷新</button></div></div>';
+    var main;
+    if (body === null) {
+      main = '<div class="card"><div class="card-b" data-report-degraded-load="1"><div class="empty"><svg class="ic"><use href="#cc-i-warn"/></svg>' +
+        '<div class="e-title">报告暂不可达</div><div>报告通道未就绪或生成暂缓——不展示过期报告冒充现势；点「刷新」或稍后自动恢复。</div>' +
+        '<div class="e-act"><button class="btn primary sm" data-act="report-refresh">重试读取</button></div></div></div></div>';
+    } else {
+      var banner = TK.degradedBanner(b.dataQuality);
+      var facts = '<div class="report-facts-bar" data-report-facts="1"><span class="small muted">事实</span> ' + TK.factsHtml(b.facts) + '</div>';
+      var summary = '<div class="report-summary" data-report-summary="1">' + (String(b.summary || '').trim() ? esc(String(b.summary)) : '本轮无综述——以条目为准。') + '</div>';
+      var items = TK.sortAttention(b.attention || []);
+      var cards = items.length
+        ? items.map(TK.attentionCard).join('')
+        : '<div class="card"><div class="card-b" data-report-att-none="1"><div class="empty"><svg class="ic"><use href="#cc-i-check"/></svg>' +
+          '<div class="e-title">本窗口无待关注项</div><div>检查范围内的在册事实未见异常与待决项。</div></div></div></div>';
+      main = banner + facts + summary + cards + TK.clearPanel(b.clear || []) + TK.reportFooter(b);
+    }
+    var agent = objChatAgent();
+    var sess = (LIVE.state.sessions && LIVE.state.sessions.sessions || []);
+    var rail = '<div class="report-chat"><div class="card"><div class="card-h" style="padding:8px 16px 0"><span class="small muted">对话（常驻）</span></div>' +
+      '<div class="card-b" style="padding:8px 16px 12px" data-report-chat="1">' +
+      '<div class="small">' + (sess.length ? '活跃会话 ' + sess.length + ' 个（系统投影）' : '暂无活跃会话') + '</div>' +
+      '<div class="ob-chat-acts" style="margin-top:8px"><button class="btn primary sm" data-act="report-chat" data-report-chat="1">与 ' + esc(agent) + ' 聊本报告</button></div>' +
+      '<div class="faint small" style="margin-top:6px">就报告条目提问/查证据/开提案——批准与 Apply 仍在既有入口，人点为准。</div>' +
+      '</div></div></div>';
+    view.innerHTML = '<div class="view-inner" data-cc-screen="report">' + head +
+      '<div class="report-layout"><div class="report-main">' + main + '</div>' + rail + '</div></div>';
+  }
+  ACTIONS['report-refresh'] = function () {
+    __CC.tasks.refreshAttention().then(function () { if (S.route === 'report') render(); });
+  };
+  ACTIONS['report-chat'] = function () {
+    var agent = objChatAgent();
+    go('chat/' + encodeURIComponent(agent));
+  };
 
   var WF_TABS = [
     { id: 'runs', label: '运行' }, { id: 'flow', label: '流程图' }, { id: 'events', label: '事件' },
@@ -4239,12 +4414,20 @@
     }
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1 class="mono" style="font-size:18px">' + esc(sid) + '</h1>' +
-      (row && row.running ? '<span class="chip ok tiny">running</span>' : '') + (row && row.blank ? '<span class="chip mute tiny">blank</span>' : '') + '</div>' +
+      (row && row.running ? '<span class="chip ok tiny">running</span>' : '') + (row && row.blank ? '<span class="chip mute tiny">blank</span>' : '') +
+      '<span id="sess-task-chips" class="sess-chips"></span></div>' +
       '<div class="dh-sub mono">' + (row ? esc(row.title) + ' · cwd: ' + esc(row.cwd || '—') : '宿主清单行缺席（roster 投影范围外）') +
       ' · agent: ' + (owner ? '<span class="lk" data-act="go" data-go="chat/' + esc(owner) + '">' + esc(owner) + '</span>' : '未归属（归属证据缺席=不冒充）') + '</div></div>' +
       '<div class="dh-actions"><button class="btn primary" data-act="chat-sess-go" data-id="' + esc(sid) + '"' + (owner ? ' data-agent="' + esc(owner) + '"' : ' disabled') + '>切回 Chat 视图 →</button></div></div>' +
       '<div class="card"><div class="card-h"><span class="h-title">Trajectory（session 事件页现读 · 与聊天流同源不同呈现）</span></div>' +
       '<div class="card-b"><div id="sess-traj">' + liveSkeletonRows(3) + '</div></div></div></div>';
+    // 会话头 chips（§16.1 D）：Task 锚=在册任务 agentSession 反查（可得的才显示）；
+    // workflow/节点/run 字段 contract 未携带=显式人话注记不编造；清单不可读=整片不显示。
+    __CC.tasks.ensureTasks().then(function (list) {
+      if (S.route !== 'session') return;
+      var el = $('#sess-task-chips');
+      if (el) el.innerHTML = __CC.tasks.sessionChips(list, sid);
+    });
     // 转录注水（retain 持有+事件窗快照）：归属 agent 缺席时用空声明集（工具卡按普通卡渲染——不冒充判据）
     var declaredOps = owner ? agentDeclaredOps(owner) : [];
     var paint = function (snap) {
@@ -6229,6 +6412,9 @@
     }).catch(function () { /* 装载失败=连接态灯投影，不传染 */ });
   });
   route('docs', screenDocsGlobal);
+  route('tasks', screenTasks); // 任务中心（console-ui.md §16.1 A——正在做/等人/卡住/完成/排队固定词形）
+  route('task/:id', screenTaskDetail); // 任务详情（§16.1 B——id=<scope>/<name> 整段单次编码，路由侧整体解回）
+  route('report', screenReport); // 关注报告（R-UX-6——报告旁挂常驻对话；首屏仍=对象工作台，本屏是报告面）
   route('designdoc/:repo/:path', screenDesignDoc); // v0.52 能力 A：设计文档工作台深链（path 段整体 URL 编码）
   route('designdoc', screenDesignDoc); // 未选档=默认首仓首文件
   route('chat/:agent', screenChat);
@@ -6359,6 +6545,25 @@
         });
       });
     }
+    /* 任务中心/任务详情/关注报告（R-UX-6）：tasks/单任务/attention loader 注入（同 obj/ctx 范式——
+     * 词形模块零直接网络依赖；清单缓存 15s、attention 60s、详情恒现读）。 */
+    if (__CC.tasks && __CC.tasks.setTasksLoader) {
+      __CC.tasks.setTasksLoader(function () {
+        return LIVE.get('v1/tasks').then(function (b) {
+          return Array.isArray(b) ? b : ((b && b.tasks) || []);
+        });
+      });
+      __CC.tasks.setTaskLoader(function (id) {
+        var s = String(id || '');
+        var i = s.indexOf('/');
+        var scope = i >= 0 ? s.slice(0, i) : s;
+        var name = i >= 0 ? s.slice(i + 1) : '';
+        return LIVE.get('v1/tasks/' + encodeURIComponent(scope) + '/' + encodeURIComponent(name));
+      });
+      __CC.tasks.setAttentionLoader(function () {
+        return LIVE.get('v1/attention');
+      });
+    }
     __CC.propYaml = propYaml;
     __CC.conn = __CC.createConnMonitor({ onChange: function (st) { applyConnState(st, {}); } });
     __CC.conn.start();
@@ -6368,7 +6573,7 @@
       if (!ROOT) return;
       // 'doc'（编辑器）不在列：编辑器自注水（屏加载即现读），live 轻刷新不重渲染（编辑态/textarea 焦点保真）；
       // Apply 成功后的重渲染走 apply 回调显式 LIVE.load().then(render)。
-      if (['welcome', 'overview', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'proposals', 'connectors', 'inbox', 'obj'].indexOf(S.route) >= 0) render();
+      if (['welcome', 'overview', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'proposals', 'connectors', 'inbox', 'obj', 'tasks', 'task', 'report'].indexOf(S.route) >= 0) render();
     };
     addInterval(function () { if (ROOT) LIVE.load(); }, 15000);
     boot();

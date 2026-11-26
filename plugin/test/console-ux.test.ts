@@ -15,7 +15,7 @@ const CLIENT = join(PLUGIN, 'client')
 const SRC = readFileSync(join(PLUGIN, 'dist/client.js'), 'utf8')
 
 const FILES = ['console-md.js', 'console-shell.js', 'console-data.js', 'console-live.js', 'console-scenario.js',
-  'console-ctx.js', 'console-obj.js', 'console-chat.js', 'console-projects.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
+  'console-ctx.js', 'console-obj.js', 'console-tasks.js', 'console-chat.js', 'console-projects.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
 
 /** 提取字符串字面量域（'…' 与 "…"，单行近似）——排除注释与代码标识符域（§13.4 判据词形）。 */
 function stringLiterals(src) {
@@ -348,4 +348,111 @@ test('L78-02 R-UX-7 工作台接线在册：路由/loader 注入/六片挂载词
   assert.ok(build.includes("'console-obj.js'") && build.indexOf("'console-obj.js'") > build.indexOf("'console-md.js'") &&
     build.indexOf("'console-obj.js'") < build.indexOf("'console-live.js'"),
     'console-obj.js 入 bundle 拼接序（console-md 后 console-live 前）')
+})
+
+test('L79-01 R-UX-6 任务中心/报告模块直测：分组人话词形/证据路由/会话头 chips/降级词形（console-ui.md §16+§14）', async () => {
+  const window: Record<string, any> = {}
+  const fn = new Function('window', readFileSync(join(CLIENT, 'console-tasks.js'), 'utf8'))
+  fn(window)
+  const tk = window.__CC.tasks
+  const t = (id: string, phase: string, extra?: any) => ({
+    kind: 'Task', scope: id.split('/')[0], name: id.split('/')[1],
+    spec: Object.assign({ title: 'T-' + id, summary: 's', dependsOn: [], touches: [], priority: 'p1', agent: 'dev-1' }, extra && extra.spec),
+    status: Object.assign({ phase, attempts: 1, agentSession: '', lastAction: '', lastError: '' }, extra && extra.status),
+  })
+  // ① 分组=确定性：正在做(running/verifying)/排队(queued/ready)/完成(done)；blocked/failed 按原因分卡住/等人
+  const g = tk.groupTasks([
+    t('a/one', 'running'), t('a/two', 'verifying'), t('b/one', 'queued'), t('b/two', 'ready'),
+    t('c/one', 'done'), t('d/one', 'blocked', { status: { lastError: '等待审批通过' } }),
+    t('d/two', 'blocked', { status: { lastError: '依赖未完成' } }), t('e/one', 'failed', { status: { lastError: 'verify 连续失败' } }),
+    t('f/one', 'canceled'),
+  ])
+  assert.deepEqual(g.doing.map((x: any) => x.name), ['one', 'two'])
+  assert.deepEqual(g.queued.map((x: any) => x.scope), ['b', 'b'])
+  assert.equal(g.done.length, 2, 'done+canceled 入完成组（canceled 徽标如实不冒充成功）')
+  assert.equal(g.waiting.length, 1, '审批词形原因=等人')
+  assert.equal(g.stuck.length, 2, '其余 blocked/failed=卡住')
+  assert.equal(tk.runningCount([t('a/one', 'running'), t('a/two', 'verifying'), t('b/one', 'queued')]), 1, '并发摘要只数 running（上限未知不装假）')
+  // ② 相位徽人话；未知相位原词如实
+  assert.ok(tk.phaseChip(t('a/x', 'done')).includes('已完成') && tk.phaseChip(t('a/x', 'done')).includes('chip ok'))
+  assert.ok(tk.phaseChip(t('a/x', 'mystery')).includes('mystery'), '未知相位不冒充人话')
+  // ③ 任务路由：id 整段单次编码（%2F 形——路由侧整体解回）
+  assert.equal(tk.taskRoute('dev/build-x'), 'task/dev%2Fbuild-x')
+  assert.equal(tk.sessionRoute('s 1'), 'session/s%201')
+  // ④ 证据 ref 路由映射：已知词形可点，未知=不可点不冒充
+  assert.equal(tk.evidenceRoute('#/wf/dev-delivery/r/1'), 'wf/dev-delivery/r/1')
+  assert.equal(tk.evidenceRoute('#/event/e-9'), 'event/e-9')
+  assert.equal(tk.evidenceRoute('#/inbox'), 'inbox')
+  assert.equal(tk.evidenceRoute('ServiceDesc/dev/core'), 'obj/ServiceDesc/dev/core')
+  assert.equal(tk.evidenceRoute('#/mystery/x'), null, '未知锚词形=纯文本（不编路由）')
+  // ⑤ severity 排序 critical→high→medium；卡片证据可点+action 按钮人话
+  const sorted = tk.sortAttention([
+    { severity: 'medium', title: 'm' }, { severity: 'critical', title: 'c' }, { severity: 'high', title: 'h' }])
+  assert.deepEqual(sorted.map((x: any) => x.title), ['c', 'h', 'm'])
+  const card = tk.attentionCard({
+    severity: 'critical', category: 'run', title: '门禁连续失败', why: '连续 3 轮失败',
+    evidence: [{ kind: 'run', ref: '#/wf/dev/r/1', hash: 'abc', at: 't1' }, { kind: 'doc', ref: 'mystery-word', hash: '', at: '' }],
+    action: { kind: 'approve', target: '#/approvals' },
+  }, 0)
+  assert.ok(card.includes('data-act="go" data-go="wf/dev/r/1"'), '证据 ref 可点（已知词形）')
+  assert.ok(!card.includes('data-go="mystery-word"'), '未知词形证据不编路由')
+  assert.ok(card.includes('去审批'), 'action.kind 人话按钮')
+  assert.ok(card.includes('sev-critical'), 'severity 卡档在册（critical 红档 css）')
+  // ⑥ 会话头 chips：可得的才显示（Task 锚反查），无关联=显式人话，清单不可读=整片不显示
+  assert.equal(tk.sessionChips(null, 's1'), '')
+  assert.ok(tk.sessionChips([t('dev/t1', 'running', { status: { agentSession: 's9' } })], 's1').includes('未关联在册任务'))
+  const chips = tk.sessionChips([t('dev/t1', 'running', { status: { agentSession: 's1' } })], 's1')
+  assert.ok(chips.includes('Task: t1') && chips.includes('data-go="' + tk.taskRoute('dev/t1') + '"'), 'Task 锚 chip=任务详情深链')
+  assert.ok(chips.includes('会话型任务'), 'workflow 字段未携带=显式人话注记不编造')
+  // ⑦ 任务行：lastAction 一句话+对话深链（无会话锚=不画按钮）
+  const rowWith = tk.taskRow(t('dev/t1', 'running', { status: { agentSession: 's1', lastAction: '正在跑 gate' } }))
+  assert.ok(rowWith.includes('正在跑 gate') && rowWith.includes('data-go="session/s1"'), '行内 lastAction+会话深链')
+  const rowWithout = tk.taskRow(t('dev/t2', 'queued'))
+  assert.ok(!rowWithout.includes('data-go="session/'), '无会话锚=不画对话按钮（不装假）')
+  // ⑧ 报告词形：facts 防御投影/降级横幅列 missing/clear 折叠/生成方式人话
+  assert.ok(tk.factsHtml(['6 系统', '42 轮']).includes('6 系统'), 'facts 数组=chips')
+  assert.ok(tk.factsHtml({ systems: 6 }).includes('systems'), 'facts 对象=kv chips')
+  assert.ok(tk.degradedBanner({ degraded: true, missing: ['runs', 'approvals'] }).includes('runs、approvals'), '降级横幅列 missing')
+  assert.equal(tk.degradedBanner({ degraded: false }), '', '未降级=零横幅')
+  assert.equal(tk.clearPanel([]), '', '零 clear=不渲染折叠（诚实空态由空卡承担）')
+  assert.ok(tk.clearPanel([{ candidateId: 'c1', note: '已处理' }]).includes('本窗口已澄清'), 'clear 折叠人话词形')
+  assert.equal(tk.generatedByLabel('llm'), '智能归纳')
+  assert.equal(tk.generatedByLabel('rules'), '基础汇总')
+  // ⑨ loader 注入：清单失败=落 null 不缓存失败态；详情恒现读
+  let calls = 0
+  tk.setTasksLoader(() => { calls++; return Promise.reject(new Error('x')) })
+  assert.equal(await tk.ensureTasks(), null, '读取失败=显式 null（调用方降级词形）')
+  assert.equal(await tk.ensureTasks(true), null)
+  assert.equal(calls, 2, '失败态不缓存（每拍现读）')
+  let tid = ''
+  tk.setTaskLoader((id: string) => { tid = id; return Promise.resolve({ name: id.split('/')[1] }) })
+  assert.equal((await tk.ensureTask('dev/t9')).name, 't9')
+  assert.equal(tid, 'dev/t9')
+})
+
+test('L79-02 R-UX-6 接线在册：三路由/侧栏入口/loader 注入/会话头 chips/拼接序/锚词形（回潮即红）', () => {
+  assert.ok(SRC.includes('window.__CC.tasks'), 'console-tasks 模块入 bundle')
+  assert.ok(SRC.includes("route('tasks', screenTasks)"), '任务中心路由在册（#/tasks）')
+  assert.ok(SRC.includes("route('task/:id', screenTaskDetail)"), '任务详情路由在册（#/task/:id）')
+  assert.ok(SRC.includes("route('report', screenReport)"), '关注报告路由在册（#/report）')
+  // 侧栏入口（entry.js 注册处——L36-02 断言 11 入口成对；此处锚词形）
+  assert.ok(SRC.includes("id: 'report', panel: 'core-console-report'"), '关注报告侧栏入口在册')
+  assert.ok(SRC.includes("id: 'tasks', panel: 'core-console-tasks'"), '任务中心侧栏入口在册')
+  assert.ok(SRC.includes("'welcome', 'overview', 'obj', 'report', 'tasks', 'task'"), 'CONSOLE_SEGS 收录 report/tasks/task（hash 同步宿主面板）')
+  // loader 注入（同 obj/ctx 范式——模块零直接网络依赖）
+  assert.ok(SRC.includes('__CC.tasks.setTasksLoader') && SRC.includes('__CC.tasks.setTaskLoader') && SRC.includes('__CC.tasks.setAttentionLoader'), '三 loader 注入在册')
+  assert.ok(SRC.includes("LIVE.get('v1/tasks')") && SRC.includes("LIVE.get('v1/attention')"), '数据通路=既有只读代理（v1/tasks+v1/attention，零新写路径）')
+  // 会话头 chips + 报告锚 + 任务中心锚
+  assert.ok(SRC.includes('sess-task-chips'), '会话头 chips 挂载点在册（§16.1 D）')
+  assert.ok(SRC.includes('data-task-groups="1"') && SRC.includes('data-tasks-degraded="1"') && SRC.includes('data-tasks-empty="1"'), '任务中心分组/降级/空态锚在册（零命中不装假）')
+  assert.ok(SRC.includes('data-task-three="1"') && SRC.includes('data-task-spec="1"') && SRC.includes('data-task-status="1"'), '任务详情三行/声明/状态锚在册')
+  assert.ok(SRC.includes('data-report-facts="1"') && SRC.includes('data-report-summary="1"') && SRC.includes('data-report-clear="1"') && SRC.includes('data-report-degraded="1"'), '报告 facts/综述/clear 折叠/降级横幅锚在册')
+  assert.ok(SRC.includes('data-report-chat="1"'), '报告旁挂对话栏在册（chat/<agent> 深链模式）')
+  assert.ok(SRC.includes("ACTIONS['tasks-refresh']") && SRC.includes("ACTIONS['report-refresh']") && SRC.includes("ACTIONS['report-chat']"), '刷新/对话动作处理器在册')
+  // css token 块随 bundle（dsh 原生 token 零新色值——.task-row/.att-card 消费既有变量）
+  assert.ok(SRC.includes('.task-row') && SRC.includes('.att-card') && SRC.includes('.report-layout'), 'css 布局块入 bundle')
+  const build = readFileSync(join(PLUGIN, 'build-client.mjs'), 'utf8')
+  assert.ok(build.includes("'console-tasks.js'") && build.indexOf("'console-tasks.js'") > build.indexOf("'console-obj.js'") &&
+    build.indexOf("'console-tasks.js'") < build.indexOf("'console-live.js'"),
+    'console-tasks.js 入 bundle 拼接序（console-obj 后 console-live 前）')
 })

@@ -1232,6 +1232,8 @@
   var nav = [
     { id: 'welcome', label: '对象工作台', route: '#/obj', icon: 'home' },
     { id: 'overview', label: '总览', route: '#/overview', icon: 'grid' },
+    { id: 'report', label: '关注报告', route: '#/report', icon: 'pulse' }, // R-UX-6：报告旁挂常驻对话（首屏仍=对象工作台）
+    { id: 'tasks', label: '任务中心', route: '#/tasks', icon: 'flow' }, // §16：正在做/等人/卡住/完成/排队一处看全
     { id: 'tree', label: '系统树', route: '#/tree', icon: 'tree' },
     { id: 'workflows', label: 'Workflows', route: '#/workflows', icon: 'flow' },
     { id: 'docs', label: '文档', route: '#/docs', icon: 'doc' },

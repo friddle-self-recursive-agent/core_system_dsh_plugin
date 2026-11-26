@@ -1,8 +1,11 @@
 // console 原生整合（console-adoption.md §1.23）：
-// 九项经 dsh Slots 注册到宿主主侧栏；console 壳只保留内容区，不再拥有第二列导航。
-// Welcome 与总览按 console-ui.md §11 A1 合并；已交付「需求提案」补足九项。
+// 侧栏入口经 dsh Slots 注册到宿主主侧栏；console 壳只保留内容区，不再拥有第二列导航。
+// Welcome 与总览按 console-ui.md §11 A1 合并；已交付「需求提案」补足九项；
+// R-UX-6（console-ui.md §16，2026-11-26）：增关注报告与任务中心入口（首屏仍=对象工作台——报告面非取代）。
 var CONSOLE_NAV = [
   { id: 'overview', panel: 'core-console-overview', label: '总览', route: '#/obj', icon: 'home', segs: ['welcome', 'overview', 'obj'] },
+  { id: 'report', panel: 'core-console-report', label: '关注报告', route: '#/report', icon: 'pulse', segs: ['report'] },
+  { id: 'tasks', panel: 'core-console-tasks', label: '任务中心', route: '#/tasks', icon: 'flow', segs: ['tasks', 'task'] },
   { id: 'tree', panel: 'core-console-tree', label: '系统树', route: '#/tree', icon: 'tree', segs: ['tree', 's'] },
   { id: 'workflows', panel: 'core-console-workflows', label: 'Workflows', route: '#/workflows', icon: 'flow', segs: ['workflows', 'wf'] },
   { id: 'docs', panel: 'core-console-docs', label: '文档', route: '#/docs', icon: 'doc', segs: ['docs', 'doc', 'designdoc'] },
@@ -14,7 +17,7 @@ var CONSOLE_NAV = [
 ]
 
 var CONSOLE_SEGS = [
-  'welcome', 'overview', 'obj', 'tree', 's', 'workflows', 'wf', 'docs', 'doc', 'designdoc',
+  'welcome', 'overview', 'obj', 'report', 'tasks', 'task', 'tree', 's', 'workflows', 'wf', 'docs', 'doc', 'designdoc',
   'chat', 'session', 'connectors', 'connector', 'ws', 'provider', 'ref', 'role',
   'agent', 'event', 'events', 'approvals', 'proposals', 'proposal', 'inbox'
 ]
