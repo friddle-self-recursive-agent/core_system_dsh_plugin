@@ -1,8 +1,8 @@
 // routes/console-v2.ts —— web/ 新前端载体面（G-02 载体切换·并行 v2 阶段）：
 //   GET /core-console/v2           → 壳页 HTML（预置 __CORE_CONSOLE_BASES__ 代理词位 + 容器）
 //   GET /core-console/v2/assets/*  → web/dist 构建产物（console.js/console.css 白名单静态面）
-// 产物来源解析序：env CORE_CONSOLE_WEB_DIST → <plugin>/core_system/web/dist（workservice
-// submodule pin 自带入库 dist——零构建启动）。产物缺席=503 诚实词形（不冒充 404）。
+// 产物来源解析序：env CORE_CONSOLE_WEB_DIST → <仓根>/core_system/web/dist（workservice
+// submodule 在插件仓根，pin 自带入库 dist——零构建启动）。产物缺席=503 诚实词形（不冒充 404）。
 // 鉴权同族 fail-closed：connection 栅栏缺席=401 拒全部；非 GET=405。旧 console（client/
 // 过渡期载体）零改动——本面是并行新增，浏览器活体验收后另行裁决默认切换。
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs'
@@ -11,14 +11,14 @@ import { fileURLToPath } from 'node:url'
 import { sendJson, type HttpReqLike, type HttpResLike } from '../http.ts'
 import { CONSOLE_V2_ASSETS_PREFIX, CONSOLE_V2_PREFIX } from '../config.ts'
 
-/** 插件根（src/routes/ → ../../ = plugin/）。 */
-function pluginRoot(): string {
-  return resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '..')
+/** 插件仓根（src/routes/ → ../../../ = 仓根；submodule core_system 在仓根非 package 目录）。 */
+export function repoRoot(): string {
+  return resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..')
 }
 
-/** web/dist 产物目录解析序：env 覆写 → submodule pin 面目录。缺席=null（诚实 503）。 */
+/** web/dist 产物目录解析序：env 覆写 → submodule pin 面（<仓根>/core_system/web/dist）。缺席=null（诚实 503）。 */
 export function resolveWebDistDir(): string | null {
-  const candidates = [process.env.CORE_CONSOLE_WEB_DIST, join(pluginRoot(), 'core_system', 'web', 'dist')]
+  const candidates = [process.env.CORE_CONSOLE_WEB_DIST, join(repoRoot(), 'core_system', 'web', 'dist')]
   for (const dir of candidates) {
     if (!dir) continue
     const abs = resolve(dir)

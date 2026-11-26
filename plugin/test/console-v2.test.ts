@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX,
-  createConsoleV2ShellHandler, createConsoleV2AssetHandler, mountConsoleV2, resolveWebDistDir,
+  createConsoleV2ShellHandler, createConsoleV2AssetHandler, mountConsoleV2, resolveWebDistDir, repoRoot,
 } from '../src/routes/console-v2.ts'
 import type { HttpReqLike, HttpResLike } from '../src/http.ts'
 
@@ -103,6 +103,10 @@ test('装配面：产物在册=两路由注册+disposer；缺席=零注册', () 
   const empty = mkdtempSync(join(tmpdir(), 'cc-v2-empty2-'))
   process.env.CORE_CONSOLE_WEB_DIST = empty
   assert.deepEqual(mountConsoleV2(webServer as never, () => undefined), [])
+})
+
+test('repoRoot 推导：以 import.meta.url 上溯三级=插件仓根', () => {
+  assert.equal(repoRoot().endsWith('core_system_dsh_plugin'), true)
 })
 
 test('resolveWebDistDir 解析序：env 命中即返；缺席=null', () => {
