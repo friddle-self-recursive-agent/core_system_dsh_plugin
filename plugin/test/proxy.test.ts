@@ -543,7 +543,7 @@ const scFake = {
   list: async () => ({ items: [{ sessionId: 's-1', updatedAt: 1700000000000, running: true, blank: false, agentAvailable: true }, { sessionId: '' }, { sessionId: 's-blank', updatedAt: 1, running: false, blank: true, agentAvailable: true }] }),
   create: async () => ({ sessionId: 's-new' }),
   state: async () => ({ active: true, running: false, queue: null, pendingInput: [] }),
-  page: async () => ({ cursor: 42, events: [
+  page: async () => ({ cursor: 42, records: [
     { type: 'event', event: { type: 'user/message', seq: 7, time: 1700000001000, data: { id: 'm1', source: { kind: 'user' }, content: [{ type: 'text', text: 'hi' }] } } },
     { type: 'event', event: { type: 'assistant/live-chunk', seq: 8, time: 1700000002000, data: {}, ignorable: true } },
     { type: 'event', event: { type: 'assistant/message', seq: 9, time: 1700000003000, data: { content: [{ type: 'text', text: 'done' }] } } },
@@ -571,7 +571,7 @@ test('transcript 读面：sessions 投影剥空 id ∧ transcript 剥 delta/igno
   const h = createChatTranscriptReadHandler({ deps, kind: 'transcript', reject: allow })
   await h({ method: 'GET', url: CONSOLE_CHAT_TRANSCRIPT_PATH + '?sessionId=s-1', headers: {} }, res)
   const j = JSON.parse(out)
-  assert.equal(j.events.length, 2, 'delta/ignorable 剥除后=2')
+  assert.equal(j.events.length, 2, 'records 词形映射+delta/ignorable 剥除后=2')
   assert.equal(j.events[0].type, 'user/message')
   assert.equal(j.cursor, 42)
   // 非 GET=405；缺 sc=503

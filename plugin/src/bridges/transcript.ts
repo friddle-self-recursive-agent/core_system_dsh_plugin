@@ -30,7 +30,8 @@ const KEEP = new Set([
 /** 事件 → 渲染面词形（剥 surfaceOp/sourceEventSeqs/ignorable 包装；data 原样透传）。 */
 export function projectTranscript(pageValue: unknown): { cursor?: number; events?: unknown[] } {
   const p = pageValue && typeof pageValue === 'object' ? pageValue as Record<string, unknown> : {}
-  const rows = Array.isArray(p.events) ? p.events as Record<string, unknown>[] : []
+  // SessionPage 词形=records（SessionEventEntry[]——types.ts §530；events 是请求侧词不是页词）
+  const rows = (Array.isArray(p.records) ? p.records : (Array.isArray(p.events) ? p.events : [])) as Record<string, unknown>[]
   const events: unknown[] = []
   for (const row of rows) {
     const ev = row && typeof row === 'object' ? (row as Record<string, unknown>).event : null
