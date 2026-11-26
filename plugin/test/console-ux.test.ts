@@ -15,7 +15,7 @@ const CLIENT = join(PLUGIN, 'client')
 const SRC = readFileSync(join(PLUGIN, 'dist/client.js'), 'utf8')
 
 const FILES = ['console-md.js', 'console-shell.js', 'console-data.js', 'console-live.js', 'console-scenario.js',
-  'console-chat.js', 'console-projects.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
+  'console-ctx.js', 'console-obj.js', 'console-chat.js', 'console-projects.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
 
 /** 提取字符串字面量域（'…' 与 "…"，单行近似）——排除注释与代码标识符域（§13.4 判据词形）。 */
 function stringLiterals(src) {
@@ -281,4 +281,71 @@ test('L77-01 降级重试：degraded 卡自带重试按钮（免刷新整页）�
   // ③ 复用语义回归：成功态同键同摘要仍复用（refresh 只清键，不破坏既有缓存语义）
   const r3 = await ctx.check('Proposal', 'global', 'ctx-retry-demo', 'title: 对照重试\nsummary: 恢复')
   assert.equal(r3.reused, true, '成功态复用语义保持（refresh 后 check 同 sig 复用）')
+})
+
+test('L78-01 R-UX-7 工作台模块直测：tagType 分组/规则命中来源显式/结构段完成度/ctx 摘要/键形（§14.5）', async () => {
+  const window: Record<string, any> = {}
+  const fn = new Function('window', readFileSync(join(CLIENT, 'console-obj.js'), 'utf8'))
+  fn(window)
+  const obj = window.__CC.obj
+  // ① tagType 分组：词表归组+未分组殿后（不冒充归组）
+  const g = obj.tagGroups(['reliability', 'ux', 'other'], { reliability: '治理', ux: '体验' })
+  assert.deepEqual(g.map((x: any) => x.type), ['体验', '治理', '未分组'])
+  assert.deepEqual(g[2].tags, ['other'])
+  assert.equal(obj.tagGroups([], {}).length, 0, '零 tag=零组（诚实空态）')
+  // ② 规则命中：三路来源显式列（标签同组/原文提及 kind/正文引用 basename）；零命中=空数组不兜底
+  const rules = [
+    { repo: 'core_design', path: 'rule/rule_eng.md', tags: ['交付'], content: 'dev-delivery workflow 交付规则' },
+    { repo: 'core_design', path: 'rule/rule_pub.md', tags: ['发布'], content: '发布规则' },
+  ]
+  const hit = obj.rulesFor({ kind: 'Workflow', scope: 'global', name: 'dev-delivery', content: '见 rule_eng', tags: ['交付'] }, rules)
+  assert.equal(hit.degraded, false, '索引在=不降级')
+  assert.equal(hit.hits.length, 1, '仅命中规则在列')
+  assert.ok(hit.hits[0].why.some((w: string) => w.indexOf('标签') >= 0), '命中来源=标签同组（显式）')
+  assert.ok(hit.hits[0].why.some((w: string) => w.indexOf('rule_eng') >= 0), '命中来源=正文引用（显式）')
+  const none = obj.rulesFor({ kind: 'Provider', scope: 'global', name: 'oss', content: 'plain', tags: [] }, rules)
+  assert.deepEqual(none.hits, [], '零命中=空数组（「无适用规则」不装假）')
+  const deg = obj.rulesFor({ kind: 'X', scope: '', name: 'y', content: '', tags: [] }, null)
+  assert.equal(deg.degraded, true, '索引缺席=降级显式（不冒充无适用）')
+  // ③ 规则引用深链=设计文档工作台形（designdoc/:repo/:path——path 整段单次编码，involvedRoute 同词形）
+  assert.equal(obj.objRouteOfRef('core_design/rule/rule_ux.md#rule_ux'), 'designdoc/core_design/rule%2Frule_ux.md')
+  // ④ 结构段完成度：注册段名 vs 正文标题（done/缺 显式）
+  const comp = obj.sectionCompletion('## 目标\nx\n## 范围\ny', ['目标', '范围', '时间线'])
+  assert.deepEqual(comp.map((c: any) => c.done), [true, true, false], '完成度逐段判定')
+  assert.deepEqual(obj.sectionCompletion('x', []), [], '无注册=空数组（不装假）')
+  // ⑤ ctx 摘要：未装配=显式 state:none；在册=带会话锚与规模档
+  assert.equal(obj.ctxSummary(null).state, 'none')
+  const s = obj.ctxSummary({ sessionId: 's1', tagSig: 'sig-abcdef0123456789', chunks: [{ ref: 'a', hash: 'h', tokens: 3000 }] })
+  assert.equal(s.state, 'ok')
+  assert.equal(s.sessionId, 's1')
+  assert.ok(s.text.indexOf('1 段') >= 0, '规模人话（段计数）')
+  // ⑥ scheme 声明投影：kinds 载荷行 → 声明卡 yaml（md.yamlToCards 同源渲染）
+  const y = obj.kindRegYaml({ name: 'Workflow', builtin: true, storage: 'global/workflows.yaml', spec: { enabled: '?bool' }, relations: { owns: 'Run' } })
+  assert.ok(y.indexOf('kind: Workflow') >= 0 && y.indexOf('spec:') >= 0 && y.indexOf('owns: Run') >= 0, '声明投影含 spec/relations')
+  assert.equal(obj.kindRegYaml(null), '', '空注册=空串')
+  // ⑦ 六片渲染词形：缺片显式「无」+ degraded 可见（不静默）
+  assert.ok(obj.tagPanel([]).includes('data-obj-tags-empty="1"'), '标签缺片=显式空态')
+  assert.ok(obj.rulePanel({ hits: [], degraded: true, reason: '暂不可达', scanned: 0 }).includes('data-obj-rules-degraded="1"'), '规则降级=可见')
+  assert.ok(obj.rulePanel({ hits: [], degraded: false, reason: '', scanned: 3 }).includes('无适用规则'), '零命中=「无适用规则」')
+  assert.ok(obj.ctxPanel(obj.ctxSummary(null)).includes('data-obj-ctx="none"'), '上下文未装配=显式')
+  assert.equal(obj.opsPanel([]), '', '无操作=整片不显示（不画灰按钮）')
+})
+
+test('L78-02 R-UX-7 工作台接线在册：路由/loader 注入/六片挂载词形/别名跳转/拼接序（回潮即红）', () => {
+  assert.ok(SRC.includes('window.__CC.obj'), 'console-obj 模块入 bundle')
+  assert.ok(SRC.includes("route('obj/:kind/:scope/:name'"), '工作台路由在册（#/obj/:kind/:scope/:name）')
+  assert.ok(SRC.includes('__CC.obj.setRuleDocsLoader'), '规则文档族 loader 注入在册')
+  assert.ok(SRC.includes('__CC.obj.setTagTypesLoader'), 'tagType 词表 loader 注入在册')
+  assert.ok(SRC.includes('data-obj-tags="1"') && SRC.includes('data-obj-rules="1"') && SRC.includes('data-obj-ctx="') &&
+    SRC.includes('data-obj-ops="1"') && SRC.includes('data-obj-scheme="1"') && SRC.includes('data-obj-content="1"'),
+    '六片挂载词形在册（标签/规则/上下文/操作/内容/scheme）')
+  assert.ok(SRC.includes('data-obj-list="1"'), '对象清单在册（标识符全可点）')
+  assert.ok(SRC.includes("ACTIONS['obj-tag']") && SRC.includes("ACTIONS['obj-rules-retry']") && SRC.includes("ACTIONS['obj-chat']"),
+    '工作台动作处理器在册（tag 联动/重试/开聊）')
+  assert.ok(SRC.includes("location.replace('#/obj')") || SRC.includes("route('obj', function"), '首屏缺省落地=对象工作台（R-UX-7 首屏=工作台——空段/裸词重定向）')
+  assert.ok(SRC.includes("{ id: 'welcome', label: '对象工作台', route: '#/obj'"), '侧栏首位=对象工作台（旧 Welcome 入口迁移）')
+  const build = readFileSync(join(PLUGIN, 'build-client.mjs'), 'utf8')
+  assert.ok(build.includes("'console-obj.js'") && build.indexOf("'console-obj.js'") > build.indexOf("'console-md.js'") &&
+    build.indexOf("'console-obj.js'") < build.indexOf("'console-live.js'"),
+    'console-obj.js 入 bundle 拼接序（console-md 后 console-live 前）')
 })

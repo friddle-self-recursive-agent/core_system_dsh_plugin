@@ -26,6 +26,8 @@
     evSyn: { on: false, n: 1200 }, // E7 合成压测窗（客户端合成展示层——不入归档不入聚合）
     docFilter: { tags: {}, kind: '', draft: '', q: '' },
     docTags: {},         // E7 tag 现读缓存（docKey@rv -> tags[]——渲染层缓存，读面权威不变）
+    objFilter: { tag: '', scope: '' }, // 对象工作台左侧对象清单过滤器（tag 点选联动）
+    objCache: {},        // 对象正文现读缓存（objKey@rv——rv 一致即复用，不重复拉正文）
     /* 设计文档工作台（v0.52 能力 A——console 屏幕 6「设计文档」页签）：
      * ddTree=白名单仓树快照（/v1/design-docs）；ddSel=当前选中 {repo,path}；
      * dd['repo|path']={working, base, sha, lastCommit, loaded}（base=HEAD 权威）；
@@ -326,6 +328,33 @@
     go(el.dataset.go);
   };
   ACTIONS['stop'] = function () {};
+  /* 对象工作台动作（R-UX-7 §14.5）：tag 点选联动清单 / 规则索引重试 / 就地开聊（深链带对象）。 */
+  ACTIONS['obj-tag'] = function (el) {
+    var t = el.dataset.t || '';
+    if (!t || S.objFilter.tag === t) { S.objFilter.tag = ''; go('obj'); return; }
+    S.objFilter.tag = t;
+    go('obj');
+  };
+  ACTIONS['obj-rules-retry'] = function () {
+    var OBJ = window.__CC && window.__CC.obj;
+    if (OBJ && OBJ.refreshIndex) OBJ.refreshIndex().then(function () { render(); });
+  };
+  ACTIONS['obj-chat'] = function (el) {
+    var agent = objChatAgent();
+    var kind = (el && el.dataset.kind) || S.params.kind || '';
+    var scope = (el && el.dataset.scope) || S.params.scope || '';
+    var name = (el && el.dataset.name) || S.params.name || '';
+    var q = '请就对象 ' + [kind, scope, name].filter(Boolean).join('/') + ' 展开说明';
+    go('chat/' + encodeURIComponent(agent));
+    setTimeout(function () {
+      var box = document.querySelector('#chat-input, [data-chat-input]');
+      if (box) {
+        box.value = q;
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+        box.focus();
+      }
+    }, 350);
+  };
 
   /* ================= 浮层栈（共用模态裁决 Esc 并恢复焦点） ================= */
   function pushOverlay(o) {
@@ -691,7 +720,7 @@
     clearTimers();
     stopFollowTimers();
     var segs = parseHash();
-    if (!segs.length) { location.replace('#/welcome'); return; }
+    if (!segs.length) { location.replace('#/obj'); return; }
     var m = matchRoute(segs);
     var view = $('#view');
     if (!m) {
@@ -1971,6 +2000,137 @@
       (st.wfAgg ? '<span class="chip kind">' + (st.wfAgg.count || 0) + ' 条规则</span>' : '') + '</div>' +
       '<div class="dh-sub">Workflow = 触发规则 → 事件整理 → 相位态机 → 文档回归。启停/编辑 全部 = Apply（override 落系统层同名对象）。</div></div></div>' +
       inner + '</div>';
+  }
+
+  /* ================= 通用对象工作台（R-UX-7：#/obj/:kind/:scope/:name——console-ui.md §14.5） =================
+   * 一个组件服务所有对象：六片固定=标签/适用规则/上下文/操作/内容/scheme；缺片显式「无」不装假。
+   * 单一真相：数据全部来自 scheme kinds + 对象枚举 + 对象正文现读 + 规则文档族现读（零自建状态）。
+   * 对话=一等片：右栏常驻会话状态投影 + 就地开聊深链（内嵌会话输入=报告主界面轮同体量项——诚实余量）。 */
+  function objKey(kind, scope, name) { return kind + '|' + (scope || 'global') + '|' + (name || ''); }
+  function objRoute(kind, scope, name) {
+    return 'obj/' + encodeURIComponent(kind) + '/' + encodeURIComponent(scope || 'global') + '/' + encodeURIComponent(name);
+  }
+  function objContentOf(ref) {
+    var k = objKey(ref.kind, ref.scope, ref.name) + '@' + (ref.resourceVersion || 0);
+    if (S.objCache[k]) return Promise.resolve(S.objCache[k]);
+    return LIVE.fetchObject(ref.kind, ref.scope, ref.name).then(function (b) {
+      var c = String((b && b.content) || '');
+      S.objCache[k] = c;
+      return c;
+    }).catch(function () { return ''; });
+  }
+  function objChatAgent() { return liveChatAgents()[0] || 'core-headless'; }
+  function screenObjWorkbench(view) {
+    LIVE.ensure();
+    var p = S.params;
+    var kind = p.kind, scope = p.scope, name = p.name;
+    var ref = (LIVE.refs(kind) || []).filter(function (o) {
+      return o.name === name && (o.scope === scope || (!o.scope && scope === 'global'));
+    })[0] || (LIVE.refs(kind) || []).filter(function (o) { return o.name === name; })[0] || null;
+    if (!ref) {
+      view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（当前 ' + (LIVE.state.kinds || []).length + ' 类）', kind + '/' + name) + '</div>';
+      return;
+    }
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: ref.kind, go: 'tree' }, { label: ref.name }]);
+    if (!LIVE.state.kinds.length || LIVE.state.status === 'loading') {
+      view.innerHTML = '<div class="view-inner"><div class="card"><div class="card-b">' + liveSkeletonRows(6) + '</div></div></div>';
+      return;
+    }
+    objContentOf(ref).then(function (content) {
+      if (S.route !== 'obj') return;
+      paintObjWorkbench(view, ref, content);
+    });
+  }
+  function paintObjWorkbench(view, ref, content) {
+    var OBJ = window.__CC && window.__CC.obj;
+    var SCN = window.__CC && window.__CC.scenario;
+    var kindReg = (LIVE.state.kinds || []).filter(function (k) { return k.name === ref.kind; })[0] || null;
+    var tags = SCN && SCN.tagsOf ? SCN.tagsOf(content) : [];
+    var sess = ref.kind === 'Session'
+      ? ((LIVE.state.sessions && LIVE.state.sessions.sessions || []).filter(function (s) { return s.sessionId === ref.name || s.involved === ref.involved; })[0] || null)
+      : null;
+    Promise.all([OBJ ? OBJ.ensureRules() : Promise.resolve(null), OBJ ? OBJ.ensureTagTypes() : Promise.resolve(null)]).then(function (r) {
+      if (S.route !== 'obj') return;
+      var rules = r[0], vocab = r[1];
+      var rs = OBJ ? OBJ.rulesFor({ kind: ref.kind, scope: ref.scope, name: ref.name, content: content, tags: tags }, rules) : { hits: [], degraded: true, reason: '工作台模块未装载。', scanned: 0 };
+      var groups = OBJ ? OBJ.tagGroups(tags, vocab) : [];
+      var hasSpec = !!(kindReg && kindReg.spec && Object.keys(kindReg.spec).length);
+      var regYaml = hasSpec && OBJ.kindRegYaml ? OBJ.kindRegYaml(kindReg) : '';
+      var sum = OBJ ? OBJ.ctxSummary(sess ? { sessionId: sess.sessionId, tagSig: sess.tagSig || '', chunks: [] } : null) : { state: 'none', text: '本会话未装配。' };
+      paintObjBody(view, ref, { kindReg: kindReg, regYaml: regYaml, hasSpec: hasSpec, tags: tags, groups: groups, rules: rs, sum: sum, content: content });
+    });
+  }
+  function objPanel(title, body, anchor) {
+    return '<div class="card ob-panel" ' + (anchor ? 'data-obj-panel="' + esc(anchor) + '"' : '') + '>' +
+      '<div class="card-h" style="padding:8px 16px 0"><span class="small muted">' + esc(title) + '</span></div>' +
+      '<div class="card-b" style="padding:8px 16px 12px">' + body + '</div></div>';
+  }
+  function objOpsFor(ref, kindReg) {
+    var ops = [];
+    ops.push({ label: '就地开聊', act: 'obj-chat', primary: true, data: { 'obj-chat': '1' } });
+    if (ref.kind === 'Workflow') ops.push({ label: '看运行', act: 'go', data: { go: 'wf/' + encodeURIComponent(ref.name) } });
+    if (ref.kind === 'Proposal') ops.push({ label: '提案详情', act: 'go', data: { go: 'proposal/' + encodeURIComponent(ref.scope) + '/' + encodeURIComponent(ref.name) } });
+    if (ref.kind === 'Event' || ref.kind === 'Notification') ops.push({ label: '事件流', act: 'go', data: { go: 'events' } });
+    if (kindReg && !kindReg.builtin) ops.push({ label: '编辑草稿', act: 'go', data: { go: 'doc/' + encodeURIComponent(ref.kind) + '/' + encodeURIComponent(ref.scope || 'global') + '/' + encodeURIComponent(ref.name) } });
+    return ops;
+  }
+  function paintObjBody(view, ref, d) {
+    var OBJ = window.__CC && window.__CC.obj;
+    var md = window.__CC && window.__CC.md;
+    var phase = (LIVE.state.instanceStatus[ref.kind + '/' + ref.scope + '/' + ref.name] || {}).phase || '';
+    /* 左栏：对象清单（当前过滤器内——tag 点选联动；标识符全可点） */
+    var f = S.objFilter;
+    var rows = [];
+    (LIVE.state.kinds || []).forEach(function (kd) {
+      (LIVE.refs(kd.name) || []).forEach(function (o) {
+        rows.push(o);
+      });
+    });
+    rows.sort(function (a, b) { return (a.kind + a.name) < (b.kind + b.name) ? -1 : 1; });
+    var listRows = rows.filter(function (o) {
+      if (f.tag) {
+        var c = S.objCache[objKey(o.kind, o.scope, o.name) + '@' + (o.resourceVersion || 0)];
+        var ot = c && window.__CC && window.__CC.scenario ? window.__CC.scenario.tagsOf(c) : [];
+        if (ot.indexOf(f.tag) < 0) return false;
+      }
+      if (f.scope && (o.scope || 'global') !== f.scope) return false;
+      return true;
+    });
+    var listBox = '<div class="ob-list" data-obj-list="1">' + (listRows.length ? listRows.map(function (o) {
+      var sel = o.kind === ref.kind && o.name === ref.name && (o.scope || 'global') === (ref.scope || 'global');
+      return '<div class="ob-row' + (sel ? ' sel' : '') + '" data-act="go" data-go="' + esc(objRoute(o.kind, o.scope, o.name)) + '">' +
+        '<span class="mono">' + esc(o.name) + '</span> <span class="chip mute tiny">' + esc(o.kind) + '</span></div>';
+    }).join('') : '<div class="ob-empty" data-obj-list-empty="1">清单为空——过滤条件过窄，点 tag 重置。</div>') + '</div>';
+    /* 身份条 */
+    var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1 style="font-size:18px">' + esc(ref.name) + '</h1>' +
+      '<span class="chip kind small">' + esc(ref.kind) + '</span>' +
+      '<span class="chip mute small">' + esc(ref.scope || 'global') + '</span>' +
+      (ref.resourceVersion != null ? '<span class="chip mute tiny">rev ' + esc(ref.resourceVersion) + '</span>' : '') +
+      (phase ? '<span class="chip ' + (phase === 'InSync' ? 'ok' : 'warn') + ' tiny">' + esc(phase) + '</span>' : '') + '</div>' +
+      '<div class="dh-sub small faint">对象工作台——六片（标签/适用规则/上下文/操作/内容/scheme）同一套；数据全部来自 scheme 与现读，标识符全可点。</div></div></div>';
+    /* 六片主体（§14.5：缺片显式「无」） */
+    var main = objPanel('标签', OBJ.tagPanel(d.groups), 'tags') +
+      objPanel('适用规则', OBJ.rulePanel(d.rules), 'rules') +
+      objPanel('上下文', OBJ.ctxPanel(d.sum), 'ctx') +
+      objPanel('操作', OBJ.opsPanel(objOpsFor(ref, d.kindReg)) || '<span class="faint small">当前权限下无可用操作。</span>', 'ops') +
+      objPanel('内容', OBJ.contentPanel(ref.kind, ref.name, d.content, isMarkdownDoc(ref.kind, ref.name)) || (md && d.content ? '<div data-obj-cards="1">' + (md.yamlToCards(d.content) || '') + '</div>' + md.rawDisclosure('YAML', d.content) : ''), 'content') +
+      (d.hasSpec ? objPanel('scheme（' + esc(ref.kind) + ' 声明结构）', OBJ.schemePanel({ spec: { struct: '1' } }, d.regYaml, []), 'scheme') : '');
+    view.innerHTML = '<div class="view-inner"><div class="obj-layout">' +
+      '<div class="obj-side"><div class="card"><div class="card-h" style="padding:8px 16px 0"><span class="small muted">对象清单（' + listRows.length + '）' + (f.tag ? ' · tag #' + esc(f.tag) : '') + '</span></div>' +
+      '<div class="card-b" style="padding:8px 16px 12px">' + listBox + '</div></div></div>' +
+      '<div class="obj-main">' + head + '<div class="obj-panels">' + main + '</div></div>' +
+      '<div class="obj-chat"><div class="card"><div class="card-h" style="padding:8px 16px 0"><span class="small muted">对话（常驻）</span></div>' +
+      '<div class="card-b" style="padding:8px 16px 12px" data-obj-chatrail="1">' + objChatRail(ref) + '</div></div></div>' +
+      '</div></div>';
+  }
+  function objChatRail(ref) {
+    var agent = objChatAgent();
+    var sess = (LIVE.state.sessions && LIVE.state.sessions.sessions || []);
+    var n = sess.length;
+    return '<div class="small">' + (n ? '活跃会话 ' + n + ' 个（系统投影）' : '暂无活跃会话') + '</div>' +
+      '<div class="ob-chat-acts" style="margin-top:8px">' +
+      '<button class="btn primary sm" data-act="obj-chat" data-obj-chat="1">与 ' + esc(agent) + ' 开聊（带本对象）</button></div>' +
+      '<div class="faint small" style="margin-top:6px">会话=原生会话机制；就地开聊=深链进入会话屏并携带对象引用（不新建概念、不复制状态）。</div>';
   }
 
   var WF_TABS = [
@@ -6045,6 +6205,29 @@
   route('wf/:name/r/:n', screenWfRun);
   route('doc/:name', function (v) { screenEditor(v, null); });      // 名字解析（歧义=空态引导回系统树）
   route('doc/:kind/:scope/:name', function (v) { screenEditor(v); }); // 对象键直链（kind/scope/name）——E4 起编辑器
+  route('obj/:kind/:scope/:name', screenObjWorkbench); // 通用对象工作台（R-UX-7——六片同一套，§14.5）
+  route('obj', function () { // 裸词=缺省对象（该 kind 首个 Workflow——首屏落地词形，挂载时序内自洽）
+    var wfs = LIVE.refs('Workflow') || [];
+    if (wfs.length) { go(objRoute(wfs[0].kind, wfs[0].scope, wfs[0].name)); return; }
+    var cur = LIVE.ensure();
+    if (!cur) return;
+    Promise.resolve(cur).then(function () {
+      if (S.route !== 'obj') return;
+      var l2 = LIVE.refs('Workflow') || [];
+      if (l2.length) go(objRoute(l2[0].kind, l2[0].scope, l2[0].name));
+    }).catch(function () { /* 装载失败=连接态灯投影，不传染 */ });
+  });
+  route('obj/:kind', function (v) { // kind 别名=该 kind 首个对象（深链省 scope 形；首装未就绪=装载完成后重渲染再解析）
+    var list = LIVE.refs(v.params.kind) || [];
+    if (list.length) { go(objRoute(list[0].kind, list[0].scope, list[0].name)); return; }
+    var cur = LIVE.ensure();
+    if (!cur) return; // 读面缺席=连接态灯已是常态设计（诚实不冒充）
+    Promise.resolve(cur).then(function () {
+      if (S.route !== 'obj') return;
+      var l2 = LIVE.refs(v.params.kind) || [];
+      if (l2.length) go(objRoute(l2[0].kind, l2[0].scope, l2[0].name));
+    }).catch(function () { /* 装载失败=连接态灯投影，不传染 */ });
+  });
   route('docs', screenDocsGlobal);
   route('designdoc/:repo/:path', screenDesignDoc); // v0.52 能力 A：设计文档工作台深链（path 段整体 URL 编码）
   route('designdoc', screenDesignDoc); // 未选档=默认首仓首文件
@@ -6075,7 +6258,7 @@
       });
     }
     $('#pal-input').addEventListener('input', function () { palSel = 0; renderPalList(this.value); });
-    if (!location.hash) location.replace('#/welcome');
+    if (!location.hash) location.replace('#/obj');
     if (__CC.serviceProjects) {
       __CC.serviceProjects.onChange = function () {
         updateCounters();
@@ -6136,6 +6319,46 @@
         return __CC.live.designDocs();
       });
     }
+    /* 对象工作台（R-UX-7）：规则文档族/tagType 词表 loader 注入（同 ctx 范式——现读规则文档族全文
+     * 与 metadatainfo tag 词表，命中判定=模块内确定性纯函数）。 */
+    if (__CC.obj && __CC.obj.setRuleDocsLoader) {
+      __CC.obj.setRuleDocsLoader(function () {
+        return __CC.live.designDocs().then(function (list) {
+          var ruleRows = ((list && (list.docs || list)) || []).filter(function (d) {
+            return /(^|\/)rule\//.test(String(d.path || ''));
+          }).slice(0, 12);
+          return Promise.all(ruleRows.map(function (d) {
+            return __CC.live.designDoc(d.repo, d.path).then(function (b) {
+              return { repo: d.repo, path: d.path, title: '', tags: [], content: String((b && b.content) || '') };
+            }).catch(function () { return null; });
+          })).then(function (rows) { return { rules: rows.filter(Boolean) }; });
+        });
+      });
+      __CC.obj.setTagTypesLoader(function () {
+        return __CC.live.designDocs().then(function (list) {
+          var rows = ((list && (list.docs || list)) || []).filter(function (d) {
+            return /\.metadatainfo$/.test(String(d.path || ''));
+          }).slice(0, 60);
+          return Promise.all(rows.map(function (d) {
+            return __CC.live.designDoc(d.repo, d.path).then(function (b) {
+              var map = {};
+              var s = String((b && b.content) || '');
+              var re = /-\s*tag:\s*([^\n]+)\s*\n(?:.*\n)*?.*tag_type:\s*([^\n]+)/g, m;
+              while ((m = re.exec(s))) {
+                var tag = m[1].trim().replace(/^['"]|['"]$/g, '');
+                var t = m[2].trim().replace(/^['"]|['"]$/g, '');
+                if (tag && t && !map[tag]) map[tag] = t;
+              }
+              return map;
+            }).catch(function () { return {}; });
+          })).then(function (maps) {
+            var out = {};
+            maps.forEach(function (m) { Object.keys(m).forEach(function (k) { if (!out[k]) out[k] = m[k]; }); });
+            return { tagTypes: out };
+          });
+        });
+      });
+    }
     __CC.propYaml = propYaml;
     __CC.conn = __CC.createConnMonitor({ onChange: function (st) { applyConnState(st, {}); } });
     __CC.conn.start();
@@ -6145,7 +6368,7 @@
       if (!ROOT) return;
       // 'doc'（编辑器）不在列：编辑器自注水（屏加载即现读），live 轻刷新不重渲染（编辑态/textarea 焦点保真）；
       // Apply 成功后的重渲染走 apply 回调显式 LIVE.load().then(render)。
-      if (['welcome', 'overview', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'proposals', 'connectors', 'inbox'].indexOf(S.route) >= 0) render();
+      if (['welcome', 'overview', 'tree', 's', 'wf', 'ws', 'provider', 'connector', 'ref', 'role', 'agent', 'event', 'events', 'approvals', 'proposals', 'connectors', 'inbox', 'obj'].indexOf(S.route) >= 0) render();
     };
     addInterval(function () { if (ROOT) LIVE.load(); }, 15000);
     boot();

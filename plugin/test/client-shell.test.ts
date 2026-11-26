@@ -92,7 +92,8 @@ test('L36-03 静态面：八入口+总览 全部在壳导航数据中且路由�
   for (const id of ['welcome', 'overview', 'tree', 'workflows', 'docs', 'events', 'approvals', 'connectors', 'chat-root']) {
     assert.ok(SRC.includes(`id: '${id}'`), `壳导航缺入口 ${id}`)
   }
-  for (const route of ['#/welcome', '#/overview', '#/tree', '#/workflows', '#/docs', '#/events', '#/approvals', '#/connectors', '#/chat/']) {
+  // R-UX-7 首屏取代（console-ui.md §14.0）：入口锚=对象工作台（#/obj——welcome 保留为旧路由别名域）
+  for (const route of ['#/obj', '#/overview', '#/tree', '#/workflows', '#/docs', '#/events', '#/approvals', '#/connectors', '#/chat/']) {
     assert.ok(SRC.includes(`'${route}`), `壳导航缺路由 ${route}`)
   }
 })

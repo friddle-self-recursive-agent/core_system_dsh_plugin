@@ -610,3 +610,33 @@
 .ctx-approval { margin: 6px 0; }
 .ctx-approval > summary { cursor: pointer; list-style: revert; display: flex; gap: 8px; align-items: center; }
 .ctx-approval-body { padding: 4px 0 0; }
+
+/* ================= 通用对象工作台（R-UX-7——#/obj 六片同一套） =================
+ * 布局=左清单 + 主区六片 + 右对话栏；样式只消费 dsh 原生 token（零新色值——R-UX-5）。 */
+.obj-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 260px;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .obj-layout { grid-template-columns: minmax(0, 1fr) 240px; }
+  .obj-side { display: none; }
+}
+.obj-list { display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow: auto; }
+.ob-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: 8px; cursor: pointer;
+}
+.ob-row:hover { background: var(--panel-3); }
+.ob-row.sel { background: var(--panel-3); outline: 1px solid var(--border-2); }
+.ob-row .mono { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obj-panels { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.ob-panel .card-h { border-bottom: 1px solid var(--border); }
+.ob-empty { color: var(--muted); font-size: 12px; }
+.ob-tagrow { display: flex; align-items: center; gap: 6px; margin: 3px 0; flex-wrap: wrap; }
+.ob-rule { border: 1px solid var(--border-2); border-radius: 8px; padding: 6px 8px; margin: 4px 0; background: var(--bg); }
+.ob-rule summary { cursor: pointer; list-style: revert; }
+.ob-rule-why { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; }
+.ob-ctx { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ob-chat-acts .btn { margin-right: 6px; }

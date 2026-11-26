@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(fileURLToPath(import.meta.url))
 const PKG_ID = 'dsh-plugin-core-system'
-const parts = ['console-shell.js', 'console-data.js', 'console-md.js', 'console-ctx.js', 'console-live.js', 'console-scenario.js', 'console-chat.js', 'console-projects.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
+const parts = ['console-shell.js', 'console-data.js', 'console-md.js', 'console-ctx.js', 'console-obj.js', 'console-live.js', 'console-scenario.js', 'console-chat.js', 'console-projects.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
 const css = readFileSync(join(root, 'client/console.css'), 'utf8')
 
 const body = [

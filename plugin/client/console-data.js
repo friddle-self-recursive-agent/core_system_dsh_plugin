@@ -1230,7 +1230,7 @@
 
   // ---------- 侧栏导航 / 路由元数据 ----------
   var nav = [
-    { id: 'welcome', label: 'Welcome', route: '#/welcome', icon: 'home' },
+    { id: 'welcome', label: '对象工作台', route: '#/obj', icon: 'home' },
     { id: 'overview', label: '总览', route: '#/overview', icon: 'grid' },
     { id: 'tree', label: '系统树', route: '#/tree', icon: 'tree' },
     { id: 'workflows', label: 'Workflows', route: '#/workflows', icon: 'flow' },
