@@ -8471,8 +8471,8 @@ function makeConsolePanel(nav) {
 }
 
 var CC_NATIVE_CSS = [
-  '[data-cc-sidebar-label]{position:absolute;top:-16px;left:12px;color:var(--dsw-alias-label-tertiary);font:11px/16px var(--dsw-font-family);letter-spacing:.04em;pointer-events:none}',
-  'button:has(>span>svg[data-cc-nav="overview"]){margin-top:16px}',
+  '[data-cc-sidebar-label]{position:absolute;top:-30px;left:12px;color:var(--dsw-alias-label-tertiary);font:11px/16px var(--dsw-font-family);letter-spacing:.04em;pointer-events:none}',
+  'nav:has([data-cc-sidebar-label]){padding-top:40px}',
   '[data-cc-approval-badge]{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-label-on-color);font:11px/16px var(--dsw-font-family);text-align:center}',
   '@media(max-width:1199px){.cc-host .cc-narrow-menu{display:inline-flex!important}}'
 ].join('\n')
