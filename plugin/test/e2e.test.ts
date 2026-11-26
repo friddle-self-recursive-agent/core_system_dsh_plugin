@@ -52,7 +52,7 @@ test('真实 cored 端到端：就绪行→句柄 list/get/404→写面关断 40
   const bin = locateCored()
   if (!bin) return t.skip('cored 不在 PATH 且未设 CORE_SYSTEM_TEST_CORED')
   const fx = makeFixture()
-  const child = spawn(bin, ['--scheme', fx.scheme, '--docs', fx.docs], { stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(bin, ['--scheme', fx.scheme, '--docs', fx.docs, '--docs-backend', 'git'], { stdio: ['ignore', 'pipe', 'pipe'] })
   try {
     // 就绪：读 stdout 就绪行（复用真解析器），5s 超时判 fail
     const ready = await new Promise<ReturnType<typeof parseReadyLine>>((resolve, reject) => {

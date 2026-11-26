@@ -605,6 +605,7 @@
   border: 1px dashed var(--border-2, #273041);
   color: var(--muted, #8b93a7); font-size: 12px;
 }
+.ctx-degraded .btn { margin-left: 8px; }
 .ctx-supp .btn { margin-top: 6px; }
 .ctx-approval { margin: 6px 0; }
 .ctx-approval > summary { cursor: pointer; list-style: revert; display: flex; gap: 8px; align-items: center; }

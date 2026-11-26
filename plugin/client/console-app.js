@@ -5086,9 +5086,11 @@
     var cx = window.__CC && window.__CC.ctx && window.__CC.ctx.cachedOf(st.kind, st.scope, st.name || propSlug(st.fields.title));
     return cx ? window.__CC.ctx.card(cx) : '';
   }
-  /* 提交节点随行对照：check() 结果写入会话缓存（kind 键复用）+ 消息行（含降级可见）。 */
+  /* 提交节点随行对照：check() 结果写入会话缓存（kind 键复用）+ 消息行（含降级可见）。
+   * precheck 兜底：重建字段（与 prop-submit 同口径）——供降级重试等无预览通路复用同一摘要。 */
   function ctxRunCheck(st, yaml) {
     if (!window.__CC || !window.__CC.ctx || !window.__CC.ctx.check) return Promise.resolve(null);
+    if (!yaml) yaml = propYaml(precheckFields(st));
     return window.__CC.ctx.check(st.kind || 'Proposal', st.scope, st.name || propSlug(st.fields.title), yaml)
       .then(function (r) {
         var cx = r && r.cx;
@@ -5703,14 +5705,29 @@
     el.classList.add('ok');
     toast('已加入随行清单', ref + '——批准派工后作为文档更新起点随载荷下发', 'ok');
   };
+  /* 降级卡「重试对照」（免刷新整页）：同键同摘要语义——预览在册用预览 yaml，否则按会话字段重建；
+   * 重试中可再点（幂等——失败态不缓存，每次 check 本就现读）；成功/再降级都重绘对照卡（新态可见）。 */
+  ACTIONS['ctx-retry'] = function (el) {
+    if (!window.__CC || !window.__CC.ctx || !window.__CC.ctx.refresh) return;
+    var kindName = (el && el.dataset.kind) || 'Proposal';
+    var st = intakeStateOf(kindName);
+    el.disabled = true;
+    el.textContent = '对照中…';
+    var scope = el.dataset.scope || st.scope || 'global';
+    var name = el.dataset.name || st.name || propSlug(st.fields.title);
+    window.__CC.ctx.refresh(kindName, scope, name, window.__CC.ctx.yamlOf(st)).then(function (r) {
+      var cx = r && r.cx;
+      if (!cx) { render(); return; }
+      var n = (cx.conflicts || []).length + (cx.supplements || []).length;
+      st.messages.push({ role: 'assistant', text: cx.degraded
+        ? '文档对照重试后仍暂不可用——已跳过（不阻断提交），可稍后再试或提交后人工复核。'
+        : (n ? '文档对照重试完成：发现 ' + (cx.conflicts || []).length + ' 处待复核冲突、' + (cx.supplements || []).length + ' 份建议随行核对的文档（见对照卡）。'
+             : '文档对照重试完成：未发现冲突。') });
+      render();
+    });
+  };
   ACTIONS['prop-submit'] = function () {
-    var f = {
-      name: ($('#pf-name') || {}).value || '', title: ($('#pf-title') || {}).value || '',
-      summary: ($('#pf-summary') || {}).value || '', acceptance: ($('#pf-acceptance') || {}).value || '',
-      impact: ($('#pf-impact') || {}).value || '', priority: ($('#pf-priority') || {}).value || 'normal',
-      landing: ($('#pf-landing') || {}).value || 'doc', proposer: ($('#pf-proposer') || {}).value || 'console-operator',
-      scope: 'global', status: 'submitted'
-    };
+    var f = precheckFields(intakeStateOf('Proposal'));
     f.name = (f.name || propSlug(f.title) || '').trim();
     if (!/^[a-z0-9][a-z0-9-]*$/.test(f.name)) { toast('名称不合法', 'slug 形态 [a-z0-9-]（标题留空自动生成）', 'warn'); return; }
     if (!f.title.trim() || !f.summary.trim()) { toast('标题/目标必填', '需求先说清做什么', 'warn'); return; }
@@ -5719,7 +5736,7 @@
     // 提交节点随行对照（§4.6：提交面同产同卡；会话缓存后详情屏同屏携带；降级可见不阻断）。
     var stCtx = intakeStateOf('Proposal');
     stCtx.name = f.name;
-    ctxRunCheck(stCtx, yaml);
+    ctxRunCheck(stCtx, propYaml(f));
     // 提交=草稿→Apply 全流程（E4 通路复用；对象键 Proposal/global/<name>）。
     fetch('/core-console/drafts', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
       body: JSON.stringify({ kind: 'Proposal', scope: 'global', name: f.name, content: yaml,
@@ -6119,6 +6136,7 @@
         return __CC.live.designDocs();
       });
     }
+    __CC.propYaml = propYaml;
     __CC.conn = __CC.createConnMonitor({ onChange: function (st) { applyConnState(st, {}); } });
     __CC.conn.start();
     applyConnState(__CC.conn.state(), { silent: true });

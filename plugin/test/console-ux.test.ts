@@ -227,6 +227,10 @@ test('L76-03 提交节点与审批屏挂载词形在册（对话区独立卡/预
   assert.ok(SRC.includes("ACTIONS['ctx-supplement-add']"), '补充项一键随行动作在册')
   assert.ok(SRC.includes('ctxRunCheck'), '提交节点随行对照入口在册')
   assert.ok(SRC.includes('__CC.ctx.setDocsLoader'), '文档库索引 loader 注入在册')
+  assert.ok(SRC.includes('__CC.propYaml = propYaml'), 'propYaml 导出在册（降级重试摘要重建通道）')
+  assert.ok(SRC.includes("ACTIONS['ctx-retry']"), '降级重试动作处理器在册')
+  assert.ok(SRC.includes('window.__CC.ctx.yamlOf'), '模块侧 yamlOf 摘要重建在册')
+  assert.ok(SRC.includes('ctx-degraded .btn'), '降级卡重试按钮样式在册')
   const build = readFileSync(join(PLUGIN, 'build-client.mjs'), 'utf8')
   assert.ok(build.includes("'console-ctx.js'"), 'console-ctx.js 入 bundle 拼接序（console-md 后 console-live 前）')
 })
@@ -246,4 +250,35 @@ test('L76-04 对照卡文案与样式纪律：零工程词形（「面」族/E<n
   const foreign = tokens.filter((t) => !dshNative.includes(t.toLowerCase()))
   assert.equal(foreign.length, 0, '对照卡样式引入非 dsh 原生色值：' + foreign.join(','))
   assert.ok(ctxBlock.includes('var(--panel-2') || css.includes('var(--panel-2'), '对照卡样式消费 dsh 原生 token（--panel-2）')
+})
+
+test('L77-01 降级重试：degraded 卡自带重试按钮（免刷新整页）——refresh 现读重装配+同键同摘要语义在册', async () => {
+  const window: Record<string, any> = {}
+  const fn = new Function('window', readFileSync(join(CLIENT, 'console-ctx.js'), 'utf8'))
+  fn(window)
+  const ctx = window.__CC.ctx
+  // ① degraded 卡自带重试按钮（文案=「重试对照」——免刷新整页）；带 kind/scope/name 数据通道
+  //    （走 check() 生产路径——analyze 直产无定位戳，check 盖戳后卡才携带 data-kind/scope）
+  ctx.setDocsLoader(() => Promise.reject(new Error('down')))
+  const cxCheck = await ctx.check('Proposal', 'global', 'ctx-retry-card', 'title: 对照重试\nsummary: 按钮在册')
+  const cardDeg = ctx.card(cxCheck.cx)
+  assert.equal(cxCheck.cx.degraded, true, '前置：索引缺席=degraded')
+  assert.ok(cardDeg.includes('data-act="ctx-retry"'), '降级卡重试按钮在册（ctx-retry）')
+  assert.ok(cardDeg.includes('重试对照'), '重试文案在册（非「刷新」词形）')
+  assert.ok(cardDeg.includes('data-kind="Proposal"') && cardDeg.includes('data-scope="global"'), '重试按钮携带对象定位数据')
+  // ② refresh 强制现读重装配：先跑出 degraded，再 loader 恢复后 refresh → 非 degraded
+  let calls = 0
+  ctx.setDocsLoader(() => { calls++; return Promise.reject(new Error('down')) })
+  const r1 = await ctx.check('Proposal', 'global', 'ctx-retry-demo', 'title: 对照重试\nsummary: 恢复')
+  assert.equal(r1.cx.degraded, true, '前置：loader 失败=degraded')
+  const docs = [{ repo: 'core_design', path: 'concepts/proposal.md', sha: 'aaaabbbbccccddddeeeeffff' }]
+  ctx.setDocsLoader(() => { calls++; return Promise.resolve({ docs }) })
+  const r2 = await ctx.refresh('Proposal', 'global', 'ctx-retry-demo', 'title: 对照重试\nsummary: 恢复')
+  assert.equal(r2.cx.degraded, false, 'refresh 后索引恢复=完整对照')
+  assert.equal(r2.reused, false, 'refresh 不复用失败态（失败态本就不缓存——重试恒现读）')
+  assert.ok(calls >= 2, 'refresh 强制跳过索引缓存现读（calls=' + calls + '）')
+  assert.equal(r2.cx.kind, 'Proposal', 'cx 携带对象定位戳（重试按钮 data 通道同源）')
+  // ③ 复用语义回归：成功态同键同摘要仍复用（refresh 只清键，不破坏既有缓存语义）
+  const r3 = await ctx.check('Proposal', 'global', 'ctx-retry-demo', 'title: 对照重试\nsummary: 恢复')
+  assert.equal(r3.reused, true, '成功态复用语义保持（refresh 后 check 同 sig 复用）')
 })

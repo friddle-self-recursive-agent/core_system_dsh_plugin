@@ -134,6 +134,7 @@
       var prev = byKey[k];
       if (prev && prev.sig === sig && prev.cx && !prev.cx.degraded) return { cx: prev.cx, reused: true };
       var cx = analyze(yaml, docs);
+      cx.kind = kind; cx.scope = scope || 'global'; cx.name = name || '';
       byKey[k] = { sig: sig, cx: cx, at: Date.now() };
       return { cx: cx, reused: false };
     });
@@ -152,7 +153,8 @@
       '<span class="small ' + (degraded ? 'faint' : 'muted') + '">' + esc(stateText) + '</span>' +
       '<span class="mono faint small">' + (degraded ? '' : ('文档 ' + esc(String(cx.scanned || 0)) + ' 份')) + '</span></div>';
     if (degraded) {
-      html += '<div class="ctx-degraded" data-ctx-degraded="1">' + esc(cx.reason || '对照暂不可用——不阻断提交。') + '</div></div>';
+      html += '<div class="ctx-degraded" data-ctx-degraded="1">' + esc(cx.reason || '对照暂不可用——不阻断提交。') +
+        ' <button class="btn sm" data-act="ctx-retry" data-kind="' + esc(cx.kind || '') + '" data-scope="' + esc(cx.scope || '') + '" data-name="' + esc(cx.name || '') + '">重试对照</button></div></div>';
       return html;
     }
     if (conf.length) {
@@ -180,6 +182,22 @@
     return html;
   }
   function shortSha(h) { var s = String(h || ''); return s ? s.slice(0, 8) : '—'; }
+  /* ---------- 降级重试（降级卡自带「重试对照」——免刷新整页） ----------
+   * refresh(kind, scope, name, yaml)：强制跳过索引缓存现读重装配（失败态不缓存——每次 check 本就重跑）；
+   * 失败态复用语义不适用（缓存只存成功对照），重试=清键后按同键同摘要再走 check。
+   * yamlOf(st)：优先在册预览 yaml（生成通路），否则按会话字段重建（降级表单通路）——两条提交入口同形。 */
+  function refresh(kind, scope, name, yaml) {
+    delete byKey[keyOf(kind, scope, name)];
+    idx.docs = null;
+    idx.at = 0;
+    return check(kind, scope, name, yaml);
+  }
+  function yamlOf(st) {
+    if (!st) return '';
+    if (st.preview && st.preview.yaml) return String(st.preview.yaml);
+    if (typeof window === 'undefined' || !window.__CC || !window.__CC.propYaml) return '';
+    try { return String(window.__CC.propYaml(st.fields || {}) || ''); } catch (e) { return ''; }
+  }
   /* ---------- 审批详情屏同屏携带（折叠次级——非首屏主体） ----------
    * live 侧数据在册 → 完整对照卡；缺席 → 降级行（可见不静默）。 */
   function approvalStrip(cx, name) {
@@ -197,7 +215,7 @@
       '<span class="small muted">' + stateText + '</span></summary>' +
       '<div class="ctx-approval-body">' + body + '</div></details>';
   }
-  var API = { analyze: analyze, card: card, approvalStrip: approvalStrip, sigOf: sigOf, keyOf: keyOf, extractScalar: extractScalar, shortSha: shortSha, taken: {}, check: check, setDocsLoader: setDocsLoader, cachedOf: function (kind, scope, name) { var e = byKey[keyOf(kind, scope, name)]; return e && e.cx; } };
+  var API = { analyze: analyze, card: card, approvalStrip: approvalStrip, sigOf: sigOf, keyOf: keyOf, extractScalar: extractScalar, shortSha: shortSha, taken: {}, check: check, setDocsLoader: setDocsLoader, refresh: refresh, yamlOf: yamlOf, cachedOf: function (kind, scope, name) { var e = byKey[keyOf(kind, scope, name)]; return e && e.cx; } };
   if (typeof window !== 'undefined') {
     window.__CC = window.__CC || {};
     window.__CC.ctx = API;
