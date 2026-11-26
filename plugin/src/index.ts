@@ -1211,6 +1211,7 @@ export async function mountWakeBridge(
       }
       const type = String(body.type ?? '')
       const agent = String(body.agent ?? '')
+      console.error('[core-system-diag] wake 桥请求 type=%s agent=%s event=%s', type, agent, String(body.eventId ?? ''))
       if (type !== 'LoopRequested') {
         reply(400, { error: `事件类型不支持（${type}）` })
         return
@@ -1230,6 +1231,7 @@ export async function mountWakeBridge(
           })
         })
         if (running) {
+          console.error('[core-system-diag] wake 桥 already-running pattern=%s event=%s', runningPattern, String(body.eventId ?? ''))
           reply(200, { ok: true, status: 'already-running', pattern: runningPattern })
           return
         }
