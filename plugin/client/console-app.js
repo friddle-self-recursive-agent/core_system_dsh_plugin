@@ -5005,7 +5005,8 @@
         missingFields: ['title', 'summary', 'acceptance', 'impact'],
         conflictFields: [],
         fieldErrors: {},
-        preview: null
+        preview: null,
+        ctxCheck: null
       };
     }
     return S.intake[kindName];
@@ -5079,6 +5080,28 @@
     return { status: 'filled', badge: '● ' + disp, cls: 'st-filled', error: '' };
   }
 
+  /* --- 提案×文档对照卡（concepts/proposal.md §4.6——console-ctx.js 展示层） ---
+   * 在册（提交节点已跑）→ 独立卡在对话区/预览区明确展示；未跑 → 零占位（生成/提交随行才产）。 */
+  function ctxCardHtml(st) {
+    var cx = window.__CC && window.__CC.ctx && window.__CC.ctx.cachedOf(st.kind, st.scope, st.name || propSlug(st.fields.title));
+    return cx ? window.__CC.ctx.card(cx) : '';
+  }
+  /* 提交节点随行对照：check() 结果写入会话缓存（kind 键复用）+ 消息行（含降级可见）。 */
+  function ctxRunCheck(st, yaml) {
+    if (!window.__CC || !window.__CC.ctx || !window.__CC.ctx.check) return Promise.resolve(null);
+    return window.__CC.ctx.check(st.kind || 'Proposal', st.scope, st.name || propSlug(st.fields.title), yaml)
+      .then(function (r) {
+        var cx = r && r.cx;
+        if (!cx) return null;
+        var n = (cx.conflicts || []).length + (cx.supplements || []).length;
+        var line = cx.degraded
+          ? '文档对照暂不可用（已跳过，不阻断提交）——提交后可在文档页签人工复核。'
+          : (n ? '文档对照完成：发现 ' + (cx.conflicts || []).length + ' 处待复核冲突、' + (cx.supplements || []).length + ' 份建议随行核对的文档（见下方对照卡，可展开核对）。'
+               : '文档对照完成：未发现冲突。');
+        st.messages.push({ role: 'assistant', text: line });
+        return cx;
+      });
+  }
   function renderProposalIntakeCard(kindName) {
     var st = intakeStateOf(kindName);
     var rawWidgets = schemeWidgetsOf(kindName);
@@ -5196,6 +5219,8 @@
         '<div style="display:flex;justify-content:flex-end;gap:10px">' +
         '<button class="btn" id="btn-intake-back" data-act="intake-back-edit" data-kind="' + esc(kindName) + '">返回对话修改</button>' +
         '<button class="btn primary" id="btn-intake-confirm-apply" data-act="intake-confirm-apply" data-kind="' + esc(kindName) + '"' + (pv.ok ? '' : ' disabled') + '>确认提交（草稿→Apply）</button>' +
+        '</div>' +
+        ctxCardHtml(st) +
         '</div></div>';
     }
 
@@ -5220,7 +5245,7 @@
       '<span class="chip mute small mono">landing 缺省=doc</span>' +
       (st.sessionId ? '<span class="chip mute small mono">session=' + esc(st.sessionId) + '</span>' : '') +
       '</div>' +
-      '<div class="intake-msg-list" id="intake-messages">' + msgsHtml + '</div>' +
+      '<div class="intake-msg-list" id="intake-messages">' + msgsHtml + ctxCardHtml(st) + '</div>' +
       '<div class="intake-input-area">' +
       '<textarea id="intake-chat-input" class="inp" rows="2" placeholder="输入一段话自由描述需求（如：标题：…；目标：…；验收标准：1. … 2. …；影响范围：…），或直接回答当前提问…"></textarea>' +
       '<div class="intake-act-row">' +
@@ -5418,6 +5443,7 @@
   ACTIONS['intake-reset'] = function (el) {
     var kindName = (el && el.dataset.kind) || 'Proposal';
     delete S.intake[kindName];
+    if (window.__CC && window.__CC.ctx) delete window.__CC.ctx.taken;
     ensureIntakeSession(kindName);
     render();
   };
@@ -5500,6 +5526,7 @@
       if (d.name && !st.name) st.name = d.name;
       st.preview = d;
       st.fieldErrors = {};
+      ctxRunCheck(st, d.yaml).then(function () { if (S.route === 'proposals') render(); });
       if (Array.isArray(d.fieldErrors) && d.fieldErrors.length > 0) {
         d.fieldErrors.forEach(function (fe) {
           st.fieldErrors[fe.field] = fe;
@@ -5568,7 +5595,9 @@
         if (res.ok) {
           var pri = st.fields.priority || 'low';
           toast('提案已确认提交（r' + res.data.rv + ' status=submitted）',
-            targetName + ' · 会话留痕 ' + reasonRef + (pri === 'high' || pri === 'critical' ? ' · 高危待人审（ApprovalNeeded 已产）' : ''),
+            targetName + ' · 会话留痕 ' + reasonRef +
+            ((window.__CC && window.__CC.ctx && window.__CC.ctx.cachedOf(kindName, targetScope, targetName) && !window.__CC.ctx.cachedOf(kindName, targetScope, targetName).degraded) ? ' · 文档对照随行' : '') +
+            (pri === 'high' || pri === 'critical' ? ' · 高危待人审（ApprovalNeeded 已产）' : ''),
             'ok');
           delete S.intake[kindName];
           LIVE.load().then(function () {
@@ -5664,6 +5693,16 @@
       intakeCard + '<div class="sec-title">提案库</div>' + rows + '</div>';
     bindIntakeEvents('Proposal');
   }
+  /* 对照卡补充项一键随行（§4.6：supplements 清单=派工文档更新起点）。 */
+  ACTIONS['ctx-supplement-add'] = function (el) {
+    var ref = el.dataset.ref || '';
+    if (!ref || !window.__CC || !window.__CC.ctx) return;
+    window.__CC.ctx.taken[ref] = { hash: el.dataset.hash || '', base: el.dataset.base || '', at: Date.now() };
+    el.textContent = '✓ 已加入随行清单';
+    el.disabled = true;
+    el.classList.add('ok');
+    toast('已加入随行清单', ref + '——批准派工后作为文档更新起点随载荷下发', 'ok');
+  };
   ACTIONS['prop-submit'] = function () {
     var f = {
       name: ($('#pf-name') || {}).value || '', title: ($('#pf-title') || {}).value || '',
@@ -5677,6 +5716,10 @@
     if (!f.title.trim() || !f.summary.trim()) { toast('标题/目标必填', '需求先说清做什么', 'warn'); return; }
     if (!f.acceptance.split('\n').some(function (s) { return s.trim(); })) { toast('验收标准至少一条', '可验证条目=Verify 相位的复测依据', 'warn'); return; }
     var yaml = propYaml(f);
+    // 提交节点随行对照（§4.6：提交面同产同卡；会话缓存后详情屏同屏携带；降级可见不阻断）。
+    var stCtx = intakeStateOf('Proposal');
+    stCtx.name = f.name;
+    ctxRunCheck(stCtx, yaml);
     // 提交=草稿→Apply 全流程（E4 通路复用；对象键 Proposal/global/<name>）。
     fetch('/core-console/drafts', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
       body: JSON.stringify({ kind: 'Proposal', scope: 'global', name: f.name, content: yaml,
@@ -5714,6 +5757,19 @@
           '<div class="e-act"><button class="btn primary" data-act="go" data-go="proposals">回提案库</button></div></div></div>';
       });
   }
+  /* 审批详情屏对照折叠次级（§4.6：审批屏同屏携带——会话在册=完整卡；缺席=降级可见）。 */
+  function ctxApprovalHtml(scope, name) {
+    var cx = window.__CC && window.__CC.ctx && window.__CC.ctx.cachedOf('Proposal', scope, name);
+    return window.__CC.ctx.approvalStrip(cx || null, name);
+  }
+  function paintCtxApproval(scope, name) {
+    if (!window.__CC || !window.__CC.ctx || !window.__CC.ctx.check) return;
+    window.__CC.ctx.check('Proposal', scope, name, '').then(function (r) {
+      if (!r || !r.cx) return;
+      var slot = $('#pd-ctx-slot');
+      if (slot) slot.innerHTML = window.__CC.ctx.approvalStrip(r.cx, name);
+    });
+  }
   function renderProposalDetail(view, d) {
     var scope = String(d.scope || 'global'), name = String(d.name || '');
     var acc = (d.spec && d.spec.acceptance) || [];
@@ -5733,7 +5789,8 @@
       (acc.length ? '<div class="set-card-sub"><ul style="margin:4px 0 0 18px;padding:0">' + acc.map(function (a) { return '<li class="small" style="padding:2px 0">' + esc(a) + '</li>'; }).join('') + '</ul></div>' : '<div class="set-card-sub faint">未声明验收标准</div>') + '</div>' +
       '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">产物指针（landing）</div>' +
       '<div class="set-card-sub mono">' + esc('target=' + ((d.landing && d.landing.target) || '—') + (d.landing && d.landing.ref ? ' ref=' + d.landing.ref : '')) + '</div>' +
-      '<div class="set-card-sub faint">产物真实落盘=apply-workflow agent 真实拉起段（余量）——落盘后状态回写 landed（本轮打通到派单受理+产物指针，不冒充产物已在）。</div></div>' +
+      '<div class="set-card-sub faint">产物真实落盘=apply-workflow agent 真实拉起段（余量）——落盘后状态回写 landed（本轮打通到派单受理+产物指针，不冒充产物已在）。</div>' +
+      '<div class="ctx-approval-slot" id="pd-ctx-slot" style="padding:0 16px 10px">' + ctxApprovalHtml(scope, name) + '</div></div>' +
       '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">派单（apply-workflow）</div><div id="pd-dispatch" style="padding:6px 16px 14px">' + liveSkeletonRows(1, 0) + '</div></div>' +
       '</div>' +
       '<div class="dh" style="margin-top:18px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">对象原文</h2></div>' +
@@ -5741,6 +5798,12 @@
       '<pre class="mono small" style="background:var(--bg2,#141a22);padding:12px 14px;border-radius:8px;overflow:auto;white-space:pre-wrap">' + esc(d.content || '') + '</pre></div>';
     // 派单投影注水（受理≠拉起——环归零/缺席=如实标注）。
     var dstamp = S.route + '|' + S.segs.join('/');
+    /* 对照会话缺位 → 降级占位在册（折叠次级可见——不静默）+ 摘要现读补挂完整对照。 */
+    var ctxSlot = $('#pd-ctx-slot');
+    if (ctxSlot && !(window.__CC && window.__CC.ctx && window.__CC.ctx.cachedOf('Proposal', scope, name))) {
+      ctxSlot.innerHTML = window.__CC.ctx.approvalStrip(null, name);
+      paintCtxApproval(scope, name);
+    }
     LIVE.get(dispatchUrl).then(function (b) {
       if ((S.route + '|' + S.segs.join('/')) !== dstamp) return;
       var el = $('#pd-dispatch'); if (!el) return;
@@ -6050,6 +6113,12 @@
     bindDelegation();
     bindKeys();
     window.addEventListener('hashchange', render);
+    /* 提案×文档对照（§4.6）：文档库索引现读 loader 注入（模块零直接网络依赖；缓存 120s）。 */
+    if (__CC.ctx && __CC.ctx.setDocsLoader) {
+      __CC.ctx.setDocsLoader(function () {
+        return __CC.live.designDocs();
+      });
+    }
     __CC.conn = __CC.createConnMonitor({ onChange: function (st) { applyConnState(st, {}); } });
     __CC.conn.start();
     applyConnState(__CC.conn.state(), { silent: true });
