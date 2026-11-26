@@ -46,6 +46,8 @@ test('壳页 200：BASES 四词位+容器在册+no-store', () => {
   assert.match(res.body, /\/core-console\/ws/)
   assert.match(res.body, /'\/core-console\/apply'/)
   assert.match(res.body, /'\/core-console\/drafts'/)
+  assert.match(res.body, /href="\/core-console\/assets\/console\.css"/, '资产链接=前缀+/文件名（无尾斜杠常量拼接补斜杠）')
+  assert.match(res.body, /src="\/core-console\/assets\/console\.js"/, '脚本 src=前缀+/文件名')
   assert.equal((res.headers as Record<string, string>)['cache-control'], 'no-store')
 })
 
