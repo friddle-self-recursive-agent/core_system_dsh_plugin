@@ -93,6 +93,12 @@ test('cored 未就绪=503；上游不可达=502（读面关断口径，不冒充
 })
 
 test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply exact 成对注册；缺席=不注册（headless 软出现）', () => {
+  // v2 载体面产物经 env 指路（hermetic——不依赖 submodule 是否 checkout）；
+  // v2 pair 注册于队尾（壳页 exact + assets prefix）。
+  const dist = mkdtempSync(join(tmpdir(), 'proxy-v2-'))
+  writeFileSync(join(dist, 'console.js'), '/* t */')
+  writeFileSync(join(dist, 'console.css'), '/* t */')
+  process.env.CORE_CONSOLE_WEB_DIST = dist
   const registered: { kind: string; path: string }[] = []
   let disposed = 0
   mountConsoleRoutes({
@@ -113,8 +119,11 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['prefix', CONSOLE_INTAKE_PATH],
     ['exact', CONSOLE_SESSION_HEARTBEAT_PATH],
     ['exact', CONSOLE_SERVICE_PROJECTS_PATH],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）成套注册')
+    ['exact', CONSOLE_V2_PREFIX],
+    ['prefix', CONSOLE_V2_ASSETS_PREFIX],
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ web v2 载体面（exact+prefix，产物在册）成套注册')
   assert.equal(disposed, 0)
+  delete process.env.CORE_CONSOLE_WEB_DIST
 
   // 依赖缺席（headless）：回调体不注册、不抛错
   let called = false
