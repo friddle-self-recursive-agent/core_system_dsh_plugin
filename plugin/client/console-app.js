@@ -2072,6 +2072,8 @@
     ops.push({ label: '就地开聊', act: 'obj-chat', primary: true, data: { 'obj-chat': '1' } });
     if (ref.kind === 'Workflow') ops.push({ label: '看运行', act: 'go', data: { go: 'wf/' + encodeURIComponent(ref.name) } });
     if (ref.kind === 'Proposal') ops.push({ label: '提案详情', act: 'go', data: { go: 'proposal/' + encodeURIComponent(ref.scope) + '/' + encodeURIComponent(ref.name) } });
+    if (ref.kind === 'Task') ops.push({ label: '任务详情', act: 'go', data: { go: 'task/' + encodeURIComponent((ref.scope || 'global') + '/' + ref.name) } });
+    if (ref.kind === 'Session') ops.push({ label: '会话详情', act: 'go', data: { go: 'session/' + encodeURIComponent(ref.name) } });
     if (ref.kind === 'Event' || ref.kind === 'Notification') ops.push({ label: '事件流', act: 'go', data: { go: 'events' } });
     if (kindReg && !kindReg.builtin) ops.push({ label: '编辑草稿', act: 'go', data: { go: 'doc/' + encodeURIComponent(ref.kind) + '/' + encodeURIComponent(ref.scope || 'global') + '/' + encodeURIComponent(ref.name) } });
     return ops;
@@ -2268,8 +2270,9 @@
   function paintReport(view, body) {
     var TK = __CC.tasks;
     var b = body || {};
+    var win = TK.windowLabel ? TK.windowLabel(b.window) : String(b.window || '');
     var head = '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>关注报告</h1>' +
-      (b.window ? '<span class="chip mute tiny">窗口 ' + esc(String(b.window)) + '</span>' : '') +
+      (win ? '<span class="chip mute tiny">窗口 ' + esc(win) + '</span>' : '') +
       (b.asOf ? '<span class="chip mute tiny">截至 ' + esc(String(b.asOf)) + '</span>' : '') + '</div>' +
       '<div class="dh-sub">一眼看到：状态、异常、值得关注的提案——每条带证据与去处；报告旁常驻对话（可就地开聊）。</div></div>' +
       '<div class="dh-actions"><button class="btn sm" data-act="report-refresh" data-report-refresh="1">刷新</button></div></div>';

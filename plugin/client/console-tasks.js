@@ -25,8 +25,10 @@
     done: { label: '已完成', chip: 'ok' },
     canceled: { label: '已取消', chip: 'mute' }
   };
+  function statusOf(t) { return (t && t.status) || t || {}; }
+  function specOf(t) { return (t && t.spec) || t || {}; }
   function phaseChip(t) {
-    var phase = String((t && t.status && t.status.phase) || '');
+    var phase = String(statusOf(t).phase || '');
     var v = PHASE_VIEW[phase];
     if (!v) {
       // 未知相位不冒充人话——原词如实显示（不丢行不掉徽）
@@ -41,11 +43,11 @@
    * canceled=完成组但徽标如实「已取消」（不冒充成功）；未知相位=排队组（原词徽显示，不丢行）。
    * 等人判定是词形规则且判据写明——契约未携带结构化「待审」标记，诚实下不猜更细。 */
   function humanWait(t) {
-    var s = (t && t.status) || {};
+    var s = statusOf(t);
     return /审批|批准|待审|等待人|approval|approve/i.test(String(s.lastError || '') + ' ' + String(s.lastAction || ''));
   }
   function groupOf(t) {
-    var phase = String((t && t.status && t.status.phase) || '');
+    var phase = String(statusOf(t).phase || '');
     if (phase === 'running' || phase === 'verifying') return 'doing';
     if (phase === 'done' || phase === 'canceled') return 'done';
     if (phase === 'blocked' || phase === 'failed') return humanWait(t) ? 'waiting' : 'stuck';
@@ -65,7 +67,7 @@
   }
   function runningCount(tasks) {
     // 并发摘要只数 running（上限不在 contract——分母缺缺席即不显示，不装假）
-    return (tasks || []).filter(function (t) { return String((t.status || {}).phase) === 'running'; }).length;
+    return (tasks || []).filter(function (t) { return String(statusOf(t).phase || '') === 'running'; }).length;
   }
 
   /* ---------- 任务标识与深链 ----------
@@ -79,15 +81,16 @@
   function taskRoute(id) { return 'task/' + encodeURIComponent(String(id || '')); }
   function sessionRoute(sid) { return 'session/' + encodeURIComponent(String(sid || '')); }
   function taskTitle(t) {
-    return String((t && t.spec && t.spec.title) || (t && t.name) || '未命名任务');
+    var spec = specOf(t);
+    return String(spec.title || (t && t.title) || (t && t.name) || '未命名任务');
   }
 
   /* ---------- 任务行（§16.1 A：标题+一句话+相位徽+依赖数+对话深链） ---------- */
   function taskRow(t) {
     var id = taskIdOf(t);
-    var s = (t && t.status) || {};
-    var spec = (t && t.spec) || {};
-    var deps = (spec.dependsOn || []).length;
+    var s = statusOf(t);
+    var spec = specOf(t);
+    var deps = (spec.dependsOn || s.dependsOn || []).length;
     var last = String(s.lastAction || '').trim();
     var agent = String(s.agent || spec.agent || '').trim();
     var sess = String(s.agentSession || '').trim();
@@ -113,7 +116,7 @@
     var hit = null;
     (tasks || []).forEach(function (t) {
       if (hit) return;
-      if (String((t.status || {}).agentSession || '') === String(sid || '')) hit = t;
+      if (String(statusOf(t).agentSession || '') === String(sid || '')) hit = t;
     });
     if (!hit) return '<span class="faint small">未关联在册任务</span>';
     var id = taskIdOf(hit);
@@ -152,8 +155,13 @@
       var segs = r.slice(2).split('/').filter(Boolean);
       if (!segs.length) return null;
       if (segs[0] === 'inbox') return 'inbox';
+      if (segs[0] === 'approvals') return 'approvals';
+      if (segs[0] === 'tasks') return 'tasks';
+      if (segs[0] === 's' && segs.length >= 2) return segs.map(encodeURIComponent).join('/');
       if (segs[0] === 'wf' && segs.length >= 2) return segs.map(encodeURIComponent).join('/');
       if (segs[0] === 'event' && segs.length >= 2) return 'event/' + encodeURIComponent(segs.slice(1).join('/'));
+      if (segs[0] === 'task' && segs.length >= 2) return 'task/' + encodeURIComponent(segs.slice(1).join('/'));
+      if (segs[0] === 'session' && segs.length >= 2) return 'session/' + encodeURIComponent(segs.slice(1).join('/'));
       if (segs[0] === 'obj' && segs.length >= 4) return segs.map(encodeURIComponent).join('/');
       return null;
     }
@@ -217,14 +225,30 @@
   function generatedByLabel(v) {
     return String(v || '') === 'llm' ? '智能归纳' : String(v || '') === 'rules' ? '基础汇总' : esc(String(v || '未注明生成方式'));
   }
+  function windowLabel(w) {
+    if (!w) return '';
+    if (typeof w === 'string') return w;
+    if (typeof w === 'object') {
+      var f = String(w.from || ''), t = String(w.to || '');
+      var tf = Date.parse(f), tt = Date.parse(t);
+      if (!isNaN(tf) && !isNaN(tt) && tt > tf) {
+        var h = Math.round((tt - tf) / 3600000);
+        if (h > 0) return h + 'h';
+      }
+      if (f || t) return (f || '—') + ' ~ ' + (t || '—');
+      return '';
+    }
+    return String(w);
+  }
   function reportFooter(body) {
     var b = body || {};
     var dq = b.dataQuality || {};
     var missing = dq.missing;
     var missText = Array.isArray(missing) ? missing.map(esc).join('、') : esc(String(missing || ''));
+    var win = windowLabel(b.window);
     return '<div class="report-foot small faint" data-report-foot="1">数据可信度：' + generatedByLabel(b.generatedBy) +
       ' · 检查范围 ' + esc(String(b.scope || 'global')) +
-      (b.window ? ' · 窗口 ' + esc(String(b.window)) : '') +
+      (win ? ' · 窗口 ' + esc(win) : '') +
       (b.asOf ? ' · 截至 ' + esc(String(b.asOf)) : '') +
       (missText ? ' · 缺席数据：' + missText : '') +
       ' · 报告为派生视图可随时重建，不落对象账。</div>';
@@ -299,7 +323,7 @@
     sessionRoute: sessionRoute, taskTitle: taskTitle, taskRow: taskRow,
     sessionChips: sessionChips, sevView: sevView, sevRank: sevRank, sortAttention: sortAttention,
     evidenceRoute: evidenceRoute, attentionCard: attentionCard, factsHtml: factsHtml,
-    degradedBanner: degradedBanner, generatedByLabel: generatedByLabel,
+    degradedBanner: degradedBanner, generatedByLabel: generatedByLabel, windowLabel: windowLabel,
     reportFooter: reportFooter, clearPanel: clearPanel,
     setTasksLoader: setTasksLoader, setTaskLoader: setTaskLoader, setAttentionLoader: setAttentionLoader,
     ensureTasks: ensureTasks, refreshTasks: refreshTasks,

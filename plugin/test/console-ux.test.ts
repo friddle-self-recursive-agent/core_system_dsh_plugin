@@ -404,12 +404,19 @@ test('L79-01 R-UX-6 任务中心/报告模块直测：分组人话词形/证据�
   const chips = tk.sessionChips([t('dev/t1', 'running', { status: { agentSession: 's1' } })], 's1')
   assert.ok(chips.includes('Task: t1') && chips.includes('data-go="' + tk.taskRoute('dev/t1') + '"'), 'Task 锚 chip=任务详情深链')
   assert.ok(chips.includes('会话型任务'), 'workflow 字段未携带=显式人话注记不编造')
-  // ⑦ 任务行：lastAction 一句话+对话深链（无会话锚=不画按钮）
+  // ⑦ 任务行：lastAction 一句话+对话深链（无会话锚=不画按钮）；兼容 GET /v1/tasks 扁平行形态（tasks_face.go taskRow）与详情嵌套形态
   const rowWith = tk.taskRow(t('dev/t1', 'running', { status: { agentSession: 's1', lastAction: '正在跑 gate' } }))
   assert.ok(rowWith.includes('正在跑 gate') && rowWith.includes('data-go="session/s1"'), '行内 lastAction+会话深链')
   const rowWithout = tk.taskRow(t('dev/t2', 'queued'))
   assert.ok(!rowWithout.includes('data-go="session/'), '无会话锚=不画对话按钮（不装假）')
-  // ⑧ 报告词形：facts 防御投影/降级横幅列 missing/clear 折叠/生成方式人话
+  const flatRow = { name: 'probe-smoke-1', scope: 'self-recursive-core', title: '调度器冒烟探针', phase: 'running', dependsOn: ['a/dep1'], agentSession: 'self-recursive-core/probe-smoke-1', lastAction: '已请求取消' }
+  assert.equal(tk.groupOf(flatRow), 'doing', 'GET /v1/tasks 扁平行形态 phase=running 归入 doing')
+  assert.equal(tk.runningCount([flatRow]), 1, '扁平行形态 runningCount=1')
+  assert.equal(tk.taskTitle(flatRow), '调度器冒烟探针', '扁平行形态 taskTitle 读顶层 title')
+  const flatHtml = tk.taskRow(flatRow)
+  assert.ok(flatHtml.includes('调度器冒烟探针') && flatHtml.includes('正在做') && flatHtml.includes('依赖 1') && flatHtml.includes('已请求取消') && flatHtml.includes('data-go="session/self-recursive-core%2Fprobe-smoke-1"'), '扁平行形态 taskRow 全要素可显')
+  assert.ok(tk.sessionChips([flatRow], 'self-recursive-core/probe-smoke-1').includes('Task: probe-smoke-1'), '扁平行形态 sessionChips 反查命中')
+  // ⑧ 报告词形：facts 防御投影/降级横幅列 missing/clear 折叠/生成方式人话/window 对象形态零 [object Object]
   assert.ok(tk.factsHtml(['6 系统', '42 轮']).includes('6 系统'), 'facts 数组=chips')
   assert.ok(tk.factsHtml({ systems: 6 }).includes('systems'), 'facts 对象=kv chips')
   assert.ok(tk.degradedBanner({ degraded: true, missing: ['runs', 'approvals'] }).includes('runs、approvals'), '降级横幅列 missing')
@@ -418,6 +425,9 @@ test('L79-01 R-UX-6 任务中心/报告模块直测：分组人话词形/证据�
   assert.ok(tk.clearPanel([{ candidateId: 'c1', note: '已处理' }]).includes('本窗口已澄清'), 'clear 折叠人话词形')
   assert.equal(tk.generatedByLabel('llm'), '智能归纳')
   assert.equal(tk.generatedByLabel('rules'), '基础汇总')
+  assert.equal(tk.windowLabel({ from: '2026-11-25T07:00:00Z', to: '2026-11-26T07:00:00Z' }), '24h', 'attention.go window {from,to} 对象形态=24h')
+  const foot = tk.reportFooter({ generatedBy: 'rules', scope: 'global', window: { from: '2026-11-25T07:00:00Z', to: '2026-11-26T07:00:00Z' }, asOf: '2026-11-26T07:00:00Z' })
+  assert.ok(foot.includes('窗口 24h') && !foot.includes('[object Object]'), 'reportFooter 零 [object Object]')
   // ⑨ loader 注入：清单失败=落 null 不缓存失败态；详情恒现读
   let calls = 0
   tk.setTasksLoader(() => { calls++; return Promise.reject(new Error('x')) })
@@ -449,6 +459,7 @@ test('L79-02 R-UX-6 接线在册：三路由/侧栏入口/loader 注入/会话�
   assert.ok(SRC.includes('data-report-facts="1"') && SRC.includes('data-report-summary="1"') && SRC.includes('data-report-clear="1"') && SRC.includes('data-report-degraded="1"'), '报告 facts/综述/clear 折叠/降级横幅锚在册')
   assert.ok(SRC.includes('data-report-chat="1"'), '报告旁挂对话栏在册（chat/<agent> 深链模式）')
   assert.ok(SRC.includes("ACTIONS['tasks-refresh']") && SRC.includes("ACTIONS['report-refresh']") && SRC.includes("ACTIONS['report-chat']"), '刷新/对话动作处理器在册')
+  assert.ok(SRC.includes("ref.kind === 'Session'") && SRC.includes("ref.kind === 'Task'"), '工作台操作片对接 Session/Task 深链（#/session/:id 与 #/task/:id）')
   // css token 块随 bundle（dsh 原生 token 零新色值——.task-row/.att-card 消费既有变量）
   assert.ok(SRC.includes('.task-row') && SRC.includes('.att-card') && SRC.includes('.report-layout'), 'css 布局块入 bundle')
   const build = readFileSync(join(PLUGIN, 'build-client.mjs'), 'utf8')
