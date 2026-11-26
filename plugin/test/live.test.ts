@@ -31,7 +31,7 @@ test('live 层写纪律（E3 起）：写方法=apply() POST /core-console/apply
 })
 
 test('Welcome 屏真数据换装：数据源标注 + event_log 归档 + run 投影阶段条（不再全 mock）', () => {
-  assert.ok(SRC.includes('数据源=cored 读面'), 'Welcome 数据源标注在册')
+  assert.ok(SRC.includes('数据源=系统文档库'), 'Welcome 数据源标注在册（R-UX-3 人话化：cored 读面→系统文档库）')
   assert.ok(SRC.includes('function welcomeBizTitle'), '业务化标题（展示层生成，不入库为准）')
   assert.ok(SRC.includes('function welcomeStageStrip'), 'run 投影阶段条在册')
   assert.ok(!/core console proto · 全部为 mock 数据/.test(SRC), '旧「全部为 mock」标注必须摘除')
@@ -67,7 +67,7 @@ test('E4 live/编辑器：草稿通道 + dry-run 三检查 + Apply 闭环（LLM 
   assert.ok(SRC.includes('data-act="prop-drop"'), '提案 [丢弃] 在册（DELETE 弃稿）')
   assert.ok(SRC.includes('data-act="doc-apply"'), '吸底 Apply dock 在册（唯一写入口人点为准）')
   assert.ok(SRC.includes('fromDraft: true, dryRun: true'), 'dry-run 预检在册（零副作用三检查）')
-  assert.ok(SRC.includes('data-c="lock"') && SRC.includes('面上已 r'), '乐观锁检查=回执 rv 与稿 baseRV 比对在册')
+  assert.ok(SRC.includes('data-c="lock"') && SRC.includes('库中已 r'), '乐观锁检查=回执 rv 与稿 baseRV 比对在册（R-UX-3 人话化：面上→库中）')
   assert.ok(SRC.includes('hydrateHistory'), '历史 tab=apply_log 投影在册（v0.38 /v1/history）')
   assert.ok(SRC.includes('空草稿——无操作'), '空草稿 Apply=无操作提示（不落库不发事件）')
   assert.ok(!SRC.includes("ACTIONS['llm-send']"), 'mock LLM 对话输入摘除（真实生成面=Agent 会话，E5 接线）')
@@ -123,7 +123,7 @@ test('R-3 审批判定独立账：审批屏已决账面区块=GET /v1/approvals 
   assert.ok(SRC.includes('function hydrateApprovalLedger'), '已决账面注水函数在册')
   assert.ok(SRC.includes("'v1/approvals?limit=20'"), 'approval_log 读面调用在册（现读不缓存）')
   assert.ok(SRC.includes('id="ap-ledger"'), '已决账面区块容器在册')
-  assert.ok(SRC.includes('判定不再只靠 apply_log 字符串考古') || SRC.includes('已决账面'), '账面语义标注在册')
+  assert.ok(SRC.includes('判定不再只靠 apply_log 字符串考古') || SRC.includes('已决记录'), '账面语义标注在册（R-UX-3：已决账面→已决记录）')
   assert.ok(SRC.includes("r.decision === 'granted'"), 'granted/rejected chip 判别在册')
 })
 
@@ -131,7 +131,7 @@ test('E6 连接页与运行面：三组=objects 枚举 ∧ ConnectorOps 第五 t
   assert.ok(SRC.includes("connCards('WorkService', 'ws/')"), 'WorkService 组=objects 枚举')
   assert.ok(SRC.includes("connCards('ConnectorOps', 'connector/')"), 'ConnectorOps 组=objects 枚举')
   assert.ok(SRC.includes("connCards('Provider', 'provider/')"), 'Provider 组=objects 枚举')
-  assert.ok(SRC.includes("'ops', '运行面'"), '运行面 tab 在册（ConnectorOps 专属）')
+  assert.ok(SRC.includes("'ops', '运行状态'"), '运行状态 tab 在册（ConnectorOps 专属；R-UX-3：运行面→运行状态）')
   assert.ok(SRC.includes('function hydrateCommLive'), 'comm 落账注水在册')
   assert.ok(SRC.includes('ENVELOPE_V1'), 'envelope v0.1 字段表在册')
   assert.ok(SRC.includes('已携（值打码）'), 'token 打码标注在册')

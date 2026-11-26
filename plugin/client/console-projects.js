@@ -49,7 +49,7 @@
     var ws = faces().workspaces;
     if (!ws || typeof ws.create !== 'function') {
       state.ready = false;
-      state.error = 'dsh Workspace 面缺席';
+      state.error = 'dsh Workspace 通道缺席';
       return Promise.resolve(state);
     }
     state.busy = true;

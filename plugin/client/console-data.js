@@ -24,7 +24,7 @@
   var systems = [
     { name: 'self-recursive-core', scope: 'systems/self-recursive-core', phase: 'InSync',
       generation: 9, observedGeneration: 9, agent: 'builtinRoot', runs24h: 5, driftOpen: 0,
-      pending: 0, desc: '自递归内核：Goal 驱动、文档对账、递归改进自身的控制面核心。' },
+      pending: 0, desc: '自递归内核：Goal 驱动、文档对账、递归改进自身的核心控制。' },
     { name: 'developer-system', scope: 'systems/developer-system', phase: 'Drifting',
       generation: 11, observedGeneration: 8, agent: 'dev-1', runs24h: 8, driftOpen: 2,
       pending: 1, desc: '研发系统：pull 源码 → build+test → 产物 digest → 修复循环。' },
@@ -199,20 +199,20 @@
   // ---------- WorkService / ConnectorOps / Provider / Ref / Role ----------
   var workservices = [
     { name: 'onedev', kind: 'WorkService', scope: 'systems/connector', status: 'Ready', endpoint: 'https://onedev.internal', desc: 'OneDev 代码与 CI 服务（git 托管 + 构建）。' },
-    { name: 'gitfs', kind: 'WorkService', scope: 'systems/connector', status: 'Ready', endpoint: 'gitfs:///srv/git', desc: 'Git 文档/代码双面存储（文档面版本化后端）。' },
+    { name: 'gitfs', kind: 'WorkService', scope: 'systems/connector', status: 'Ready', endpoint: 'gitfs:///srv/git', desc: 'Git 文档/代码双库存储（文档版本化后端）。' },
     { name: 'nas', kind: 'WorkService', scope: 'systems/storage-system', status: 'Ready', endpoint: 'nas:///mnt/builds', desc: 'NAS 本地构建产物卷。' },
     { name: 'oss', kind: 'WorkService', scope: 'systems/storage-system', status: 'Degraded', endpoint: 'oss://builds', desc: 'OSS 对象存储（产物入库 digest）。' }
   ];
 
   var connectorops = [
     { name: 'onedev-ci', kind: 'ConnectorOps', workService: 'onedev', status: 'Ready',
-      ops: ['build', 'poll-log', 'trigger-job', 'watch-queue'], desc: 'OneDev CI 面：触发构建、拉日志、盯队列。' },
+      ops: ['build', 'poll-log', 'trigger-job', 'watch-queue'], desc: 'OneDev CI：触发构建、拉日志、盯队列。' },
     { name: 'gotty-web', kind: 'ConnectorOps', workService: 'onedev', status: 'Degraded',
-      ops: ['open-terminal', 'exec'], desc: '网页终端挂载（gotty）：默认终端接入面，可选 opencode cli / claude-code / 内嵌 dsh 三种 runner。' },
+      ops: ['open-terminal', 'exec'], desc: '网页终端挂载（gotty）：默认终端接入，可选 opencode cli / claude-code / 内嵌 dsh 三种 runner。' },
     { name: 'agent-comm', kind: 'ConnectorOps', workService: null, status: 'Ready',
-      ops: ['dispatch', 'query', 'interrupt', 'inbox'], desc: '跨 Agent 通信面：dispatch / query / interrupt / inbox；上级委派=权限整包下发（token），子 agent 权限 ⊆ 父。' },
+      ops: ['dispatch', 'query', 'interrupt', 'inbox'], desc: '跨 Agent 通信：dispatch / query / interrupt / inbox；上级委派=权限整包下发（token），子 agent 权限 ⊆ 父。' },
     { name: 'oss-artifacts', kind: 'ConnectorOps', workService: 'oss', status: 'Ready',
-      ops: ['put', 'get', 'verify-digest'], desc: '产物入库面：digest 校验 + 回源。' }
+      ops: ['put', 'get', 'verify-digest'], desc: '产物入库：digest 校验 + 回源。' }
   ];
 
   var providers = [
@@ -228,7 +228,7 @@
   ];
 
   var roles = [
-    { name: 'root-all', scope: 'global', desc: 'root 全量权限面（仅 builtinRoot）。' },
+    { name: 'root-all', scope: 'global', desc: 'root 全量权限（仅 builtinRoot）。' },
     { name: 'approver', scope: 'global', desc: '审批者：可批准/驳回 ApprovalNeeded。' },
     { name: 'ci-repair', scope: 'systems/developer-system/ci', desc: 'CI 修复：onedev-ci 写 + gitfs 读写。' },
     { name: 'ci-verify', scope: 'systems/developer-system/ci', desc: 'CI 验证：只读 + 探针执行。' },
@@ -263,12 +263,12 @@
       updated: ago(180), fieldManager: 'root', ownerRefs: ['self-desc'],
       history: [H(21, 'root', 180, '提升自递归收敛指标'), H(20, 'builtinRoot', 2600, '初始化全局目标'), H(19, 'root', 5200, '措辞修订')],
       content:
-"apiVersion: core/v1\nkind: Goal\nmetadata:\n  name: core-goal\n  scope: global\n  ownerRefs:\n    - self-desc\nspec:\n  intent: |\n    core_system 以「一切皆文档」的方式管理 AI Agent 集群：\n    每个 Service 由 ServiceDesc 声明，由 Workflow 对账，\n    偏差进 DriftReport，收敛靠 developer-system 与 deploy-system。\n  northStars:\n    - 系统集长期自治运行，人工只处理 Escalated 与审批\n    - 任意对象可从树上一跳可达，标识符皆可点\n    - 文档面唯一写路径是 Apply（乐观锁 + DocApplied 回执）\n  slo:\n    convergenceP95Minutes: 30\n    escalatedPer24h: 2\n    docDriftOpenMax: 3\nstatus:\n  progress: on-track\n  lastReview: 2026-11-21" }),
+"apiVersion: core/v1\nkind: Goal\nmetadata:\n  name: core-goal\n  scope: global\n  ownerRefs:\n    - self-desc\nspec:\n  intent: |\n    core_system 以「一切皆文档」的方式管理 AI Agent 集群：\n    每个 Service 由 ServiceDesc 声明，由 Workflow 对账，\n    偏差进 DriftReport，收敛靠 developer-system 与 deploy-system。\n  northStars:\n    - 系统集长期自治运行，人工只处理 Escalated 与审批\n    - 任意对象可从树上一跳可达，标识符皆可点\n    - 文档唯一写路径是 Apply（乐观锁 + DocApplied 回执）\n  slo:\n    convergenceP95Minutes: 30\n    escalatedPer24h: 2\n    docDriftOpenMax: 3\nstatus:\n  progress: on-track\n  lastReview: 2026-11-21" }),
     D({ name: 'apply-rule', kind: 'Rule', scope: 'global', revision: 7, generation: 7,
       updated: ago(2400), fieldManager: 'builtinRoot', ownerRefs: ['apply-rule'],
       history: [H(7, 'builtinRoot', 2400, '明确 Status 直写豁免'), H(6, 'root', 8000, '初版：草稿缓存语义')],
       content:
-"apiVersion: core/v1\nkind: Rule\nmetadata:\n  name: apply-rule\n  scope: global\nspec:\n  statement: |\n    文档面唯一写路径是 Apply。人/LLM 的改动先进草稿缓存，\n    Apply 落库时 Revision+1 并必发 DocApplied 事件。\n    LLM 只提案，Apply 必须人点。\n  exemptions:\n    - Status 回写（fieldManager 白名单，机器直写）\n    - SessionLog / DriftReport（记录类，不经 Apply）\n  lock: document-level-optimistic\n  conflict: re-read + LLM 语义 diff，人裁兜底" }),
+"apiVersion: core/v1\nkind: Rule\nmetadata:\n  name: apply-rule\n  scope: global\nspec:\n  statement: |\n    文档唯一写路径是 Apply。人/LLM 的改动先进草稿缓存，\n    Apply 落库时 Revision+1 并必发 DocApplied 事件。\n    LLM 只提案，Apply 必须人点。\n  exemptions:\n    - Status 回写（fieldManager 白名单，机器直写）\n    - SessionLog / DriftReport（记录类，不经 Apply）\n  lock: document-level-optimistic\n  conflict: re-read + LLM 语义 diff，人裁兜底" }),
     D({ name: 'core-scheme', kind: 'Scheme', scope: 'global', revision: 14, generation: 14,
       updated: ago(420), fieldManager: 'builtinRoot', ownerRefs: [],
       history: [H(14, 'builtinRoot', 420, '注册 ConnectorOps/agent-comm 四原语'), H(13, 'builtinRoot', 3000, 'Workflow phases 增加 Paused')],
@@ -401,7 +401,7 @@
       updated: ago(2600), fieldManager: 'root', ownerRefs: ['conn-desc-sd'],
       history: [H(2, 'root', 2600, '补充 runner 说明')],
       content:
-"# connector 系统说明\n\nconnector 系统是连接层：把外部世界（git/CI/存储/终端）\n包装成 WorkService + ConnectorOps 面，供 Agent 与 Workflow 调用。\n\ngotty-web 挂载默认支持网页终端接入；\n会话 runner 可选 opencode cli / claude-code / 内嵌 dsh。" }),
+"# connector 系统说明\n\nconnector 系统是连接层：把外部世界（git/CI/存储/终端）\n包装成 WorkService + ConnectorOps，供 Agent 与 Workflow 调用。\n\ngotty-web 挂载默认支持网页终端接入；\n会话 runner 可选 opencode cli / claude-code / 内嵌 dsh。" }),
     D({ name: 'connector-runbook', kind: 'Runbook', scope: 'systems/connector', revision: 1, generation: 1,
       updated: ago(2800), fieldManager: 'builtinRoot', ownerRefs: ['builtinRoot'],
       history: [H(1, 'builtinRoot', 2800, '初版')],
@@ -446,7 +446,7 @@
     { op: 'onedev-ci.poll-log', d: '拉取构建日志尾部 200 行' },
     { op: 'onedev-ci.watch-queue', d: '注册队列 watch（backlog 阈值 10）' },
     { op: 'gitfs.pull', d: 'shallow clone depth=1 @ main' },
-    { op: 'gitfs.commit', d: '文档面落库（经 Apply，fieldManager=workflow/{wf}）' },
+    { op: 'gitfs.commit', d: '文档落库（经 Apply，fieldManager=workflow/{wf}）' },
     { op: 'oss-artifacts.put', d: '产物入库 digest=sha256:{h}' },
     { op: 'oss-artifacts.verify-digest', d: 'digest 校验通过' },
     { op: 'agent-comm.dispatch', d: '委派子任务（token 下发，权限 ⊆ 父）' },
@@ -911,7 +911,7 @@
     { field: 'id', type: 'uuid', req: true, desc: '消息 id（幂等去重键）' },
     { field: 'ts', type: 'rfc3339', req: true, desc: '发送时间' },
     { field: 'from', type: 'agentRef', req: true, desc: '发送方 agent 全名（system/instance/agent）' },
-    { field: 'to', type: 'agentRef', req: true, desc: '接收方 agent 全名；inbox 面投递' },
+    { field: 'to', type: 'agentRef', req: true, desc: '接收方 agent 全名；inbox 投递' },
     { field: 'kind', type: 'enum', req: true, desc: 'dispatch | query | interrupt | inbox | reply | ack' },
     { field: 'payload', type: 'object', req: false, desc: '任务/问题/打断语义负载（JSON）' },
     { field: 'refs', type: 'array', req: false, desc: '关联对象链（文档/事件/运行）' },
@@ -1018,7 +1018,7 @@
         ], { tokens: 3120, steps: 6 }),
         M('m-3', 'user', '先批准 prod。另外给 watcher-goal 提一条收紧阈值的提案。', 20),
         M('m-4', 'agent',
-          '已受理：\n1. ap-1 我无法替你批——Apply 必须人点，请到审批页操作；\n2. watcher-goal 阈值提案我已写入草稿（不触碰文档面），可在编辑器里查看并 Apply。', 19, [
+          '已受理：\n1. ap-1 我无法替你批——Apply 必须人点，请到审批页操作；\n2. watcher-goal 阈值提案我已写入草稿（不动正式文档），可在编辑器里查看并 Apply。', 19, [
           OP('agent-comm.dispatch', 'watch-only#76', { proposal: 'successRateMin 0.85→0.90' }, '已确认'),
           PROPOSAL('watcher-goal', 'successRateMin 0.85 → 0.90', [
             { t: '-', s: "    successRateMin: '0.85'" },
@@ -1119,7 +1119,7 @@
       messages: [
         M('m-1', 'user', 'req-118 拆完了吗？改哪些文件？', 42),
         M('m-2', 'agent',
-          '拆解完成，3 个子任务：\n1. queue 观测指标补齐（done）\n2. onedev connector 重试语义（done）\n3. 红线测试拆分并行（执行中，依赖 ap-4 的 deploy-impl 提案合入）\n\n改动文件（工作区，未 Apply 文档面）：', 41, [
+          '拆解完成，3 个子任务：\n1. queue 观测指标补齐（done）\n2. onedev connector 重试语义（done）\n3. 红线测试拆分并行（执行中，依赖 ap-4 的 deploy-impl 提案合入）\n\n改动文件（工作区，未 Apply 文档）：', 41, [
           FILES([
             { path: 'lib/connector/onedev/retry.ts', add: '+34', del: '-6', status: 'M' },
             { path: 'lib/metrics/queue.ts', add: '+58', del: '-0', status: 'A' },
@@ -1163,7 +1163,7 @@
     'builtinRoot': [
       { k: ['状态', 'status', '总览', '全局'], text: '全局快照：6 系统里 4 个 InSync；developer-system Drifting（ci 队列策略漂移，dev-delivery #43 修复中）；connector Remediating（gotty-web 挂载重建 attempt 1/3）；deploy-system/prod Escalated（prod 门禁等你批）。待审批 5 条。建议先看审批页的 ap-1。', cards: [OP('agent-comm.query', 'ci-verifier', { q: 'probe status' }, '已确认')] },
       { k: ['触发', '手动', '一轮', 'tick'], text: '已手动触发一轮对账（core-workflow #130 入队，reason: manual:root）。轮次开始后你会在运行抽屉里看到相位时间线与 action log。', cards: [OP('workflow.trigger', 'core-workflow', { round: 130, reason: 'manual' }, '已入队')] },
-      { k: ['goal', '目标', '新建'], text: '新建 Goal 走文档面：我可以在 global scope 起一份草稿（不触碰文档面、不发事件），你确认内容后点 Apply 落库。要现在起草吗？给我一句话意图即可。', cards: [] },
+      { k: ['goal', '目标', '新建'], text: '新建 Goal 走文档通道：我可以在 global scope 起一份草稿（不动正式文档、不发事件），你确认内容后点 Apply 落库。要现在起草吗？给我一句话意图即可。', cards: [] },
       { k: ['审批', '批准', 'reject', '驳回'], text: '审批必须人点（LLM 只提案）。当前待审 5 条：ap-1 prod 发布（fatal）、ap-2 ci-impl 队列参数（high）、ap-3 watcher 阈值、ap-4 staging canary、ap-5 通知模板。批准=Apply，落库必发 DocApplied。', cards: [] },
       { k: ['漂移', 'drift', '不一致'], text: '当前未解决 drift 3 条：ci-drift-042（warn，修复中）、conn-drift-017（warn，自愈中）、escalated-drift（fatal，等你批 ap-1）。全部有 DriftReport 深链可点。', cards: [] }
     ],
@@ -1194,7 +1194,7 @@
       if (hit) return { text: list[i].text, cards: list[i].cards || [] };
     }
     return {
-      text: '收到（' + agentName + '）。我的权限面是 ' + (__CC.MOCK ? '见右栏' : '') + '：ConnectorOps 挂载与 Ref 都在范围内。这句话我归纳为一条新任务，会以 SessionLog 留痕；若涉及文档面修改，我只提案进草稿，Apply 由你点。需要我先给现状摘要还是直接动手？',
+      text: '收到（' + agentName + '）。我的权限范围是 ' + (__CC.MOCK ? '见右栏' : '') + '：ConnectorOps 挂载与 Ref 都在范围内。这句话我归纳为一条新任务，会以 SessionLog 留痕；若涉及文档修改，我只提案进草稿，Apply 由你点。需要我先给现状摘要还是直接动手？',
       cards: []
     };
   }

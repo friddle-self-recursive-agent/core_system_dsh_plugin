@@ -429,7 +429,7 @@
       add('Workflows', w.name, (w.effective ? 'effective' : 'absent') + ' · ' + (w.runsTotal || 0) + ' runs', 'wf/' + w.name, 'i-flow');
     });
     // agents（E5 起文档面真数据；M.agents mock 行摘除——对话入口=chat/<agent>）
-    liveChatAgents().forEach(function (a) { add('Agents', a, 'Agent@文档面 · 对话入口', 'chat/' + a, 'i-bot'); });
+    liveChatAgents().forEach(function (a) { add('Agents', a, 'Agent · 对话入口', 'chat/' + a, 'i-bot'); });
     // connectors（E6 真数据：cored objects 枚举；读面未装=不列 mock——palette 诚实缩容）
     (LIVE.state.kinds.length ? LIVE.refs('WorkService') : []).forEach(function (w) { add('连接', w.name, 'WorkService · r' + w.resourceVersion, 'ws/' + w.name, 'i-plug'); });
     (LIVE.state.kinds.length ? LIVE.refs('ConnectorOps') : []).forEach(function (c) { add('连接', c.name, 'ConnectorOps · r' + c.resourceVersion, 'connector/' + c.name, 'i-plug'); });
@@ -501,7 +501,7 @@
   ACTIONS['open-palette'] = function () { openPalette(); };
   /* E7 收口清扫：manual tick=诚实提示（触发面=cored 写面余量——不画假回执不推 mock 事件库） */
   function manualTick() {
-    toast('手动触发=触发面余量', '写路径唯一入口=POST /v1/apply（--allow-apply）；触发执行面=cored 触发器接线（declared 余量）——不画假回执', 'warn');
+    toast('手动触发暂未接线（余量）', '写路径唯一入口=POST /v1/apply（--allow-apply）；触发执行暂未接线（余量）——不画假回执', 'warn');
   }
   ACTIONS['manual-tick'] = function () { manualTick(); };
   /* E7 收口清扫：新建 Goal=诚实提示（新建=落稿经 Apply；编辑器 new-draft 模式=declared 余量——
@@ -732,7 +732,7 @@
     return out;
   }
   function liveDegradedNote() {
-    return '<div class="small faint" style="padding:8px 16px">cored 读面暂不可达（' + esc(LIVE.state.err || '未就绪') +
+    return '<div class="small faint" style="padding:8px 16px">数据暂不可达（' + esc(LIVE.state.err || '未就绪') +
       '）——保留骨架，恢复后自动整装替换（连接态灯见右下）</div>';
   }
   function liveHealth() {
@@ -884,22 +884,22 @@
       '；DriftReport=' + h.drifts + '；审批归档=' + h.approvals + '；24h 失败=' + h.failed + '/' + h.started + '。';
     view.innerHTML = '<div class="welcome" data-cc-screen="overview">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>总览</h1><span class="chip kind">core console</span></div>' +
-      '<div class="dh-sub">' + esc(greeting()) + ' · ' + fmtDate(new Date()) + ' · 数据源=cored 读面与 dsh 运行面</div></div>' +
+      '<div class="dh-sub">' + esc(greeting()) + ' · ' + fmtDate(new Date()) + ' · 数据实时来自系统文档库与运行状态</div></div>' +
       '<div class="dh-actions"><button type="button" class="btn primary" data-cc-primary="true" data-act="go" data-go="workflows">管理工作流</button></div></div>' +
       metrics + stageHtml +
       '<div class="sec-title">服务状态</div><div class="w-services">' + svcHtml + '</div>' +
       '<div class="sec-title">最近重要事件</div><div class="w-ev-filter">' + chips + '</div>' +
       '<div class="card"><div class="card-b cc-event-list">' + evHtml + '</div></div>' +
-      '<details class="cc-disclosure"><summary>指标口径与数据来源</summary><div class="cc-prose">' + esc(healthText) + ' 所有数字均来自读面投影；零实例与零运行保持中性，不冒充 100% 或成功。</div></details>' +
+      '<details class="cc-disclosure"><summary>指标口径与数据来源</summary><div class="cc-prose">' + esc(healthText) + ' 所有数字均来自系统文档库与运行状态投影；零实例与零运行保持中性，不冒充 100% 或成功。</div></details>' +
       '</div>';
   }
   ACTIONS['w-ev-level'] = function (el) { S.wImpLevel = el.dataset.lv; render(); };
   // 快捷动作（E2 诚实投影：写路径=Apply，未开启写面的装配不下发假回执）
   ACTIONS['manual-tick'] = function () {
-    toast('只读装配不下发手动触发', '写路径唯一入口=POST /v1/apply（--allow-apply；E3 运行管理接 Apply override 闭环）', 'warn');
+    toast('只读装配不下发手动触发', '写路径唯一入口=POST /v1/apply（--allow-apply；运行管理接 Apply override 闭环）', 'warn');
   };
   ACTIONS['new-goal'] = function () {
-    toast('新建 Goal 由文档编辑器落地（E4）', 'LLM 草稿 → 人点 Apply → Revision+1 全链路（apply.md §1/§6）', 'warn');
+    toast('新建 Goal 由文档编辑器落地', 'LLM 草稿 → 人点 Apply → Revision+1 全链路（apply.md §1/§6）', 'warn');
   };
 
   /* ================= 屏 1：总览（E7 真数据换装——mock 渲染面归零，console-adoption.md §1.14 收口清扫） =================
@@ -939,7 +939,7 @@
         '</div>' +
         '<div class="sc-foot"><span class="faint small" style="margin-left:auto">' + sc.rows.length + ' 对象在册 →</span></div>' +
         '</div>';
-    }).join('') || '<div class="empty" style="padding:20px"><div class="e-title">零系统在册（cored 读面）</div></div>';
+    }).join('') || '<div class="empty" style="padding:20px"><div class="e-title">零系统在册</div></div>';
     // 进行中的运行（runs 面投影：triggered|running|suspended=进行中语义——终态推进不冒充）
     var runs = (LIVE.state.runs || []).filter(function (r) { return r.status === 'running' || r.status === 'triggered' || r.status === 'suspended'; }).slice(0, 8);
     var runsHtml = runs.map(function (r) {
@@ -949,7 +949,7 @@
         '<span class="mono" style="color:#7fb0f9;font-weight:700">#' + esc(String(no)) + '</span>' +
         '<div class="mr-main"><div>' + esc(wf) + '</div><div class="mr-sub mono">' + esc(r.eventId || r.involved || '') + '</div></div>' +
         '<span class="chip mute small">' + esc(r.status || '') + '</span></div>';
-    }).join('') || '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">runs 面无进行中轮次</div></div>';
+    }).join('') || '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">暂无进行中的运行轮次</div></div>';
     // 最近事件（归档窗头 8 行——/v1/events 最新优先投影）
     var evs = (LIVE.state.events || []).slice(0, 8).map(function (e) {
       var dot = e.level === 'fatal' || e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : 'acc';
@@ -1038,7 +1038,7 @@
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树' }]);
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>系统树</h1><span class="chip kind">Global → ServiceDesc → …</span></div>' +
-      '<div class="dh-sub">文档节点与资源节点完全同构：同样的行样式 / kind 徽章 / revision / 草稿圆点。树上出现的任何标识符都可点（对象详情只读 viewer）。<span class="mono faint">数据源=cored 读面（scheme kinds + 对象枚举 + 草稿缓存）</span></div></div></div>' +
+      '<div class="dh-sub">文档节点与资源节点完全同构：同样的行样式 / kind 徽章 / revision / 草稿圆点。树上出现的任何标识符都可点（对象详情只读 viewer）。<span class="mono faint">数据源=系统文档库（类型定义 + 对象清单 + 草稿缓存）</span></div></div></div>' +
       '<div class="tree-toolbar">' +
         '<input type="search" id="tree-q" placeholder="搜索类型、名称或作用域…" style="flex:1;max-width:360px;background:var(--bg);border:1px solid var(--border-2);border-radius:7px;padding:6px 11px;color:var(--text);outline:none;font-size:12.5px">' +
         '<button class="btn sm" data-act="tree-expand">展开全部</button>' +
@@ -1058,12 +1058,12 @@
     TREE_KEYS = [];
     if (st.status === 'loading') {
       box.innerHTML = '<div class="tree-node">' + liveSkeletonRows(6, 10) + '</div>';
-      if (note) note.textContent = '装载 cored 读面…';
+      if (note) note.textContent = '正在装载数据…';
       return;
     }
     if (st.status === 'degraded') {
       box.innerHTML = '<div class="tree-node">' + liveSkeletonRows(3, 10) + liveDegradedNote() + '</div>';
-      if (note) note.textContent = '读面不可达（保留骨架）';
+      if (note) note.textContent = '数据暂不可达（保留骨架）';
       return;
     }
     var match = function (o) { return !ql || (o.name + ' ' + o.kind + ' ' + o.scope).toLowerCase().indexOf(ql) >= 0; };
@@ -1109,11 +1109,11 @@
     if (note) {
       note.textContent = ql
         ? systems.length + '/' + LIVE.refs('ServiceDesc').length + ' 系统匹配 · 命中对象 ' + totalRows
-        : LIVE.refs('ServiceDesc').length + ' 系统 · ' + totalRows + ' 对象在册 · 全部来自 cored 读面';
+        : LIVE.refs('ServiceDesc').length + ' 系统 · ' + totalRows + ' 对象在册 · 全部来自系统文档库';
     }
     if (!LIVE.refs('ServiceDesc').length && !gRows) {
       box.innerHTML = '<div class="empty" style="padding:28px"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
-        '<div class="e-title">读面无对象在册</div><div>cored 读面 200 但零对象——检查文档库挂载（--docs）</div></div>';
+        '<div class="e-title">暂无对象在册</div><div>文档库已连上但零对象——检查文档库挂载（--docs）</div></div>';
     }
   }
   ACTIONS['tree-sys-toggle'] = function (el) {
@@ -1132,13 +1132,67 @@
     render();
   };
   ACTIONS['tree-collapse'] = function () { S.treeOpen = {}; render(); };
-  /* ================= 屏 3：系统详情（E2：cored 读面真数据最小面，console-ui.md 屏幕 3） =================
-   * 声明/清单全部来自读面（ServiceDesc 正文 + scope 对象枚举）；六 tab 与场景面四页=E7 落地
-   * （此处只留场景面入口占位，不渲染 mock——宁可空态不可假数据，console-adoption §5 规则 2）。
-   * 「与该系统 Agent 对话」入口=agent 详情（E2 为对象 viewer；E5 换会话屏）。 */
+  /* ================= 屏 3：系统详情（§13.3 系统视角：首屏=系统卡→服务分组→入口卡；R-UX-3④）
+   * 数据全部来自 cored 读面现读（声明正文 + scope 对象枚举）；文档对象清单=「文档」tab 次级。
+   * 对象详情可查看可编辑（编辑器屏）；入口卡四张=事件/指标/文档/权限（人话，无工程词形）。 */
   function sysCrumb(sys, extra) {
     var c = [{ label: 'Welcome', go: 'welcome' }, { label: sys.name, go: 's/' + sys.name }];
     return extra ? c.concat(extra) : c;
+  }
+  /* 系统目标一句话：goalRef 对象正文现读首段/首标题（读面缺席=中性占位不冒充）。 */
+  function sysGoalLine(name) {
+    var key = 'ServiceDesc/' + name;
+    var cached = (typeof SYS_GOAL_CACHE !== 'undefined' && SYS_GOAL_CACHE[key]) || '';
+    return cached;
+  }
+  var SYS_GOAL_CACHE = {};
+  function sysGoalRefs(sd) {
+    var refs = [];
+    var content = LIVE.docContent('ServiceDesc', sd.scope, sd.name) || '';
+    if (content) {
+      var g = /goalRef:\s*(\S+)/.exec(content);
+      if (g) refs.push({ label: '系统目标', ref: g[1] });
+      var d = /descRef:\s*(\S+)/.exec(content);
+      if (d) refs.push({ label: '系统说明', ref: d[1] });
+    }
+    return refs;
+  }
+  function systemCardHtml(sd, set) {
+    var name = sd.name;
+    var sc = inScopeObjects(name);
+    var insts = sc.byKind.ServiceInstance || [];
+    var phase = null, phaseChips = [];
+    insts.forEach(function (o) {
+      var row = LIVE.state.instanceStatus[o.kind + '/' + o.scope + '/' + o.name];
+      if (row && row.phase) phaseChips.push(row.phase);
+    });
+    if (insts.length && phaseChips.length && phaseChips.every(function (p) { return p === 'InSync'; })) phase = 'InSync';
+    else if (phaseChips.some(function (p) { return p === 'Failed' || p === 'Error'; })) phase = 'Failed';
+    else if (insts.length) phase = phaseChips[0] || null;
+    var health = phase === 'InSync'
+      ? '<span class="chip ok small"><span class="lamp ok"></span>运行正常</span>'
+      : (phase === 'Failed' || phase === 'Error'
+        ? '<span class="chip danger small"><span class="lamp danger"></span>有实例异常</span>'
+        : '<span class="chip mute small"><span class="lamp off"></span>暂无运行状态</span>');
+    var goal = sysGoalLine(name);
+    var goalHtml = goal
+      ? '<div class="syscard-row"><div class="syscard-kv" style="flex:1;min-width:220px"><span class="k">这个系统做什么</span><span class="v small">' + esc(goal) + '</span></div></div>'
+      : '';
+    return '<div class="card syscard" data-syscard="1"><div class="card-h"><span class="h-title">' + esc(name) + '</span>' +
+      '<span class="chip mute small" title="系统声明（ServiceDesc）">系统声明</span>' + draftDot(set[sd.kind + '/' + sd.scope + '/' + sd.name]) + '</div>' +
+      '<div class="card-b">' +
+      '<div class="syscard-row">' +
+      '<div class="syscard-kv"><span class="k">健康度</span><span class="v">' + health + '</span></div>' +
+      '<div class="syscard-kv"><span class="k">实例数</span><span class="v">' + insts.length + '</span></div>' +
+      '<div class="syscard-kv"><span class="k">文档版本</span><span class="v">r' + esc(sd.resourceVersion) + '</span></div>' +
+      '<div class="syscard-kv"><span class="k">作用域</span><span class="v small mono">' + esc(sd.scope) + '</span></div>' +
+      '</div>' + goalHtml + '</div></div>';
+  }
+  function entCard(icon, label, sub, count, goPath, testid) {
+    return '<div class="ent-card" data-act="go" data-go="' + esc(goPath) + '" data-ent="' + esc(testid) + '" role="link" tabindex="0">' +
+      '<div class="ec-title"><svg class="ic"><use href="#cc-i-' + icon + '"/></svg>' + esc(label) +
+      (count != null ? '<span class="chip kind small" style="margin-left:auto">' + count + '</span>' : '') + '</div>' +
+      '<div class="ec-sub">' + esc(sub) + '</div></div>';
   }
   function hydrate(elId, path, paint) {
     // 异步内容注水：现渲染骨架行，读面返回后原位替换（路由已变=丢弃，不跨屏串数据）。
@@ -1151,7 +1205,7 @@
       paint(el, b);
     }).catch(function (e) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
-      el.innerHTML = '<div class="small faint" style="padding:6px 0">读面暂不可达（' + esc(String((e && e.message) || e)) + '）——恢复后重进即现读</div>';
+      el.innerHTML = '<div class="small faint" style="padding:6px 0">数据暂不可达（' + esc(String((e && e.message) || e)) + '）——恢复后重进即现读</div>';
     });
   }
   // scheme 引用词 → 路由（内容里出现的标识符全可点：硬性验收 console-adoption §5 规则 6）
@@ -1233,7 +1287,7 @@
           if (wf && res.matched) {
             cur += ' <span class="chip click mute" data-act="go" data-go="wf/' + esc(encodeURIComponent(wf)) + '">workflow 锚 ' + esc(wf) + '（route ' + esc(res.route) + '·row' + esc(res.row) + '）→</span>';
           } else if (res.route) {
-            cur += ' <span class="chip mute small">route ' + esc(res.route) + '（执行面 executor=' + esc((res.execution && res.execution.route && res.execution.route.executor) || '') + '，非 workflow 锚）</span>';
+            cur += ' <span class="chip mute small">route ' + esc(res.route) + '（执行通道 executor=' + esc((res.execution && res.execution.route && res.execution.route.executor) || '') + '，非 workflow 锚）</span>';
           }
           el2.innerHTML = cur;
         }).catch(function () { /* 决策面缺席=链路行保持现状（不报错块） */ });
@@ -1256,13 +1310,13 @@
             return '<span class="chip click ok" data-act="go" data-go="wf/' + esc(encodeURIComponent(wf)) + '/r/' + esc(no) + '">run #' + esc(no) + ' @' + esc(wf) + '（' + esc(r.status || '') + '·' + esc(r.phase || '') + '）→</span>';
           }).join(' ');
         } else {
-          el2.innerHTML = '<span class="chip mute small">无 run 投影（该事件执行面非 workflow 或未接线——诚实空态）</span>';
+          el2.innerHTML = '<span class="chip mute small">无运行轮次（该事件不是工作流产生，或尚未接线）</span>';
         }
         anchor();
       }, function () {
         if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
         var el2 = $('#ev-chain-runs');
-        if (el2) el2.innerHTML = '<span class="small faint">run 反查面暂不可达</span>';
+        if (el2) el2.innerHTML = '<span class="small faint">运行轮次暂不可查</span>';
       });
     }
   }
@@ -1271,11 +1325,11 @@
     var name = S.params.name;
     var sd = LIVE.refs('ServiceDesc').filter(function (o) { return o.name === name; })[0];
     if (!sd) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', name) + '</div>';
       setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '404' }]);
       return;
     }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' }, { label: name }]);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + name }]);
     var set = treeDraftSet();
     var sc = inScopeObjects(name);
     var rows = function (k, depth) { return (sc.byKind[k] || []).map(function (o) { return treeObjRow(o, depth, set); }).join(''); };
@@ -1286,40 +1340,49 @@
       docRows = docRows.concat(sc.byKind[kd.name] || []);
     });
     docRows.sort(function (a, b) { return (a.kind + a.name) < (b.kind + b.name) ? -1 : 1; });
+    var wfCount = (sc.byKind.Workflow || []).length;
+    var connCount = (sc.byKind.ConnectorOps || []).length + (sc.byKind.Provider || []).length + (sc.byKind.WorkService || []).length;
+    var evCount = (LIVE.state.events || []).filter(function (e) { return SCN.evInScope(e, name); }).length;
     var sec = function (t, inner) {
       return '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">' + t + '</span></div><div class="card-b" style="padding:4px 8px 8px">' + (inner || '') + '</div></div>';
     };
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(name) + '</h1><span class="chip kind">ServiceDesc</span>' +
-      draftDot(set[sd.kind + '/' + sd.scope + '/' + sd.name]) + '</div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(sd.scope) + '</span><span class="mono">r' + sd.resourceVersion + '</span>' +
-      '<span>声明/清单全部来自 cored 读面；对象详情=只读 viewer（E4 起升编辑器）</span></div>' +
-      '<div class="dh-sub" style="margin-top:8px">场景面（E7 真数据）：' +
-      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/events">事件面 →</span> ' +
-      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/metrics">指标面 →</span> ' +
-      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/docs">文档面（tag 过滤）→</span> ' +
-      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/permissions">权限面 →</span></div>' +
-      '<div class="dh-actions" id="sys-agents"></div></div></div>' +
-      sec('声明正文（ServiceDesc，现读）', '<div id="sys-spec">' + liveSkeletonRows(1, 0) + '</div>') +
-      sec('instances（ServiceInstance）', rows('ServiceInstance', 12) || '<div class="small faint" style="padding:4px 12px">暂无实例对象在册</div>') +
-      sec('workflows（系统层对象；builtin 全局同名 override 语义见 workflow.md）', rows('Workflow', 12) || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
-      sec('资源（WorkService / ConnectorOps / Provider）',
+      systemCardHtml(sd, set) +
+      '<div class="ent-cards" data-ent-cards="1">' +
+      entCard('pulse', '事件', '这个系统发生过的动态', evCount || 0, 's/' + esc(name) + '/events', 'events') +
+      entCard('pulse', '指标', '运行数据与阈值', null, 's/' + esc(name) + '/metrics', 'metrics') +
+      entCard('doc', '文档', '系统说明与规则（按标签筛选）', docRows.length, 's/' + esc(name) + '/docs', 'docs') +
+      entCard('check', '权限', '谁能用哪些连接', connCount || 0, 's/' + esc(name) + '/permissions', 'permissions') +
+      '</div>' +
+      '<div id="sys-agents" class="dh-actions" style="margin-top:10px"></div>' +
+      sec('服务实例', rows('ServiceInstance', 12) || '<div class="small faint" style="padding:4px 12px">暂无运行实例</div>') +
+      sec('工作流', rows('Workflow', 12) || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      sec('连接与凭据源',
         rows('WorkService', 12) + rows('ConnectorOps', 12) + rows('Provider', 12) ||
         '<div class="small faint" style="padding:4px 12px">暂无</div>') +
-      sec('docs（文档与资源同规则，kind 徽章区分）',
-        docRows.map(function (o) { return treeObjRow(o, 12, set); }).join('') || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      '<div class="card" style="margin-top:12px" data-decl-card="1"><div class="card-h"><span class="h-title">系统声明</span>' +
+      '<span class="chip kind">ServiceDesc</span><div class="md-switch" id="decl-switch" style="margin-left:auto"></div></div>' +
+      '<div class="card-b" id="sys-spec">' + liveSkeletonRows(1, 0) + '</div></div>' +
+      '<details class="md-raw" style="margin-top:12px" data-docs-fold="1"><summary>文档清单（' + docRows.length + '）</summary>' +
+      '<div class="card-b" style="padding:4px 8px 8px">' +
+      (docRows.map(function (o) { return treeObjRow(o, 12, set); }).join('') || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      '</div></details>' +
       '</div>';
     hydrate('sys-spec', 'v1/objects/ServiceDesc/' + encodeURIComponent(sd.name) + '?scope=' + encodeURIComponent(sd.scope), function (el, b) {
       var content = String(b.content || '');
-      el.innerHTML = '<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc(content) + '</pre>' +
+      var goalM = /(?:^|\n)\s*(?:summary|goal|description):\s*["']?([^"'\n]{6,120})/.exec(content);
+      if (goalM && !SYS_GOAL_CACHE['ServiceDesc/' + name]) { SYS_GOAL_CACHE['ServiceDesc/' + name] = goalM[1].trim(); }
+      el.innerHTML =
+        '<div data-decl-view="cards">' + (window.__CC.md.yamlToCards(content) || '') + '</div>' +
+        '<details class="md-raw" data-decl-view="raw"><summary>YAML</summary><pre class="mono md-raw-pre">' + esc(content) + '</pre></details>' +
         (refChips(content) ? '<div style="margin-top:8px">' + refChips(content) + '</div>' : '');
-      // 与该系统 Agent 对话入口（agentRef 来自声明正文——E2 进 agent 对象详情，E5 换会话屏）
+      // 与该系统实例对话入口（agentRef 来自声明正文——点入会话屏）
       var ag = $('#sys-agents');
       if (ag) {
         var refs = (content.match(/agent:\/\/([A-Za-z0-9-_.]+)/g) || []).map(function (x) { return x.replace('agent://', ''); });
         var uniq = refs.filter(function (v, i) { return refs.indexOf(v) === i; });
         ag.innerHTML = uniq.map(function (a) {
-          return '<button class="btn primary" data-act="go" data-go="agent/' + esc(a) + '"><svg class="ic"><use href="#cc-i-chat"/></svg>与 ' + esc(a) + ' 对话</button>';
+          return '<button class="btn primary" data-act="go" data-go="chat/' + esc(a) + '"><svg class="ic"><use href="#cc-i-chat"/></svg>与 ' + esc(a) + ' 对话</button>';
         }).join('');
       }
     });
@@ -1356,7 +1419,7 @@
       .concat(CHAT().sessionIdsOfRefs(instEntry.match(/session:\/\/[A-Za-z0-9_.:-]+/g) || []).map(function (x) { return x; }));
     var uniqRefs = agentRefs.filter(function (v, i) { return agentRefs.indexOf(v) === i; });
     var phaseRow = LIVE.state.instanceStatus['ServiceInstance/' + sysRef.scope + '/' + S.params.inst];
-    var phaseChipHtml = phaseRow && phaseRow.phase ? phaseChip(phaseRow.phase, true) : '<span class="faint small" title="ServiceInstance 对象未在册（实例条目内嵌于 ServiceDesc 声明）——相位=引擎回写面余量">n/a</span>';
+    var phaseChipHtml = phaseRow && phaseRow.phase ? phaseChip(phaseRow.phase, true) : '<span class="faint small" title="ServiceInstance 对象未在册（实例条目内嵌于 ServiceDesc 声明）——相位=引擎回写（余量）">n/a</span>';
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' }, { label: S.params.name, go: 's/' + esc(S.params.name) }, { label: S.params.inst }]);
     var agentChips = uniqRefs.map(function (a) {
       var isSession = a.indexOf('session:') === 0;
@@ -1376,7 +1439,7 @@
       (refChips(instEntry) ? '<div style="margin-top:8px">' + refChips(instEntry) + '</div>' : '') + '</div></div>' +
       '<div class="card"><div class="card-h"><span class="h-title">Status conditions / metrics</span></div><div class="card-b">' +
       (phaseRow ? '<div class="kv"><span class="k">phase</span><span class="v mono">' + esc(phaseRow.phase) + '</span><span class="k">observedGeneration</span><span class="v mono">' + esc(String(phaseRow.observedGeneration != null ? phaseRow.observedGeneration : '—')) + '</span></div>'
-        : '<div class="empty" style="padding:16px"><div class="e-title">ServiceInstance 对象未在册</div><div class="small faint">conditions/metrics=引擎回写面（对象缺席=诚实空态，不画 mock）——E7 场景面细化</div></div>') +
+        : '<div class="empty" style="padding:16px"><div class="e-title">ServiceInstance 对象未在册</div><div class="small faint">conditions/metrics=引擎回写（对象缺席=诚实空态，不画 mock）</div></div>') +
       '</div></div></div></div>';
   }
 
@@ -1400,10 +1463,10 @@
     LIVE.ensure();
     var name = S.params.name;
     if (!LIVE.refByName('ServiceDesc', name)) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', name) + '</div>';
       return;
     }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '指标面' }]);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '指标' }]);
     var mets = LIVE.state.metrics || [];
     var thr = (LIVE.state.events || []).filter(function (e) { return e.type === 'MetricThreshold' && SCN.evInScope(e, name); });
     var thrHtml = thr.length ? thr.slice(0, 8).map(function (e) {
@@ -1415,17 +1478,17 @@
     var bodyHtml;
     if (!mets.length) {
       bodyHtml = '<div class="empty" style="padding:28px"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
-        '<div class="e-title">数据面未装配（/v1/metrics 空投影=关断口径可见）</div>' +
-        '<div class="small faint">查询声明清单 / 曲线 / 阈值线的数据本体在 TSDB，不入 console（ops-log 同规则）——数据面装配=declared 余量（不冒充指标名不画 mock 曲线）</div></div>';
+        '<div class="e-title">指标数据未接入</div>' +
+        '<div class="small faint">指标数据的本体在监控库，不入控制台（同日志规则）——指标接入=余量（不冒充指标名不画 mock 曲线）</div></div>';
     } else {
       var rows = mets.map(function (m2) {
         return '<tr><td class="mono">' + esc(m2.name) + '</td><td class="mono" style="text-align:right">' + esc(String(m2.samples != null ? m2.samples : '—')) + '</td>' +
           '<td class="mono small" id="mq-' + esc(cssId(m2.name)) + '"><span class="faint">即席查询中…</span></td></tr>';
       }).join('');
-      bodyHtml = '<div class="card"><div class="card-h"><span class="h-title">指标声明清单（/v1/metrics 投影）</span><span class="h-sub">样本计数=数据面在册实数</span></div>' +
+      bodyHtml = '<div class="card"><div class="card-h"><span class="h-title">指标声明清单（/v1/metrics 投影）</span><span class="h-sub">样本计数=接入的实数</span></div>' +
         '<table class="tbl"><thead><tr><th>metric</th><th style="text-align:right">samples</th><th>即席查询（跨窗口全量 · avg/max）</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
-    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '指标面', '数据面投影实数（TSDB 本体不入 console）· 越线事件=归档行现读', '状态') +
+    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '指标', '指标投影实数（数据本体在监控库）· 越线事件=归档行现读', '状态') +
       '<div class="grid" style="grid-template-columns:1fr 340px">' + bodyHtml +
       '<div class="card" style="align-self:start"><div class="card-h"><span class="h-title">最近越线事件（MetricThreshold）</span><span class="h-sub">归档窗内 · 系统 scope 过滤</span></div><div class="mini-list">' + thrHtml + '</div></div>' +
       '</div></div>';
@@ -1492,10 +1555,10 @@
     LIVE.ensure();
     var name = S.params.name;
     if (!LIVE.refByName('ServiceDesc', name)) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', name) + '</div>';
       return;
     }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '文档面' }]);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '文档' }]);
     paintDocsScreen(view, docBaseRows(name), 's/' + encodeURIComponent(name), 'systems/' + name);
   }
   function screenDocsGlobal(view) {
@@ -1511,7 +1574,7 @@
     kinds.sort();
     var tags = docTagsUnion(baseRows);
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>文档面</h1><span class="chip kind">' + esc(scopeLabel) + '</span></div>' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>文档</h1><span class="chip kind">' + esc(scopeLabel) + '</span></div>' +
       '<div class="dh-sub">tag chips 多选 × kind × 草稿 × 搜索 组合生效（tag=对象正文 spec.metadata.tags 现读——scheme conventions 检索元数据）· 虚拟滚动 · 共 ' + baseRows.length + ' 对象（文档与资源同规则）</div></div>' +
       '<div class="dh-actions">' + (backGo ? '<button class="btn" data-act="go" data-go="' + esc(backGo) + '">← 返回</button>' : '') + '</div></div>' +
       '<div class="filter-bar">' +
@@ -1590,10 +1653,10 @@
     LIVE.ensure();
     var name = S.params.name;
     if (!LIVE.refByName('ServiceDesc', name)) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', name) + '</div>';
       return;
     }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '权限面' }]);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '权限' }]);
     var agents = LIVE.refs('Agent');
     var roles = LIVE.refs('Role');
     var groups = LIVE.refs('Group');
@@ -1610,7 +1673,7 @@
       return ref ? (ref.scope || '') : '';
     }
     var matrixRows = agents.map(function (a) { return a.name; });
-    var matrix = '<div class="card"><div class="card-h"><span class="h-title">权限矩阵（行=Agent 文档面，列=ConnectorOps / Provider / Ref 对象）</span>' +
+    var matrix = '<div class="card"><div class="card-h"><span class="h-title">权限矩阵（行=Agent 声明，列=ConnectorOps / Provider / Ref 对象）</span>' +
       '<span class="h-sub">格=授权来源现读（Agent 声明正文挂载行）；—=无挂载声明</span></div>' +
       '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="min-width:150px">agent</th>' +
       cols.map(function (c) { return '<th style="min-width:90px" title="' + esc(c.kind + '/' + c.scope + '/' + c.name) + '"><span class="lk mono small" data-act="go" data-go="' + esc(c.route) + '">' + esc(c.name) + '</span><div class="faint tiny">' + esc(c.kind) + '</div></th>'; }).join('') +
@@ -1622,8 +1685,8 @@
             return '<td class="mono" style="color:' + (hit ? '#4ade80' : 'var(--text-3)') + ';text-align:center" title="' +
               esc(hit ? '授权来源：Agent/' + agentScopeOf(r) + '/' + r + ' 声明正文挂载行 ' + hit.ref : '声明正文无 ' + c.kind + ' 挂载') + '">' + (hit ? '✓' : '—') + '</td>';
           }).join('') +
-          '<td class="mono" style="color:var(--text-3);text-align:center" title="Apply 准入=subject role 面（cored admit 判定）——Agent 文档面无声明，不冒充">—</td></tr>';
-      }).join('') : '<tr><td colspan="' + (colKeys.length + 2) + '" class="small faint">Agent 对象零在册（文档面）——矩阵空态</td></tr>') +
+          '<td class="mono" style="color:var(--text-3);text-align:center" title="Apply 准入=主体角色判定（cored admit）——Agent 声明无此域，不冒充">—</td></tr>';
+      }).join('') : '<tr><td colspan="' + (colKeys.length + 2) + '" class="small faint">Agent 对象零在册——矩阵空态</td></tr>') +
       '</tbody></table></div></div>';
     // 挂载反查表（ConnectorOps × 挂载者——Agent 声明现读，双可点）
     var copRows = LIVE.refs('ConnectorOps').map(function (c) {
@@ -1636,9 +1699,9 @@
     }).join('');
     var rolesHtml;
     if (!roles.length && !groups.length) {
-      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 文档面</span></div><div class="card-b">' +
+      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 角色对象</span></div><div class="card-b">' +
         '<div class="empty" style="padding:16px"><div class="e-title">Role / Group 对象零在册（docsRoot）</div>' +
-        '<div class="small faint">角色面=declared 余量（docsRoot 未建 Role/Group 对象）——矩阵行只呈现 Agent 声明面现读，不冒充 role 授权</div></div></div></div>';
+        '<div class="small faint">角色对象暂未在册（余量）——矩阵行只呈现 Agent 声明现读，不冒充角色授权</div></div></div></div>';
     } else {
       // R-6（console-adoption.md §1.20）：Role/Group 文档面在册 → 授权矩阵 spec 现读区块。
       // 数据源=live 小对象现读（console-live.js smallKinds 含 Role/Group）——声明正文现读，非内置表；
@@ -1668,7 +1731,7 @@
       roles.forEach(function (r) {
         var sp = roleSpecOf(r.scope, r.name);
         if (!sp.perms.length && !sp.on.length) {
-          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td colspan="3" class="small faint">spec 零授权条目（声明在册，零挂载零权限域——授权面同判=不产生授权）</td></tr>';
+          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td colspan="3" class="small faint">spec 零授权条目（声明在册，零挂载零权限域——不产生授权）</td></tr>';
           return;
         }
         sp.on.forEach(function (o) {
@@ -1678,7 +1741,7 @@
               : esc(o)) + '</td><td class="mono faint small">—</td><td class="small faint">on 对象挂载（permission.md 骨架 3b——持有者可处理该对象）</td></tr>';
         });
         sp.perms.forEach(function (p) {
-          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td class="mono">' + esc(p.scope) + '</td><td class="mono small">' + esc(p.actions.join(', ')) + '</td><td class="small faint">permissions 权限域条目（写面 admit 判定源）</td></tr>';
+          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td class="mono">' + esc(p.scope) + '</td><td class="mono small">' + esc(p.actions.join(', ')) + '</td><td class="small faint">permissions 权限域条目（写入判定的依据）</td></tr>';
         });
       });
       var grpRows = groups.map(function (g) {
@@ -1686,7 +1749,7 @@
         return '<tr><td class="mono"><span class="chip kind">Group</span> ' + esc(g.name) + '</td><td>' +
           (bound.length ? bound.map(roleLink).join(' ') : '<span class="faint">零绑定（组不产生授权）</span>') + '</td></tr>';
       }).join('');
-      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 文档面</span></div><table class="tbl"><thead><tr><th>kind</th><th>name</th><th>scope</th><th>rv</th></tr></thead><tbody>' +
+      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 角色对象</span></div><table class="tbl"><thead><tr><th>kind</th><th>name</th><th>scope</th><th>rv</th></tr></thead><tbody>' +
         roles.map(function (r) { return '<tr><td class="chip kind">Role</td><td class="mono"><span class="lk" data-act="go" data-go="role/' + esc(r.name) + '">' + esc(r.name) + '</span></td><td class="mono">' + esc(r.scope || '—') + '</td><td class="mono">r' + esc(r.resourceVersion) + '</td></tr>'; }).join('') +
         groups.map(function (g) { return '<tr><td class="chip kind">Group</td><td class="mono">' + esc(g.name) + '</td><td class="mono">' + esc(g.scope || '—') + '</td><td class="mono">r' + esc(g.resourceVersion) + '</td></tr>'; }).join('') +
         '</tbody></table></div>' +
@@ -1698,10 +1761,10 @@
         '<table class="tbl" style="margin-top:10px"><thead><tr><th style="min-width:140px">group</th><th>绑定 role（user→group→role，骨架 3）</th></tr></thead><tbody>' +
         (grpRows || '<tr><td colspan="2" class="small faint">Group 零在册</td></tr>') + '</tbody></table></div>';
     }
-    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '权限面', '行=Agent 文档面 · 列=ConnectorOps/Provider/Ref · 格=声明正文挂载行现读（溯源全可点）· Role/Group=文档面枚举+授权矩阵 spec 现读', 'Agent') +
+    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '权限', '行=Agent 声明 · 列=连接/凭据源/引用 · 格=声明正文挂载行现读（溯源全可点）· Role/Group=角色对象清单+授权矩阵 spec 现读', 'Agent') +
       '<div class="grid" style="grid-template-columns:1fr">' + matrix +
       '<div class="card"><div class="card-h"><span class="h-title">挂载反查（ConnectorOps × 挂载者——声明正文现读）</span></div>' +
-      '<table class="tbl"><thead><tr><th>ConnectorOps</th><th>scope</th><th>挂载者（Agent 文档面）</th></tr></thead><tbody>' +
+      '<table class="tbl"><thead><tr><th>ConnectorOps</th><th>scope</th><th>挂载者（Agent 声明）</th></tr></thead><tbody>' +
       (copRows || '<tr><td colspan="3" class="small faint">ConnectorOps 零在册</td></tr>') + '</tbody></table></div>' +
       rolesHtml + '</div></div>';
   }
@@ -1751,10 +1814,10 @@
   // bound+实现=ok chip 可点落 ConnectorOps 编辑器；bound+skeleton=骨架（实现代码未落）mute chip；
   // unbound=warn chip（缺同名 ConnectorOps 对象——缺口可见）；execution 缺席=—（面缺省不冒充）。
   function wfExecChip(ex) {
-    if (!ex || !ex.state) return '<span class="faint small" title="执行绑定面缺席（旧代/枚举失败——不冒充）">—</span>';
+    if (!ex || !ex.state) return '<span class="faint small" title="执行绑定缺席（旧代/枚举失败——不冒充）">—</span>';
     if (ex.state === 'bound') {
       var tt = '执行绑定：ConnectorOps/' + ex.connectorScope + '/' + ex.connector + (ex.skeleton
-        ? '（骨架=apply 即实现物化面；实现代码=apply-workflow agent 余量）' : '（实现已在册）');
+        ? '（骨架=apply 即落实现占位；实现代码=apply-workflow agent 余量）' : '（实现已在册）');
       return '<span class="chip click ' + (ex.skeleton ? 'mute' : 'ok') + ' small" data-act="go" data-go="connector/' +
         encodeURIComponent(ex.connector) + '" title="' + tt + '">' + (ex.skeleton ? '骨架·' : '') + esc(ex.connector) + '</span>';
     }
@@ -1779,7 +1842,7 @@
   // faint；面缺席=—。判据=「构建产物 digest ↔ 生效对象 rv ↔ execution 绑定态」三者联动一致
   // 或缺口可见（unbound/skeleton=true 即缺口词形）。
   function wfReconcileChip(rc) {
-    if (!rc || !rc.chain) return '<span class="faint small" title="生效链判别面缺席（旧代/apply_log 缺——不冒充）">—</span>';
+    if (!rc || !rc.chain) return '<span class="faint small" title="生效链判定缺席（旧代/apply_log 缺——不冒充）">—</span>';
     var head = 'digest r' + (rc.skeletonRv || 0) + ' ↔ bind r' + (rc.lastBindRv != null ? rc.lastBindRv : 0);
     if (rc.chain === 'consistent') {
       return '<span class="chip mute small mono" title="生效链一致（' + head +
@@ -1846,7 +1909,7 @@
         content = ensureOriginLabel(setYamlEnabled(content, to));
       } else {
         var sys = firstSystemScope();
-        if (!sys) { toast('override 目标面缺席', '文档库无系统 scope（ServiceDesc 缺席）——不发明 override 位置', 'warn'); return; }
+        if (!sys) { toast('override 目标缺席', '文档库无系统 scope（ServiceDesc 缺席）——不发明 override 位置', 'warn'); return; }
         scope = sys;
         content = cloneAsOverride(content, sys, to);
       }
@@ -1860,7 +1923,7 @@
         LIVE.load().then(function () { render(); });
       });
     }, function () {
-      toast('本体读取失败', '对象读面不可达——稍后重试（连接态灯见右下）', 'warn');
+      toast('本体读取失败', '对象数据暂不可达——稍后重试（连接状态见右下）', 'warn');
     });
   }
 
@@ -1881,7 +1944,7 @@
           switchCell = '<span class="switch' + (curEnabled ? ' on' : '') + '" data-act="wf-toggle" data-wf="' + esc(w.name) +
             '" title="启用/停用 = Apply（override 语义：builtin 本体不动）"></span>';
         } else {
-          switchCell = '<span class="faint small" title="builtin 本体无文档对象——override 生成=E4 编辑器轮余量（诚实余量，不假开关）">—</span>';
+          switchCell = '<span class="faint small" title="builtin 本体无文档对象——override 生成=文档编辑器余量（诚实余量，不假开关）">—</span>';
         }
         var docsChips = (w.objects || []).map(function (o) { return wfObjectChip(w.name, o); }).join(' ') ||
           '<span class="faint small" title="声明随运行时 builtin 注册表（无文档本体）">builtin 注册表</span>';
@@ -1901,7 +1964,7 @@
       }).join('');
       inner = '<div class="card"><table class="tbl"><thead><tr><th>名称</th><th>生效 scope</th><th>启用 (=Apply)</th><th>执行绑定</th><th>生效链</th><th>当前相位</th>' +
         '<th>运行次数 总/24h</th><th>成功率</th><th>最近运行</th><th>涉及文档</th></tr></thead><tbody>' + (rowsHtml || '') + '</tbody></table></div>' +
-        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）；执行绑定=同名/spec.connector 覆写 ConnectorOps（apply 即实现骨架物化——unbound=缺口可见）；生效链=骨架 digest ↔ apply_log 绑定行 rv 对账（R-9 判别面——分裂=人写演进可见）</div>';
+        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）；执行绑定=同名/spec.connector 覆写 ConnectorOps（apply 即实现骨架物化——unbound=缺口可见）；生效链=骨架 digest ↔ apply_log 绑定行 rv 对账（R-9 判别——分裂=人写演进可见）</div>';
     }
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>Workflows</h1>' +
@@ -1922,7 +1985,7 @@
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows', go: 'workflows' }, { label: name }]);
     if (!row) {
       view.innerHTML = '<div class="view-inner">' + (st.wfAgg
-        ? emptyBox('workflow 不在聚合面（行集=注册表∪对象∪run 锚三源并集）', name)
+        ? emptyBox('workflow 不在聚合视图（行集=注册表∪对象∪run 锚三源并集）', name)
         : '<div class="card"><div class="card-b">' + liveSkeletonRows(3) + '</div></div>' + liveDegradedNote()) + '</div>';
       return;
     }
@@ -1938,8 +2001,8 @@
       '<div class="dh-actions">' +
       (curEnabled !== null
         ? '<button class="btn ' + (curEnabled ? 'danger' : 'ok') + '" data-act="wf-toggle" data-wf="' + esc(row.name) + '">' + (curEnabled ? '停用' : '启用') + '</button>'
-        : '<span class="faint small" title="builtin 本体无文档对象——override 生成=E4 余量">启停余量</span>') +
-      '<button class="btn" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '" title="编辑=文档编辑器（E4 起 Apply 全链）">编辑 spec</button>' +
+        : '<span class="faint small" title="builtin 本体无文档对象——override 生成=文档编辑器余量">启停余量</span>') +
+      '<button class="btn" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '" title="编辑=文档编辑器（Apply 全链）">编辑 spec</button>' +
       '</div></div>';
     var kpi = '<div class="statbar" style="grid-template-columns:repeat(4,1fr)">' +
       '<div class="stat"><div class="st-num">' + row.runsTotal + '</div><div class="st-label">总运行（归档口径）</div></div>' +
@@ -1965,9 +2028,9 @@
     e.stopPropagation();
     var name = el.dataset.wf;
     var row = liveWfRow(name);
-    if (!row) { toast('读面未就绪', 'workflow 聚合面未装载——稍后重试', 'warn'); return; }
+    if (!row) { toast('数据未就绪', 'workflow 清单未装载——稍后重试', 'warn'); return; }
     var tt = wfToggleTarget(row);
-    if (!tt.target) { toast('无法启停（诚实余量）', 'builtin 本体无文档对象——override 生成=E4 编辑器轮余量', 'warn'); return; }
+    if (!tt.target) { toast('无法启停（诚实余量）', 'builtin 本体无文档对象——override 生成=文档编辑器余量', 'warn'); return; }
     var cur = tt.target.enabled === false ? false : true;
     var to = !cur;
     var scopeAfter = tt.isOverride ? tt.target.scope : firstSystemScope();
@@ -1975,7 +2038,7 @@
       '<div class="kv" style="gap:8px"><span class="k">对象</span><span class="v mono">Workflow/' + esc(scopeAfter) + '/' + esc(name) + '</span>' +
       '<span class="k">语义</span><span class="v">' + (tt.isOverride ? '更新既有 override（系统层同名覆盖——builtin 本体不动）' : '生成 override（克隆本体文档 + origin 标注 + 翻转 enabled；builtin 本体不动）') + '</span>' +
       '<span class="k">变更</span><span class="v mono">spec.enabled: ' + cur + ' → ' + to + '</span>' +
-      '<span class="k">闭环</span><span class="v">Apply 落库 Revision+1 · DocApplied 归档 · 页面重读显示新态（触发路径对 enabled 的实时 honoring=引擎余量，如实标注）</span></div>',
+      '<span class="k">闭环</span><span class="v">Apply 落库 Revision+1 · DocApplied 归档 · 页面重读显示新态（触发路径对 enabled 的实时遵循；接线=引擎余量，如实标注）</span></div>',
       '确认（Apply）', function () {
         applyWorkflowToggleLive(name, tt.target, tt.isOverride, to);
       });
@@ -1984,7 +2047,7 @@
     var row = liveWfRow(el.dataset.wf);
     var tt = row ? wfToggleTarget(row) : null;
     if (tt && tt.target) { go('doc/Workflow/' + encodeURIComponent(tt.target.scope) + '/' + encodeURIComponent(el.dataset.wf)); return; }
-    toast('无文档本体（诚实空态）', '该 workflow 的声明随 builtin 注册表——spec 编辑=E4 编辑器轮余量', 'warn');
+    toast('无文档本体（诚实空态）', '该 workflow 的声明随 builtin 注册表——spec 编辑=文档编辑器余量', 'warn');
   };
 
   /* --- 运行 tab：dsh Jobs 双栏（run 列表 + 抽屉内联；follow=余量，轮次静态投影） --- */
@@ -1998,9 +2061,9 @@
         '<span class="faint mono small" style="margin-left:auto">' + fmtAgo(new Date(r.startedAt)) + '</span></div>' +
         '<div class="ji-sub"><span>' + esc(r.type) + '</span><span>·</span><span>' + esc(r.specSource || '—') + '</span></div></div>';
     }).join('');
-    if (!list) list = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">环内暂无该锚的 run（触发留痕=观测面，环容量 256）</div></div>';
+    if (!list) list = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">环内暂无该锚的 run（触发留痕=观测记录，环容量 256）</div></div>';
     var detail = sel ? wfRunDrawerHtml(row, sel, true) :
-      '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">无运行轮次</div><div class="e-act"><span class="faint small">手动触发=Apply 触发设置（引擎真实执行面接线余量）</span></div></div>';
+      '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">无运行轮次</div><div class="e-act"><span class="faint small">手动触发=Apply 触发设置（引擎真实执行接线余量）</span></div></div>';
     return '<div class="jobs-layout"><div class="jobs-list"><div class="card-h"><span class="h-title">运行轮次</span><span class="h-sub">' +
       runs.length + ' 轮（环内投影，新→旧）</span></div><div class="jl-scroll">' + list + '</div></div>' +
       '<div class="job-detail" id="job-detail">' + detail + '</div></div>';
@@ -2015,7 +2078,7 @@
       var cls = i < curIdx ? 'done' : (i === curIdx ? 'current' : '');
       return '<div class="ptl-item ' + cls + '"><div class="ptl-rail"><div class="ptl-node"></div>' + (i < phases.length - 1 ? '<div class="ptl-line"></div>' : '') + '</div>' +
         '<div class="ptl-main"><div class="ptl-head"><span class="ptl-phase">' + esc(p) + '</span><span class="ptl-ts">' +
-        (i === curIdx ? '当前落点' : (i < curIdx ? '已过（留痕面无进出时刻——相位进出时刻=执行面余量）' : '未至')) + '</span></div></div></div>';
+        (i === curIdx ? '当前落点' : (i < curIdx ? '已过（留痕无进出时刻——相位进出时刻=执行余量）' : '未至')) + '</span></div></div></div>';
     }).join('');
     if (!tl) tl = '<div class="small faint">相位未投影（' + esc(r.specSource) + ' 源未声明 spec.phases——零投影口径，status=' + esc(r.status) + '）</div>';
     var kv = function (k, v) { return '<span>' + esc(k) + ' <b>' + v + '</b></span>'; };
@@ -2034,9 +2097,9 @@
       '<span>brakes <b class="mono">' + esc(brakes.cooldown || '—') + ' / ' + esc(brakes.maxMutationsTick != null ? brakes.maxMutationsTick : '—') + '</b></span></div>' +
       '<div class="jd-body">' +
       '<div><div class="sec-title">相位时间线（FSM：声明序列 + 当前落点）</div><div class="phase-tl">' + tl + '</div></div>' +
-      '<div><div class="sec-title">action log（ConnectorOps 调用）</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：action log 随真实执行面接线落位（引擎主体余量，cored-bridge.md §2.3）——本抽屉当前承载触发面投影（留痕 kv 即该 run 的审计锚点）</div></div></div>' +
+      '<div><div class="sec-title">action log（ConnectorOps 调用）</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：action log 随真实执行接线落位（引擎主体余量，cored-bridge.md §2.3）——本抽屉当前承载触发投影（留痕 kv 即该 run 的审计锚点）</div></div></div>' +
       '<div><div class="sec-title">涉及文档（点击进对象 viewer）</div><div style="display:flex;gap:6px;flex-wrap:wrap">' + (docsChips || '<span class="faint small">留痕 involved 缺席</span>') + (objChips ? '<span class="faint small" style="align-self:center">声明对象：</span>' + objChips : '') + '</div></div>' +
-      '<div><div class="sec-title">SessionLog 全文</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：SessionLog 随 agent 会话接线落位（E5 会话屏轮）——细粒度断点续跑靠 SessionLog（workflows 规则 13 挂账）</div></div></div>' +
+      '<div><div class="sec-title">SessionLog 全文</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：SessionLog 随 agent 会话接线落位（会话屏余量）——细粒度断点续跑靠 SessionLog（workflows 规则 13 挂账）</div></div></div>' +
       '</div>';
   }
 
@@ -2080,15 +2143,15 @@
           (st === 'current' ? '◉' : (st === 'passed' ? '✓' : (st === 'off-flow' ? '⤫' : '○'))) + '</span>';
       }).join(' ');
       recon = '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">骨架节点 × run 相位对账投影</span>' +
-        '<span class="h-sub">数据面=spec.flow.nodes（executionFlow）× run 现势相位——节点态着色：◉ 当前落点 · ✓ 已过 · ○ 未至 · ⤫ 不在序列</span></div>' +
+        '<span class="h-sub">数据源=spec.flow.nodes（executionFlow）× run 现势相位——节点态着色：◉ 当前落点 · ✓ 已过 · ○ 未至 · ⤫ 不在序列</span></div>' +
         '<div class="card-b"><div style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 0">' +
         (nodeChips || '<span class="faint small">骨架节点零投影（absent——缺口可见）</span>') + '</div>' +
         '<div class="small faint" style="padding:4px 0 0">对账口径：节点在骨架而 run 相位序列不含=off-flow（缺口词形可见不静默）；' +
         (lastRun ? '现势 run #' + lastRun.run + ' 相位序列=' + esc(runPhases.join(' → ') || '未投影') : '无现势 run——节点态不假画（全部不冒充）') +
         '</div></div></div>';
     } else {
-      recon = '<div class="card" style="margin-top:12px"><div class="card-b"><div class="small faint" style="padding:6px 0">骨架节点对账面缺席：execution=' +
-        esc(ex.state || '—') + '（' + (ex.state === 'unbound' ? '绑定对象缺席=unbound 缺口可见' : '绑定面缺席——不冒充') + '）——物化后骨架节点接线在此对账呈现</div></div></div>';
+      recon = '<div class="card" style="margin-top:12px"><div class="card-b"><div class="small faint" style="padding:6px 0">骨架节点对账缺席：execution=' +
+        esc(ex.state || '—') + '（' + (ex.state === 'unbound' ? '绑定对象缺席=unbound 缺口可见' : '绑定缺席——不冒充') + '）——物化后骨架节点接线在此对账呈现</div></div></div>';
     }
     return head + recon;
   }
@@ -2106,16 +2169,16 @@
         '<div class="mr-main"><div>' + esc(rec.type) + '</div><div class="mr-sub mono">' + esc(rec.involved || '—') + ' · route ' + esc(rec.route) + '</div></div>' +
         '<span class="faint mono small">' + fmtAgo(new Date(rec.receivedAt || rec.at)) + '</span></div>';
     }).join('');
-    if (!html) html = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">留痕环内暂无路由到该锚的事件（dead-letter/其他执行面不入此列）</div></div>';
+    if (!html) html = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">留痕环内暂无路由到该锚的事件（死信/其他通道不入此列）</div></div>';
     return '<div class="card"><div class="card-h"><span class="h-title">触发与消费的事件流（留痕=过去的决策投影）</span><span class="h-sub">' + recs.length + ' 条</span></div>' +
       '<div class="mini-list" style="max-height:520px;overflow-y:auto">' + html + '</div></div>';
   }
 
-  /* --- 流转 tab：run 行投影（相位+状态+时刻；相位进出时刻=执行面余量，如实标注） --- */
+  /* --- 流转 tab：run 行投影（相位+状态+时刻；相位进出时刻=执行余量，如实标注） --- */
   function wfLiveTabTransitions(row) {
     var runs = liveRunsOf(row.name);
     var container = '<div id="tr-vlist"></div>';
-    var note = '<div class="filter-bar"><span class="small muted">运行轮次（新→旧）：</span><span class="count-note">' + runs.length + ' 行（相位进出时刻随执行面接线落位——当前承载=受理/迁移落点投影）</span></div>';
+    var note = '<div class="filter-bar"><span class="small muted">运行轮次（新→旧）：</span><span class="count-note">' + runs.length + ' 行（相位进出时刻随执行接线落位——当前承载=受理/迁移落点投影）</span></div>';
     return note + container;
   }
   function paintWfTransitions(row) {
@@ -2142,7 +2205,7 @@
     var tt = wfToggleTarget(row);
     var eff = tt.target;
     if (!eff) {
-      return '<div class="card"><div class="card-b">' + emptyBox('数据流声明缺席（诚实空态）', row.name + ' 无文档本体——spec.dataflow 随文档面，builtin 注册表无此声明') + '</div></div>';
+      return '<div class="card"><div class="card-b">' + emptyBox('数据流声明缺席（诚实空态）', row.name + ' 无文档本体——spec.dataflow 随文档对象，builtin 注册表无此声明') + '</div></div>';
     }
     var ins = (eff.dataflowInputs || []).map(function (x) {
       var label = x.events && x.events.length ? 'events: ' + x.events.join(', ') : (x.docs ? 'docs: ' + x.docs : '');
@@ -2178,7 +2241,7 @@
     var exSkel = !!(row.execution && row.execution.state === 'bound' && row.execution.skeleton);
     if (!tt.target) {
       return '<div class="card"><div class="card-h"><span class="h-title">spec（builtin 注册表——无文档本体）</span></div>' +
-        '<div class="card-b"><div class="small faint" style="padding:4px 0">声明随运行时 builtin 注册表（相位词汇映射表同源，concepts/workflow.md §1）；override 编辑=E4 编辑器轮余量。</div>' +
+        '<div class="card-b"><div class="small faint" style="padding:4px 0">声明随运行时 builtin 注册表（相位词汇映射表同源，concepts/workflow.md §1）；override 编辑=文档编辑器余量。</div>' +
         '<div class="yaml-block">' + esc('phases: [' + (row.phases || []).join(', ') + ']\nspecSource: ' + row.specSource) + '</div>' +
         '<div class="small faint" style="padding:6px 0 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——apply 即实现骨架物化，workflow-runtime.md §11.1）</span></div>' +
         wfReconcileLine(row) +
@@ -2197,9 +2260,9 @@
         }).join(' ') + '</div>'
       : '<div class="small faint" style="padding:4px 0">骨架节点零投影（absent——缺口可见）</div>') : '';
     return '<div class="card"><div class="card-h"><span class="h-title">spec yaml（' + esc(obj.scope) + ' r' + obj.resourceVersion + ' · origin ' + esc(obj.origin) + '）</span>' +
-      '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '">编辑（→ 对象 viewer，E4 起 Apply 全链）</span></span></div>' +
+      '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '">编辑（→ 对象编辑器，Apply 全链）</span></span></div>' +
       '<div class="card-b" id="wf-config-yaml"><div class="skel-row"><div class="skel" style="width:220px"></div></div></div>' +
-      '<div class="card-b" style="border-top:1px solid var(--line)"><div class="small faint" style="padding:2px 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——骨架=apply 即实现物化面，实现代码=apply-workflow agent 余量）</span></div>' +
+      '<div class="card-b" style="border-top:1px solid var(--line)"><div class="small faint" style="padding:2px 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——骨架=apply 即落实现占位，实现代码=apply-workflow agent 余量）</span></div>' +
       nodesHtml +
       '<div class="card-b" style="border-top:1px solid var(--line)">' + wfReconcileLine(row) +
       (exSkel ? wfDispatchLine() : '') + '</div></div>';
@@ -2244,9 +2307,9 @@
         if (sp && sp.declared) {
           spHtml = '<span class="chip acc small mono" title="spawn 接线声明（v0.57 §11.7）：approved 批准投影行→声明词形；wired=false=真实拉起 deferred（agent-session 域）——approved≠拉起，真实执行仍 observe">spawn·声明 target=' + esc(sp.target || '') + ' · wired=' + esc(String(sp.wired)) + '</span> ';
         } else if (sp) {
-          spHtml = '<span class="chip mute small mono" title="spawn 接线缺席词形（pending/rejected 行或批准投影缺席——零值键恒在=代际判别器；未批准=接线面未进入）">spawn·未声明（wired=false）</span> ';
+          spHtml = '<span class="chip mute small mono" title="spawn 接线缺席词形（pending/rejected 行或批准投影缺席——零值键恒在=代际判别器；未批准=接线未进入）">spawn·未声明（wired=false）</span> ';
         }
-        var apHtml = apState ? '<span id="wf-approval-chip" class="chip ' + apCls + ' small mono" title="ask 批准动作面（§11.5）：批准/驳回=Apply workflow:approve|reject 判定（apply_log 行集匹配原地翻转）">批准投影·' + esc(apState) + '</span> ' : '';
+        var apHtml = apState ? '<span id="wf-approval-chip" class="chip ' + apCls + ' small mono" title="ask 批准动作（§11.5）：批准/驳回=Apply workflow:approve|reject 判定（apply_log 行集匹配原地翻转）">批准投影·' + esc(apState) + '</span> ' : '';
         el.innerHTML = '<span class="chip mute small mono">apply-workflow ×' + recs.length + '</span> ' + apHtml + spHtml +
           '<span>最近 ' + esc(String(last.at || '').replace('T', ' ').slice(0, 19)) + ' · action=' + esc(last.action) +
           ' · rv=' + esc(last.rv) + ' · autoLevel=' + esc(last.autoLevel) +
@@ -2296,14 +2359,14 @@
         var checks = dry.ok
           ? '<div class="checklist">' +
             '<div class="check-item pass"><span class="ci-ic" style="color:var(--ok)">✓</span>Scheme 校验 + 权限准入（dry-run 零副作用）</div>' +
-            '<div class="check-item ' + (lockOk ? 'pass' : 'fail') + '"><span class="ci-ic" style="color:' + (lockOk ? 'var(--ok)' : 'var(--danger)') + '">' + (lockOk ? '✓' : '✗') + '</span>乐观锁（投影 rv r' + rec.rv + ' ↔ 面上现值' + (lockOk ? '一致' : '漂移 r' + (dry.data && dry.data.rv) + '——重进即现读') + '）</div>' +
+            '<div class="check-item ' + (lockOk ? 'pass' : 'fail') + '"><span class="ci-ic" style="color:' + (lockOk ? 'var(--ok)' : 'var(--danger)') + '">' + (lockOk ? '✓' : '✗') + '</span>乐观锁（投影 rv r' + rec.rv + ' ↔ 落库现值' + (lockOk ? '一致' : '漂移 r' + (dry.data && dry.data.rv) + '——重进即现读') + '）</div>' +
             '</div>'
           : '<div class="small" style="color:var(--danger)">预检未过（' + esc(String(dry.error || ('HTTP ' + dry.status))) + '）</div>';
         confirmModal(decision === 'approve' ? '批准派单（= Apply workflow:approve）' : '驳回派单（= Apply workflow:reject）',
           '<div class="small" style="margin-bottom:8px">对象 <b class="mono">' + esc(key) + '</b>' +
           ' · 派单 rv r' + esc(rec.rv) + ' · autoLevel=' + esc(rec.autoLevel || 'ask') +
-          '（判定串 workflow:' + esc(decision) + '——apply_log 判定行=批准投影翻转权威，§11.5 动作面；' +
-          (decision === 'approve' ? '批准→spawn 接线声明（wired 恒 false=真实拉起 deferred——红线 a，批准≠拉起零执行）' : '驳回→零声明（接线面未进入））') + '）' +
+          '（判定串 workflow:' + esc(decision) + '——apply_log 判定行=批准投影翻转权威，§11.5 动作；' +
+          (decision === 'approve' ? '批准→spawn 接线声明（wired 恒 false=真实拉起 deferred——红线 a，批准≠拉起零执行）' : '驳回→零声明（接线未进入））') + '）' +
           checks,
           decision === 'approve' ? '确认批准（Apply）' : '确认驳回（Apply）', function () {
             LIVE.apply({ kind: kind, scope: rec.scope, name: objName,
@@ -2314,7 +2377,7 @@
                   name + ' · 批准投影翻转 ' + fm + ' · inbox 下一次装载反映（挂起行消失=回链闭环）', decision === 'approve' ? 'ok' : 'warn');
                 render(); // 呈现面 refresh（chips 原地翻转 + 动作按钮摘除；inbox 回链=挂起行投影已判过滤）
               } else if (res.status === 409) {
-                toast('乐观锁冲突（409）', '派单行 rv 已前移（r' + rec.rv + ' → 面上现值）——重进即现读', 'danger');
+                toast('乐观锁冲突（409）', '派单行 rv 已前移（r' + rec.rv + ' → 落库现值）——重进即现读', 'danger');
               } else {
                 toast('判定失败（' + (res.status == null ? '传输层' : 'HTTP ' + res.status) + '）', String(res.error || ''), 'danger');
               }
@@ -2338,7 +2401,7 @@
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows', go: 'workflows' }, { label: name, go: 'wf/' + name }, { label: '运行 #' + no }]);
     if (!row || !r) {
       view.innerHTML = '<div class="view-inner">' + (st.wfAgg
-        ? emptyBox('运行轮次不在环内（环容量 256——旧轮次随溢出挤出，留痕=观测面非账本）', name + ' #' + no)
+        ? emptyBox('运行轮次不在环内（环容量 256——旧轮次随溢出挤出，留痕=观测记录非账本）', name + ' #' + no)
         : '<div class="card"><div class="card-b">' + liveSkeletonRows(3) + '</div></div>' + liveDegradedNote()) + '</div>';
       return;
     }
@@ -2427,7 +2490,7 @@
       // 变更（URL 手输名不冒充创建窗）。name-only 解析路由不入此窗（草稿键歧义不发明解析）。
       var dRow = (kind && scope) ? draftRowOf(kind, scope, name) : null;
       if (!dRow) {
-        view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
+        view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（文档库 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
         return;
       }
       ref = { kind: kind, scope: scope, name: name };
@@ -2443,23 +2506,65 @@
     // E6：ConnectorOps kind 专属第五 tab「运行面」（连接层运行态——缺省 tab=运行面）；
     // v0.52 能力 A：全 kind 增「设计文档」页签（整屏换设计文档工作台——文件树+编辑器+diff+Apply）。
     var tabs = kind === 'ConnectorOps'
-      ? [['ops', '运行面'], ['scheme', '控件'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
+      ? [['ops', '运行状态'], ['scheme', '控件'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
       : [['scheme', '控件'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
     var tab = S.docTab[key] || (kind === 'ConnectorOps' ? 'ops' : 'llm');
+    // R-UX-4 渲染优先：默认视图=渲染正文（markdown/字段卡，read-only 呈现）；「原文」=可编辑
+    // textarea 次级切换（编辑能力与草稿通路零变更——切换态只是显隐，S.ED 工作副本不重建）。
+    var viewMode = edViewMode(key);
     view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' +
       '<div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
-      '<span id="ed-draft-chip"></span></div>' +
+      '<span id="ed-draft-chip"></span>' +
+      '<div class="md-switch" style="margin-left:auto">' +
+      '<span class="chip click small' + (viewMode === 'render' ? ' acc' : ' mute') + '" data-act="ed-view" data-val="render" data-key="' + esc(key) + '">正文</span>' +
+      '<span class="chip click small' + (viewMode === 'raw' ? ' acc' : ' mute') + '" data-act="ed-view" data-val="raw" data-key="' + esc(key) + '">原文</span>' +
+      '</div></div>' +
       '<div class="doc-meta-row"><span class="chip mute small">scope</span>' +
       '<span class="chip click mute small" data-act="go" data-go="' + (scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + esc(encodeURIComponent(scope))) + '">' + esc(scope) + '</span>' +
       '<span class="mono small" id="ed-rev-chip">r?</span>' +
       '<span class="chip ok small">' + esc(kind) + ' 在册</span></div>' +
-      '<div class="doc-editor-wrap"><textarea class="doc-editor" id="doc-editor" spellcheck="false" disabled></textarea></div>' +
-      '<div class="small faint">编辑即累积草稿（POST /core-console/drafts——不触文档面、不发事件）；Apply 唯一入口=右栏「草稿」tab 吸底按钮（人点为准；LLM 只在右侧提案，机制上无 Apply 权）。</div>' +
+      '<div id="ed-render-wrap" data-ed-view="render" class="doc-render-wrap"' + (viewMode === 'render' ? '' : ' hidden') + '><div class="md-prose" id="ed-render">' + liveSkeletonRows(3, 0) + '</div></div>' +
+      '<div class="doc-editor-wrap" data-ed-view="raw"' + (viewMode === 'raw' ? '' : ' hidden') + '><textarea class="doc-editor" id="doc-editor" spellcheck="false" disabled></textarea></div>' +
+      '<div class="small faint">默认展示渲染后的成品；点「原文」查看与编辑源文件。编辑即累积草稿（POST /core-console/drafts——不动正式文档、不发事件）；Apply 唯一入口=右栏「草稿」tab 吸底按钮（人点为准；LLM 只在右侧提案，机制上无 Apply 权）。</div>' +
       '</div>' +
       '<div class="doc-collab"><div class="collab-tabs">' + tabs.map(function (t) {
         return '<div class="collab-tab' + (tab === t[0] ? ' active' : '') + '" data-act="doc-tab" data-t="' + t[0] + '" id="ctab-' + t[0] + '">' + t[1] + '<span class="ct-badge" id="ctab-badge-' + t[0] + '" hidden></span></div>';
       }).join('') + '</div><div class="collab-body" id="collab-body"></div></div></div></div>';
   }
+
+  /* —— R-UX-4 视图态（编辑器屏：render=渲染默认 / raw=原文编辑） ——
+   * 态在 S.edView[key]（内存态——刷新回默认渲染视图）；切换只显隐容器，S.ED 工作副本零重建。 */
+  function edViewMode(key) { return (S.edView && S.edView[key]) || 'render'; }
+  /* 渲染正文绘制：markdown 文档类默认 markdown 渲染；对象正文（YAML spec）默认结构化字段卡；
+   * 两者都附「原文」折叠次级（首屏禁裸转储）。判据词形：isMarkdownDoc。 */
+  function isMarkdownDoc(kind, name) {
+    if (kind === 'Goal' || kind === 'Rule' || kind === 'Runbook' || kind === 'DriftReport') return true;
+    return /(^|[-_])(README|design|report|notes)([-_.]|$)/i.test(String(name || ''));
+  }
+  function paintRenderBody(kind, scope, name, content) {
+    var el = $('#ed-render');
+    if (!el) return;
+    var md = window.__CC && window.__CC.md;
+    if (!md) { el.innerHTML = '<pre class="mono md-raw-pre">' + mdEsc(content) + '</pre>'; return; }
+    if (isMarkdownDoc(kind, name)) {
+      el.innerHTML = '<div data-md-render="1">' + md.renderMarkdown(content) + '</div>' + md.rawDisclosure('原文', content);
+    } else {
+      el.innerHTML = '<div data-md-cards="1">' + (md.yamlToCards(content) || '<div class="empty" style="padding:14px"><div class="e-title">（空声明）</div></div>') + '</div>' + md.rawDisclosure('YAML', content);
+    }
+  }
+  function mdEsc(x) { return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  ACTIONS['ed-view'] = function (el) {
+    var key = el.dataset.key, val = el.dataset.val;
+    S.edView = S.edView || {};
+    S.edView[key] = val;
+    var renderWrap = $('[data-ed-view="render"]');
+    var rawWrap = document.querySelector('[data-ed-view="raw"]');
+    if (renderWrap) renderWrap.hidden = val !== 'render';
+    if (rawWrap) rawWrap.hidden = val !== 'raw';
+    document.querySelectorAll('[data-act="ed-view"]').forEach(function (c) {
+      c.className = 'chip click small' + (c.dataset.val === val ? ' acc' : ' mute');
+    });
+  };
 
   // —— 注水：面正文（乐观锁基准）+ 草稿缓存（工作副本来源）——
   function hydrateEditor(kind, scope, name) {
@@ -2517,18 +2622,20 @@
       var ta = $('#doc-editor');
       if (ta) ta.value = '';
       var chip = $('#ed-rev-chip');
-      if (chip) chip.textContent = '读面暂不可达（' + String((e && e.message) || e) + '）——恢复后重进即现读';
+      if (chip) chip.textContent = '数据暂不可达（' + String((e && e.message) || e) + '）——恢复后重进即现读';
     });
   }
 
   function paintEditorBody(kind, scope, name) {
     var ed = edOf(kind, scope, name);
     var ta = $('#doc-editor');
-    if (!ed || !ta) return;
+    if (!ed) return;
+    paintRenderBody(kind, scope, name, ed.working || ''); // R-UX-4：渲染正文默认视图（与 textarea 同源=ed.working）
+    if (!ta) return;
     ta.value = ed.working;
     ta.disabled = false;
     var rev = $('#ed-rev-chip');
-    if (rev) rev.textContent = ed.faceAbsent ? '面缺席（在册稿基座——Apply=创建通路）' : 'r' + ed.faceRV + '（乐观锁基准）';
+    if (rev) rev.textContent = ed.faceAbsent ? '文档缺席（在册稿基座——Apply=创建通路）' : 'r' + ed.faceRV + '（乐观锁基准）';
   }
 
   // —— 徽章/dock 的原位更新（编辑中不整屏重渲染——textarea 焦点保真）——
@@ -2560,6 +2667,7 @@
       var ed = edOf(kind, scope, name);
       if (!ed) return;
       ed.working = ta.value;
+      if (edViewMode(edKey(kind, scope, name)) === 'render') paintRenderBody(kind, scope, name, ed.working); // 渲染视图同步（双视图同源零漂移）
       var has = ed.working !== ed.base;
       if (has && !ed.entries.filter(function (e) { return e.source === 'manual'; }).length) {
         ed.entries.push({ source: 'manual', summary: '手动编辑（编辑器直改）', ts: new Date() });
@@ -2633,8 +2741,8 @@
         '<span class="faint mono small" style="margin-left:auto">' + esc(fmtAgo(new Date(d.updatedAt))) + '</span></div></div>';
     }).join('');
     return (cards || '<div class="empty" style="padding:22px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">暂无排队提案</div>' +
-      '<div>LLM 提案由 Agent 经草稿通道落稿（fieldManager=agent 名）；会话页提案卡深链至此（E5 接线余量）。机制上 LLM 无 Apply 权——提案止步这里。</div></div>') +
-      '<div class="small faint" style="padding:8px 2px">提案 diff 基准=文档面现值（r' + (ed ? ed.faceRV : '?') + '）；采纳后与手动编辑走同一草稿通道，Apply 仍须人点。</div>';
+      '<div>LLM 提案由 Agent 经草稿通道落稿（fieldManager=agent 名）；会话页提案卡深链至此（接线余量）。机制上 LLM 无 Apply 权——提案止步这里。</div></div>') +
+      '<div class="small faint" style="padding:8px 2px">提案 diff 基准=文档现值（r' + (ed ? ed.faceRV : '?') + '）；采纳后与手动编辑走同一草稿通道，Apply 仍须人点。</div>';
   }
 
   function hydrateProposals(kind, scope, name) {
@@ -2650,14 +2758,14 @@
         if (!el) return;
         var content = String(b.content || '');
         if (content === edBaseOf(kind, scope, name)) {
-          el.innerHTML = '<span class="faint small">提案与文档面一致（noop 稿）</span>';
+          el.innerHTML = '<span class="faint small">提案与文档现值一致（noop 稿）</span>';
           return;
         }
         el.innerHTML = renderDiff(diffLines(edBaseOf(kind, scope, name), content), 30);
       })
       .catch(function () {
         var el = $('#prop-diff');
-        if (el) el.innerHTML = '<span class="faint small">提案正文暂不可读（读面退化）</span>';
+        if (el) el.innerHTML = '<span class="faint small">提案正文暂不可读（数据退化）</span>';
       });
   }
   function edBaseOf(kind, scope, name) {
@@ -2698,7 +2806,7 @@
           for (var j = i + 1; j < (b.entries || []).length; j++) {
             if (b.entries[j].result === 'ok') { prev = b.entries[j].rv; break; }
           }
-          return '<div class="rev-item"' + (clickable ? ' data-act="hist-diff" data-rv="' + h.rv + '" data-prev="' + (prev || '') + '" title="点行 diff 上一版（rev-content 读面现读）"' : '') + '>' +
+          return '<div class="rev-item"' + (clickable ? ' data-act="hist-diff" data-rv="' + h.rv + '" data-prev="' + (prev || '') + '" title="点行 diff 上一版（rev-content 现读）"' : '') + '>' +
             '<span class="rv-no">' + (h.result === 'ok' ? 'r' + h.rv : h.result) + '</span>' +
             '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
             '<span class="rv-sum">' + esc(h.result) + (h.reasonRef ? ' · ' + esc(h.reasonRef) : '') + (h.subject ? '<br><span class="mono faint">' + esc(h.subject) + '</span>' : '') + '<br><span class="mono">' + esc(fmtAgo(new Date(h.ts))) + '</span></span>' +
@@ -2706,7 +2814,7 @@
         }).join('');
         el.innerHTML = '<div id="hist-diff-box" hidden style="border:1px solid var(--border-2);border-radius:8px;margin-bottom:10px;padding:8px;background:var(--bg)"></div>' +
           (rows || '<div class="faint small" style="padding:8px 2px">归档窗内暂无应用流水（该对象尚未 Apply 过）</div>') +
-          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；ok 行可点=与上一版 diff（rev-content 读面现读 git 权威正文快照，零副作用零写路径）。</div>';
+          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；ok 行可点=与上一版 diff（rev-content 现读 git 权威正文快照，零副作用零写路径）。</div>';
       });
   }
   // 点行 diff 上一版（v0.63 rev-content 读面）：rv+prev 两快照现读 → diff 呈现（面板只开一处，
@@ -2728,16 +2836,16 @@
     var oldP = prev ? LIVE.get(path(prev)).then(function (b) { return String(b.content || ''); }) : Promise.resolve(null);
     Promise.all([newP, oldP]).then(function (rs) {
       var cur = rs[0], old = rs[1];
-      if (cur == null) { box.innerHTML = '<span class="faint small">快照暂不可读（读面退化）</span>'; return; }
+      if (cur == null) { box.innerHTML = '<span class="faint small">快照暂不可读（数据退化）</span>'; return; }
       var head = '<div class="sec-title">r' + rv + (prev ? ' ← r' + prev : ' ← 对象起点（create，无上一版）') +
-        ' <span class="faint mono small">rev-content 读面现读（git 权威正文快照）</span></div>';
+        ' <span class="faint mono small">rev-content 现读（git 权威正文快照）</span></div>';
       box.innerHTML = head + (old == null
         ? '<div class="small faint" style="padding:4px 0">起点行=首版全文（' + cur.split('\n').length + ' 行）——无上一版可 diff，全文首览：</div>' + renderDiff(diffLines('', cur), 40)
         : (old === cur
           ? '<span class="faint small">两版快照一致（rv 反写行推进——正文零变更）</span>'
           : renderDiff(diffLines(old, cur), 60)));
     }).catch(function (e) {
-      box.innerHTML = '<span class="faint small">快照暂不可读（读面退化：' + esc(String((e && e.message) || e)) + '）</span>';
+      box.innerHTML = '<span class="faint small">快照暂不可读（数据退化：' + esc(String((e && e.message) || e)) + '）</span>';
     });
   };
 
@@ -2748,7 +2856,7 @@
     var kv = function (k, v) { return '<div class="kv" style="margin-bottom:6px"><span class="k mono">' + esc(k) + '</span><span class="v mono">' + (v || '<span class="faint">—</span>') + '</span></div>'; };
     var draftState = dr
       ? '在册 · fieldManager ' + esc(dr.fieldManager) + ' · baseRV r' + dr.baseResourceVersion + ' · ' + esc(fmtAgo(new Date(dr.updatedAt)))
-      : '无（工作副本==文档面）';
+      : '无（工作副本==文档现值）';
     return '<div style="flex:1;overflow-y:auto"><div class="sec-title">对象规则（与资源同构）</div>' +
       kv('kind', esc(kind)) + kv('scope', esc(scope)) + kv('name', esc(name)) +
       kv('resourceVersion', ed ? 'r' + ed.faceRV + '（乐观锁）' : '?') +
@@ -2801,7 +2909,7 @@
         if (ta) ta.value = ed.working;
         paintEdBadges(ctx.kind, ctx.scope, ctx.name);
         renderCollabBody(ctx.kind, ctx.scope, ctx.name);
-        toast('提案已加入草稿（未落库）', '乐观锁期望值=r' + ed.baseRV + '——面上已前移则 Apply 弹窗如实判 ✗（409 稿保留）', 'ok');
+        toast('提案已加入草稿（未落库）', '乐观锁期望值=r' + ed.baseRV + '——库中版本已前移则 Apply 弹窗如实判 ✗（409 稿保留）', 'ok');
       })
       .catch(function (e) { toast('提案正文不可读', String((e && e.message) || e), 'danger'); });
   };
@@ -2818,7 +2926,7 @@
       LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
         return !(d.kind === ctx.kind && d.scope === ctx.scope && d.name === ctx.name);
       });
-      toast('提案已丢弃', 'fieldManager: ' + fm + '（草稿缓存清空，文档面不动）', 'warn');
+      toast('提案已丢弃', 'fieldManager: ' + fm + '（草稿缓存清空，正式文档不动）', 'warn');
       renderCollabBody(ctx.kind, ctx.scope, ctx.name);
       paintEdBadges(ctx.kind, ctx.scope, ctx.name);
     }).catch(function (e) { toast('弃稿失败', String((e && e.message) || e), 'danger'); });
@@ -2845,7 +2953,7 @@
       if (ta) ta.value = ed.working;
       paintEdBadges(ctx.kind, ctx.scope, ctx.name);
       renderCollabBody(ctx.kind, ctx.scope, ctx.name);
-      toast('草稿已弃', '工作副本回到文档面 r' + ed.faceRV + '（零落库零事件）', 'warn');
+      toast('草稿已弃', '工作副本回到文档现值 r' + ed.faceRV + '（零落库零事件）', 'warn');
     }).catch(function (e) { toast('弃稿失败', String((e && e.message) || e), 'danger'); });
   };
 
@@ -2855,7 +2963,7 @@
     if (!ctx) return;
     var ed = edOf(ctx.kind, ctx.scope, ctx.name);
     if (!ed || !ed.loaded) return;
-    if (ed.working === ed.base) { toast('空草稿——无操作', '草稿与文档面无差异：不落库、不发事件、不清稿（提示即止）'); return; }
+    if (ed.working === ed.base) { toast('空草稿——无操作', '草稿与文档现值无差异：不落库、不发事件、不清稿（提示即止）'); return; }
     // 先落稿（缓存=差异唯一来源；落稿失败=中止 Apply——写路径必须走稿）
     landDraft(ctx.kind, ctx.scope, ctx.name).then(function (landed) {
       if (!landed) return;
@@ -2869,7 +2977,7 @@
         '<div class="checklist" id="ed-checks">' +
         '<div class="check-item" data-c="scheme"><span class="ci-ic">…</span>Scheme 校验（kind 注册∧spec 结构）</div>' +
         '<div class="check-item" data-c="perm"><span class="ci-ic">…</span>权限准入（主体=宿主注入 console-operator）</div>' +
-        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + ed.baseRV + ' ↔ 面上现值）</div></div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + ed.baseRV + ' ↔ 落库现值）</div></div>' +
         renderDiff(fullDiff, 26) +
         '<div class="small faint" id="ed-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/apply {fromDraft:true, dryRun:true}——零副作用）…</div>' +
         '</div>' +
@@ -2893,10 +3001,10 @@
         };
         if (res.ok && res.data && res.data.action === 'dry-run') {
           mark('scheme', true, 'kind 在册∧spec 结构过（cored admit ①）');
-          mark('perm', true, '主体准入过（cored admit ②——Role/Group 文档面判定）');
+          mark('perm', true, '主体准入过（cored admit ②——Role/Group 角色判定）');
           var cur = Number(res.data.rv);
           var lockOk = cur === ed.baseRV;
-          mark('lock', lockOk, lockOk ? 'r' + ed.baseRV + ' == 面上现值（可落）' : '稿基于 r' + ed.baseRV + '，面上已 r' + cur + '——落库将 409（稿保留，重读后重整）');
+          mark('lock', lockOk, lockOk ? 'r' + ed.baseRV + ' == 落库现值（可落）' : '稿基于 r' + ed.baseRV + '，库中已 r' + cur + '——落库将 409（稿保留，重读后重整）');
           var note = $('#ed-dry-note');
           if (note) note.textContent = 'dry-run 通过预检（rv 回执=r' + cur + '）——确认后真落库。';
           var go = $('#ed-apply-go');
@@ -2908,7 +3016,7 @@
                 fieldManager: edConsoleFM(ctx.kind, ctx.scope, ctx.name), reasonRef: 'console:apply' }).then(function (r2) {
                 if (r2.ok) {
                   closeModal();
-                  toast('已落库 r' + r2.data.rv + '（' + (r2.data.action === 'noop' ? 'noop：稿与面一致，零提交' : 'Revision+1') + '）',
+                  toast('已落库 r' + r2.data.rv + '（' + (r2.data.action === 'noop' ? 'noop：稿与文档现值一致，零提交' : 'Revision+1') + '）',
                     ctx.name + ' · DocApplied 已归档 · 草稿已清（apply.md rule 6）', 'ok');
                   delete S.ED[edKey(ctx.kind, ctx.scope, ctx.name)]; // 会话态作废——重进即现读新面
                   LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
@@ -2917,7 +3025,7 @@
                   LIVE.load().then(function () { render(); });
                 } else if (r2.status === 409) {
                   closeModal();
-                  toast('乐观锁冲突（409）——稿保留', '文档面前移（' + String(r2.error || '') + '）——重读后重整草稿再落（apply.md §3 后写者语义）', 'danger');
+                  toast('乐观锁冲突（409）——稿保留', '文档现值已前移（' + String(r2.error || '') + '）——重读后重整草稿再落（apply.md §3 后写者语义）', 'danger');
                   delete S.ED[edKey(ctx.kind, ctx.scope, ctx.name)];
                   render();
                 } else {
@@ -2971,8 +3079,8 @@
       '<div class="doc-main"><div class="doc-headbar"><span class="doc-path mono">' +
       (sel ? esc(sel.repo) + '/' + esc(sel.path) : '设计文档') + '</span><span id="dd-sha-chip"></span><span id="dd-draft-chip"></span></div>' +
       '<div class="dd-commit-row" id="dd-commit-row"></div>' +
-      '<div class="doc-editor-wrap"><textarea class="doc-editor dd-editor" id="dd-editor" spellcheck="false" disabled placeholder="加载中（HEAD 权威正文——工作树未提交改动不进读面）…"></textarea></div>' +
-      '<div class="small faint">权威=git 仓（读面=HEAD 内容，未提交的工作树改动不进读面）；编辑即累积草稿（kind=DesignDoc 与对象草稿同一缓存）；Apply=白名单→R-PUB-1 lint→乐观锁 baseSha 三检查 → git commit（本地落盘不 push）。</div>' +
+      '<div class="doc-editor-wrap"><textarea class="doc-editor dd-editor" id="dd-editor" spellcheck="false" disabled placeholder="加载中（HEAD 权威正文——工作树未提交改动不进读侧）…"></textarea></div>' +
+      '<div class="small faint">权威=git 仓（读到的=HEAD 内容，未提交的工作树改动不进读侧）；编辑即累积草稿（kind=DesignDoc 与对象草稿同一缓存）；Apply=白名单→R-PUB-1 lint→乐观锁 baseSha 三检查 → git commit（本地落盘不 push）。</div>' +
       '</div>' +
       '<div class="doc-collab"><div class="collab-tabs">' +
       [['diff', '草稿 diff'], ['hist', '审计']].map(function (t) {
@@ -2996,7 +3104,7 @@
     }, function (e) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
       var el = $('#dd-tree');
-      if (el) el.innerHTML = '<div class="small faint" style="padding:10px">设计文档面暂不可达（' + esc(String((e && e.message) || e)) + '）——未配置 --design-repo 或 cored 未就绪。</div>';
+      if (el) el.innerHTML = '<div class="small faint" style="padding:10px">设计文档暂不可达（' + esc(String((e && e.message) || e)) + '）——未配置 --design-repo 或 cored 未就绪。</div>';
     });
   }
   function paintDDTree() {
@@ -3044,7 +3152,7 @@
       var ta = $('#dd-editor');
       if (ta) ta.value = '';
       var chip = $('#dd-sha-chip');
-      if (chip) chip.textContent = '读面暂不可达（' + String((e && e.message) || e) + '）';
+      if (chip) chip.textContent = '数据暂不可达（' + String((e && e.message) || e) + '）';
       var chip2 = $('#dd-commit-row');
       if (chip2) chip2.textContent = '';
     });
@@ -3150,7 +3258,7 @@
         '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（obj=DesignDoc/<repo>/<path>；git 权威在正文，最近提交见左栏 headbar）。</div>';
     }, function () {
       var el = $('#dd-history');
-      if (el) el.innerHTML = '<div class="small faint">史面暂不可达（/v1/design-docs/history 缺席或超时）。</div>';
+      if (el) el.innerHTML = '<div class="small faint">历史暂不可读（/v1/design-docs/history 缺席或超时）。</div>';
     });
   }
   /* --- 设计文档动作 --- */
@@ -3262,7 +3370,7 @@
           var lintVs = (res.body && res.body.violations) || [];
           mark('gate', !gateFail, gateFail ? String(res.error || 'HTTP 403') : '—');
           mark('lint', !(st === 400 && lintVs.length), (st === 400 && lintVs.length)
-            ? lintVs.map(function (v) { return v.rule + '@L' + v.line; }).join('、') + '（违规明细见报告面）'
+            ? lintVs.map(function (v) { return v.rule + '@L' + v.line; }).join('、') + '（违规明细见验收报告）'
             : (st === 400 ? String(res.error || '') : '—'));
           mark('lock', false, '预检未过（' + (st == null ? '传输层' : 'HTTP ' + st) + '）');
           var note2 = $('#dd-dry-note');
@@ -3389,7 +3497,7 @@
     if (!aref) {
       // 文档面未注册 agent=诚实空态（不冒充 mock agent）
       var known = liveChatAgents();
-      view.innerHTML = '<div class="view-inner">' + emptyBox('agent 未注册（文档面 Agent 对象缺席）', agentName +
+      view.innerHTML = '<div class="view-inner">' + emptyBox('agent 未注册（Agent 对象缺席）', agentName +
         (known.length ? ' · 在册：' + known.join(', ') : '')) + '</div>';
       setCrumbs([{ label: 'Welcome', go: 'welcome' }]);
       return;
@@ -3422,7 +3530,7 @@
       : '';
     if (!mineHtml && !hostHtml) {
       mineHtml = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">' +
-        (ad.ready() ? '宿主会话清单为空' : '宿主会话面缺席') + '</div><div class="small faint">' +
+        (ad.ready() ? '宿主会话清单为空' : '宿主会话通道缺席') + '</div><div class="small faint">' +
         (ad.ready() ? '新建一个开始对话' : 'ctx.sessions 未在册——dsh session store 数据源缺席（诚实降级）') + '</div></div>';
     }
     var owner = agentOwnerOf(agentName);
@@ -3481,7 +3589,7 @@
     var refsList = (content.match(/\brefs:[\s\S]{0,120}?- ?\W*([A-Za-z0-9-_.\/]+)/) || [])[1];
     var autoLevel = specBlock('autoLevel', /autoLevel:\s*["']?([a-z]+)/);
     var right = '<div class="chat-ctx">' +
-      '<div class="ctx-sec"><div class="cx-h">权限面（Agent 文档面 · cored 现读）</div><div class="cx-b">' +
+      '<div class="ctx-sec"><div class="cx-h">权限（Agent 声明 · cored 现读）</div><div class="cx-b">' +
       '<div class="ctx-row"><span class="cr-k">ConnectorOps</span>' + opChips(opsRefs, 'connector') + '</div>' +
       '<div class="ctx-row"><span class="cr-k">Provider</span>' + (providers ? '<span class="chip click mute small" data-act="go" data-go="provider/' + esc(providers.split('/').pop()) + '">' + esc(providers) + '</span>' : '<span class="faint small">—</span>') + '</div>' +
       '<div class="ctx-row"><span class="cr-k">Ref</span>' + (refsList ? '<span class="chip mute small mono">' + esc(refsList) + '</span>' : '<span class="faint small">—</span>') + '</div>' +
@@ -3492,10 +3600,10 @@
       '</div></div>' +
       '<div class="ctx-sec"><div class="cx-h">身份与归属（SessionId）</div><div class="cx-b">' +
       '<div class="ctx-row"><span class="cr-k">owner</span>' + ownerLink + '</div>' +
-      '<div class="ctx-row"><span class="cr-k">当前会话</span><span class="mono small">' + (ev.currentSessionId ? esc(ev.currentSessionId) : '—（文档面 status.currentSession 未回写）') + '</span></div>' +
+      '<div class="ctx-row"><span class="cr-k">当前会话</span><span class="mono small">' + (ev.currentSessionId ? esc(ev.currentSessionId) : '—（文档 status.currentSession 未回写）') + '</span></div>' +
       '<div class="small faint" style="margin-top:4px">身份=SessionId（cross-agent.md §5.7 #1）：console 新建会话后 Apply 回填 status.currentSession</div>' +
       '</div></div>' +
-      '<div class="ctx-sec"><div class="cx-h">详情</div><div class="cx-b"><span class="lk small" data-act="go" data-go="agent/' + esc(agentName) + '">agent 文档面（编辑器）→</span>' +
+      '<div class="ctx-sec"><div class="cx-h">详情</div><div class="cx-b"><span class="lk small" data-act="go" data-go="agent/' + esc(agentName) + '">agent 声明（编辑器）→</span>' +
       (cur ? '<span class="lk small" data-act="go" data-go="session/' + esc(cur.id) + '">session 详情（trajectory）→</span>' : '') + '</div></div>' +
       '</div>';
     view.classList.add('nopad');
@@ -3514,7 +3622,7 @@
       if (!h || h.sessionId !== sessionId) {
         if (h) { try { h.handle.release(); } catch (e) { /* 已离场 */ } }
         var handle = chatAd().hold(sessionId);
-        if (!handle) throw new Error('宿主会话面缺席（ctx.sessions 未在册）');
+        if (!handle) throw new Error('宿主会话通道缺席（ctx.sessions 未在册）');
         S.chatHold = { sessionId: sessionId, handle: handle };
         h = S.chatHold;
       }
@@ -3537,7 +3645,7 @@
       }, function (e) {
         var el = $('#chat-body');
         if (el && el.dataset.sess === sessionId) {
-          el.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录读面暂不可达</div><div class="small faint">' +
+          el.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">会话记录暂不可读</div><div class="small faint">' +
             esc(String((e && e.message) || e)) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
           bindChatInput(agentName, sessionId);
         }
@@ -3621,7 +3729,7 @@
       '<button class="btn primary sm" data-act="chat-send"' + (ad.ready() ? '' : ' disabled') + '>发送</button></div>' +
       '<div class="chat-hints"><span>' + (ad.ready()
         ? kbd('Enter') + ' 发送 · ' + mode + ' 语义（cross-agent.md §5.7 #2）'
-        : '宿主会话面缺席（ctx.sessions 未在册）——发送面诚实禁用') + '</span><span style="margin-left:auto">权限见右栏</span></div></div>';
+        : '宿主会话通道缺席（ctx.sessions 未在册）——发送诚实禁用') + '</span><span style="margin-left:auto">权限见右栏</span></div></div>';
   }
   function bindChatInput(agentName, sessionId) {
     var ta = $('#chat-input');
@@ -3636,7 +3744,7 @@
     text = (text || '').trim();
     if (!text || !sessionId) return;
     var ad = chatAd();
-    if (!ad.ready()) { toast('会话面缺席', 'ctx.sessions 未在册——发送面诚实禁用', 'warn'); return; }
+    if (!ad.ready()) { toast('会话通道缺席', 'ctx.sessions 未在册——发送诚实禁用', 'warn'); return; }
     var mode = S.chatMode[agentName] || 'queue';
     S.chatBusy[sessionId] = true;
     paintTranscript(agentName, sessionId, 'chat');
@@ -3665,8 +3773,8 @@
     var roster = ad.terminals ? ad.terminals(cur.id) : null;
     var rosterHtml;
     if (!roster) {
-      rosterHtml = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-term"/></svg><div class="e-title">宿主终端面缺席</div>' +
-        '<div class="small faint">ctx.webTerminals 未在册——roster 只读面诚实降级（不冒充终端）</div></div>';
+      rosterHtml = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-term"/></svg><div class="e-title">宿主终端暂不可用</div>' +
+        '<div class="small faint">ctx.webTerminals 未在册——终端清单只读诚实降级（不冒充终端）</div></div>';
     } else {
       var list = roster.get() || [];
       rosterHtml = list.length
@@ -3679,7 +3787,7 @@
     }
     return head + '<div class="term-wrap"><div class="card" style="margin:12px"><div class="card-h"><span class="h-title">dsh 内置终端 roster（' + esc(cur.id.slice(0, 12)) + '…）</span></div>' +
       '<div class="card-b">' + rosterHtml +
-      '<div class="small faint" style="margin-top:10px">主案=dsh 内置 PTY（remote.terminal.*：与会话同生命周期同鉴权；交互面=宿主终端侧栏——本屏 attach 渲染=xterm 依赖余量，如实标注不冒充）。</div>' +
+      '<div class="small faint" style="margin-top:10px">主案=dsh 内置 PTY（remote.terminal.*：与会话同生命周期同鉴权；交互入口=宿主终端侧栏——本屏 attach 渲染=xterm 依赖余量，如实标注不冒充）。</div>' +
       '<div class="small faint">gotty=跨机兜底（ServiceInstance 在别的机器、或终端需独立分享给无 console 权限者时经 piko 暴露）——本机不启用（§5.7 #6）。</div>' +
       '</div></div></div>';
   }
@@ -3721,7 +3829,7 @@
     });
     $('#sess-create').addEventListener('click', function () {
       var ad = chatAd();
-      if (!ad.ready()) { toast('会话面缺席', 'ctx.sessions 未在册——创建面诚实禁用', 'warn'); return; }
+      if (!ad.ready()) { toast('会话通道缺席', 'ctx.sessions 未在册——创建诚实禁用', 'warn'); return; }
       var btn = this; btn.disabled = true;
       var createOwned = function () {
         var project = __CC.serviceProjects && __CC.serviceProjects.projectForAgent(agentName);
@@ -3769,7 +3877,7 @@
         resourceVersion: b.resourceVersion,
         content: merged.content,
         fieldManager: 'console:chat-backfill',
-        reasonRef: 'console E5: chat session create'
+        reasonRef: 'console:chat-session-create'
       }).then(function (res) {
         if (res.ok) {
           var rv = res.data && res.data.rv != null ? res.data.rv : '?';
@@ -3819,7 +3927,7 @@
     var loading = LIVE.state.status !== 'ok';
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>连接</h1><span class="chip kind">WorkService · ConnectorOps · Provider</span></div>' +
-      '<div class="dh-sub">连接系统把外部世界包装成可调用的面；跨 Agent 通信走 agent-comm（dispatch / query / interrupt / inbox）。数据源=cored objects 枚举。</div></div></div>' +
+      '<div class="dh-sub">连接系统把外部能力包装成可调用的服务；跨 Agent 通信走 agent-comm（dispatch / query / interrupt / inbox）。数据源=cored objects 枚举。</div></div></div>' +
       '<div class="conn-group"><div class="sec-title">WorkServices</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('WorkService', 'ws/')) + '</div></div>' +
       '<div class="conn-group"><div class="sec-title">ConnectorOps 挂载</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('ConnectorOps', 'connector/')) + '</div></div>' +
       '<div class="conn-group"><div class="sec-title">Providers</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('Provider', 'provider/')) + '</div></div>' +
@@ -3831,11 +3939,11 @@
     { field: 'id', type: 'uuid', req: true, desc: '信封幂等键（inbox 按 id 去重）' },
     { field: 'ts', type: 'RFC3339', req: true, desc: '发出时刻' },
     { field: 'from', type: 'agent ref', req: true, desc: '发起方 agent/<name>@<scope>' },
-    { field: 'to', type: 'agent ref', req: true, desc: '目标 agent/<name>@<scope>（文档面在册且活体可解析才可投）' },
+    { field: 'to', type: 'agent ref', req: true, desc: '目标 agent/<name>@<scope>（文档在册且活体可解析才可投）' },
     { field: 'kind', type: 'enum', req: true, desc: '四原语之一：dispatch | query | interrupt | inbox' },
     { field: 'payload', type: 'object', req: true, desc: '自由对象（v0.1 不定 schema；inbox 侧容错收）' },
-    { field: 'refs', type: 'string[]', req: false, desc: '可选文档面引用（systems/<s>/path#revN）' },
-    { field: 'token', type: 'string', req: 'dispatch', desc: '权限凭据——dispatch 必带（无 token 一律拒绝）；值永不入 console 落账面' }
+    { field: 'refs', type: 'string[]', req: false, desc: '可选文档引用（systems/<s>/path#revN）' },
+    { field: 'token', type: 'string', req: 'dispatch', desc: '权限凭据——dispatch 必带（无 token 一律拒绝）；值永不入 console 落账' }
   ];
   function envelopeTableHtml() {
     return '<table class="env-table"><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>' +
@@ -3847,7 +3955,7 @@
   }
   /* —— agent-comm 运行面（comm 落账真数据：拓扑/消息日志/op 计数；token 打码） —— */
   function agentCommCommPanels(data) {
-    var OP_DESC = { dispatch: '委派任务（异步；token ⊆ 发起方权限面，缺 token=拒）', query: '只读问询（同步快照；§2 对齐表 query↔get/list）', interrupt: '打断/插话（cancel 落点）', inbox: '收件面拉取（error reply 落账消费；豁免活体检查）' };
+    var OP_DESC = { dispatch: '委派任务（异步；token ⊆ 发起方权限，缺 token=拒）', query: '只读问询（同步快照；§2 对齐表 query↔get/list）', interrupt: '打断/插话（cancel 落点）', inbox: '收件拉取（error reply 落账消费；豁免活体检查）' };
     var counts = data.counts || {};
     var opCards = '<div class="op-cards">' + ['dispatch', 'query', 'interrupt', 'inbox'].map(function (op) {
       var c = counts[op] || { total: 0, ok: 0 };
@@ -3928,7 +4036,7 @@
       return head +
         '<div class="op-cards" style="margin-top:12px">' + opsRow + '</div>' +
         '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">相关事件（involved 过滤）</span></div><div class="card-b">' + evHtml + '</div></div>' +
-        '<div class="small faint" style="margin-top:8px">非 agent-comm 挂载面：运行流水暂无独立落账面（declared 余量）——编辑器深链=本屏 tab「草稿」。</div>';
+        '<div class="small faint" style="margin-top:8px">非 agent-comm 挂载：运行流水暂无独立落账（余量）——编辑器深链=本屏 tab「草稿」。</div>';
     }
     return head + '<div id="comm-live" style="margin-top:12px">' + liveSkeletonRows(3, 0) + '</div>';
   }
@@ -3946,7 +4054,7 @@
     }, function (e) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
       var el2 = $('#comm-live');
-      if (el2) el2.innerHTML = '<div class="small faint">comm 落账读面暂不可达（' + esc(String((e && e.message) || e)) + '）——宿主未装配该路由（旧插件代）或恢复后重进即现读</div>';
+      if (el2) el2.innerHTML = '<div class="small faint">通信记录暂不可读（' + esc(String((e && e.message) || e)) + '）——宿主未装配该路由（旧插件代）或恢复后重进即现读</div>';
     });
   }
 
@@ -3975,7 +4083,7 @@
       '<div class="dh-sub mono">' + (row ? esc(row.title) + ' · cwd: ' + esc(row.cwd || '—') : '宿主清单行缺席（roster 投影范围外）') +
       ' · agent: ' + (owner ? '<span class="lk" data-act="go" data-go="chat/' + esc(owner) + '">' + esc(owner) + '</span>' : '未归属（归属证据缺席=不冒充）') + '</div></div>' +
       '<div class="dh-actions"><button class="btn primary" data-act="chat-sess-go" data-id="' + esc(sid) + '"' + (owner ? ' data-agent="' + esc(owner) + '"' : ' disabled') + '>切回 Chat 视图 →</button></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">Trajectory（session 事件页读面 · 与聊天流同源不同呈现）</span></div>' +
+      '<div class="card"><div class="card-h"><span class="h-title">Trajectory（session 事件页现读 · 与聊天流同源不同呈现）</span></div>' +
       '<div class="card-b"><div id="sess-traj">' + liveSkeletonRows(3) + '</div></div></div></div>';
     // 转录注水（retain 持有+事件窗快照）：归属 agent 缺席时用空声明集（工具卡按普通卡渲染——不冒充判据）
     var declaredOps = owner ? agentDeclaredOps(owner) : [];
@@ -3999,7 +4107,7 @@
     };
     releaseChatHold();
     var handle = chatAd().hold(sid);
-    if (!handle) { $('#sess-traj').innerHTML = '<div class="small faint">宿主会话面缺席（ctx.sessions 未在册）——轨迹诚实降级</div>'; return; }
+    if (!handle) { $('#sess-traj').innerHTML = '<div class="small faint">宿主会话通道缺席（ctx.sessions 未在册）——轨迹诚实降级</div>'; return; }
     S.chatHold = { sessionId: sid, handle: handle };
     handle.ready.then(function () {
       var cur = S.chatHold;
@@ -4008,7 +4116,7 @@
       handle.subscribe(function () { paint(handle.snapshot()); });
     }, function (e) {
       var el = $('#sess-traj');
-      if (el) el.innerHTML = '<div class="small faint">转录读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
+      if (el) el.innerHTML = '<div class="small faint">会话记录暂不可读（' + esc(String((e && e.message) || e)) + '）</div>';
     });
     paint(handle.snapshot());
   }
@@ -4134,10 +4242,10 @@
     LIVE.ensure();
     var isSys = !!sysName;
     if (isSys && !LIVE.refByName('ServiceDesc', sysName)) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', sysName) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', sysName) + '</div>';
       return;
     }
-    if (isSys) setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: sysName, go: 's/' + encodeURIComponent(sysName) }, { label: '事件面' }]);
+    if (isSys) setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: sysName, go: 's/' + encodeURIComponent(sysName) }, { label: '事件' }]);
     else setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '事件流' }]);
     var win = evWindowOf(isSys ? 'sys:' + sysName : 'global');
     var base = evRowsOf(win);
@@ -4149,7 +4257,7 @@
     base.forEach(function (e) { typeCount[e.type] = (typeCount[e.type] || 0) + 1; });
     var top5 = Object.keys(typeCount).sort(function (a, b) { return typeCount[b] - typeCount[a]; }).slice(0, 5);
     var head = isSys
-      ? scenarioHead({ name: sysName }, '事件面', '归档窗真数据（involved scope 过滤）· 过滤条=全局事件流同款 · until 游标滚动加载更早页 · 行点击进事件详情', '事件')
+      ? scenarioHead({ name: sysName }, '事件', '归档窗实数（involved scope 过滤）· 过滤条=全局事件流同款 · until 游标滚动加载更早页 · 行点击进事件详情', '事件')
       : '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>事件流</h1><span class="chip kind">三泳道混排 · 归档窗 ' + base.length + ' 条</span></div>' +
         '<div class="dh-sub">Event / 状态变迁 / 数据事件 · 点任意一条跳相关对象（event→run→workflow→doc 链路）。数据源=event_log 归档投影（/v1/events limit=500 + until 游标滚动加载）。</div></div></div>';
     var sidePanel = '';
@@ -4160,10 +4268,10 @@
       sidePanel = '<div style="display:grid;gap:12px;align-self:start">' +
         '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span><span class="h-sub">归档窗内实数</span></div><div class="card-b" style="display:grid;gap:10px">' +
         '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (back.total ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + back.total + '</span></span>' +
-        '<span class="small faint">' + pal.long + back.drafts + ' ∪ ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作面落点：审批屏∪编辑器/提案详情/wf 配置）</span></div>' +
+        '<span class="small faint">' + pal.long + back.drafts + ' ∪ ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作落点：审批屏∪编辑器/提案详情/wf 配置）</span></div>' +
         '<div class="kv"><span class="k">死信率</span><span class="v mono">' + dead + '%</span></div>' +
         '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">n/a</span><span class="small faint">run 终态事件未落归档（declared 余量，不冒充）</span></div>' +
-        '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据面余量</span></div>' +
+        '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据接入余量</span></div>' +
         '<div class="kv"><span class="k">类型分布</span><span class="v small">' + (top5.length ? top5.map(function (t) { return '<span class="tag mono">' + esc(t) + '×' + typeCount[t] + '</span>'; }).join(' ') : '<span class="faint">—</span>') + '</span></div>' +
         '</div></div>' +
         '<div class="card"><div class="card-h"><span class="h-title">泳道图例</span></div><div class="card-b small faint">' +
@@ -4213,7 +4321,7 @@
    * 批准=Apply 全流程复用（dry-run 三检查→人确认→fromDraft 落库，E4 通路零旁路）；
    * 驳回=DELETE 弃稿（零文档面动作）；批量=同 kind 多稿顺序 Apply（独立判别不中断）。
    * ApprovalNeeded 无稿=只读待审卡（批准面缺席不冒充——深链 involved 对象编辑器）。
-   * 已决账面（v0.46）：approval_log 审批判定独立账 GET /v1/approvals 现读——批准 granted
+   * 已决记录（v0.46）：approval_log 审批判定独立账 GET /v1/approvals 现读——批准 granted
    * （rv=落库版本）/驳回 rejected（弃稿零文档面动作）判定行在册，审计不再只靠 apply_log 字符串考古。 */
   function apDiffHtml(diff, maxLines) { return renderDiff(diff, maxLines || 40); }
   function approvalItemHtml(it) {
@@ -4245,7 +4353,7 @@
         '<div class="ap-body" id="apdiff-' + esc(cssId(it.key)) + '">' + liveSkeletonRows(2, 0) + '</div>' +
         '<div class="ap-acts"><button class="btn ok" data-act="ap-approve" data-key="' + esc(it.key) + '">批准（=Apply）</button>' +
         '<button class="btn danger" data-act="ap-reject" data-key="' + esc(it.key) + '">驳回（弃稿）</button>' +
-        '<span class="small faint" style="align-self:center">批准=dry-run 三检查→fromDraft 落库（Revision+1 · DocApplied）；驳回=弃稿（零文档面动作）</span></div></div>';
+        '<span class="small faint" style="align-self:center">批准=dry-run 三检查→fromDraft 落库（Revision+1 · DocApplied）；驳回=弃稿（零文档动作）</span></div></div>';
     }
     var e = it.event;
     return '<div class="ap-card resolved" id="apcard-' + esc(cssId(it.key)) + '">' +
@@ -4254,7 +4362,7 @@
       '<div class="ap-meta"><span>来源：<b class="mono">' + esc(e.source) + '</b></span><span>level：<b class="mono">' + esc(e.level) + '</b></span>' +
       '<span class="mono faint">' + esc(String(e.ts || '').replace('T', ' ').slice(0, 19)) + '</span>' +
       '<span class="lk mono small" data-act="go" data-go="' + esc(involvedRoute(e.involved)) + '">involved 对象编辑器 →</span></div>' +
-      '<div class="ap-body small faint">批准面缺席（该对象无草稿在稿）——变更未进稿不可批准（不冒充 diff）；落稿后本页即出现 diff 预览与批准动作。</div></div>';
+      '<div class="ap-body small faint">批准缺席（该对象无草稿在稿）——变更未进稿不可批准（不冒充 diff）；落稿后本页即出现 diff 预览与批准动作。</div></div>';
   }
   function involvedRoute(inv) {
     var segs = String(inv || '').split('/');
@@ -4277,7 +4385,7 @@
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>审批</h1><span class="chip ' + (draftItems.length || evItems.length ? 'warn' : 'ok') + '">' +
       (draftItems.length + evItems.length) + ' 条待审</span></div>' +
-      '<div class="dh-sub">待审区=草稿缓存（DocReview 类同源——代改代审的家，apply.md §6）∪ ApprovalNeeded 归档行（已批 N 稿不出现）。批准/驳回均=人点（LLM 只提案）；diff=稿 vs 文档面现值现读；草稿行深链=编辑器屏（apply dock 在册）∪ 本屏 diff 卡双落点。</div></div>' +
+      '<div class="dh-sub">待审区=草稿缓存（DocReview 类同源——代改代审的家，apply.md §6）∪ ApprovalNeeded 归档行（已批的不出现）。批准/驳回均=人点（LLM 只提案）；diff=稿 vs 文档现值现读；草稿行深链=编辑器屏（apply dock 在册）∪ 本屏 diff 卡双落点。</div></div>' +
       '<div class="dh-actions"><button class="btn ok" data-act="ap-batch"' + (draftItems.length ? '' : ' disabled') + '>批量批准（' + draftItems.length + ' 稿）</button></div></div>' +
       draftItems.map(approvalItemHtml).join('') + evItems.map(approvalItemHtml).join('') +
       '<div id="ap-ledger" style="margin-top:24px">' + liveSkeletonRows(2, 0) + '</div>' +
@@ -4286,7 +4394,7 @@
     hydrateApprovalLedger();
     draftItems.forEach(function (it) { hydrateApprovalDiff(it.draft); });
   }
-  /* 已决账面（v0.46 审批独立账：GET /v1/approvals 现读不缓存——批准/驳回即决即见；
+  /* 已决记录（v0.46 审批独立账：GET /v1/approvals 现读不缓存——批准/驳回即决即见；
    * 驳回=弃稿零文档面动作亦落行；读面缺席=诚实降级注记，零 console error 零 4xx 调用）。 */
   function hydrateApprovalLedger() {
     var stamp = S.route + '|' + S.segs.join('/');
@@ -4296,12 +4404,12 @@
       if (!el) return;
       var rows = (b && b.approvals) || [];
       if (!rows.length) {
-        el.innerHTML = '<div class="small faint">已决账面暂无判定行（批准/驳回即决即见——approval_log 独立账：apply_log 承落库流水，本账承判定）。</div>';
+        el.innerHTML = '<div class="small faint">已决记录暂无判定行（批准/驳回即决即见——approval_log 独立账：apply_log 承落库流水，本账承判定）。</div>';
         return;
       }
-      el.innerHTML = '<div class="dh" style="margin-bottom:8px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">已决账面</h2>' +
+      el.innerHTML = '<div class="dh" style="margin-bottom:8px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">已决记录</h2>' +
         '<span class="chip mute small">' + rows.length + ' 行</span></div>' +
-        '<div class="dh-sub">approval_log 独立账（ops DB）：批准=granted（rv=落库版本，noop 照落）· 驳回=rejected（弃稿零文档面动作）。</div></div></div>' +
+        '<div class="dh-sub">approval_log 独立账（ops DB）：批准=granted（rv=落库版本，noop 照落）· 驳回=rejected（弃稿零文档动作）。</div></div></div>' +
         '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>时刻</th><th>判定</th><th>对象</th><th>判定主体</th><th>rv</th><th>来源</th></tr></thead><tbody>' +
         rows.map(function (r) {
           return '<tr><td class="mono small">' + esc(String(r.ts || '').replace('T', ' ').slice(0, 19)) + '</td>' +
@@ -4313,7 +4421,7 @@
         }).join('') + '</tbody></table></div>';
     }, function () {
       var el = $('#ap-ledger');
-      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">审批账面读面暂不可达（/v1/approvals 缺席或超时）——判定留痕暂只=apply_log（fieldManager=console:approve）。</div>';
+      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">审批记录暂不可读（服务无此投影或超时）——判定留痕暂只=apply_log（fieldManager=console:approve）。</div>';
     });
   }
   /* diff 注水：稿 content（GET /v1/drafts/{kind}/{name}）+ 面现值（GET /v1/objects）现读；
@@ -4330,13 +4438,13 @@
         var el = $('#apdiff-' + cssId(key));
         if (!el) return;
         var face = rs[0], dr = rs[1];
-        var base = face ? String(face.content || '') : '（HEAD 读面缺席）';
+        var base = face ? String(face.content || '') : '（最新版暂不可读）';
         var working = String((dr && dr.content) || '');
-        el.innerHTML = (dr ? '' : '<div class="small faint">稿正文读面缺席（超时）——重进即现读</div>') + apDiffHtml(diffLines(base, working)) +
+        el.innerHTML = (dr ? '' : '<div class="small faint">正文暂不可读（超时）——重进即恢复</div>') + apDiffHtml(diffLines(base, working)) +
           '<div class="small faint" style="margin-top:4px">基准=HEAD ' + (face ? String(face.sha || '').slice(0, 8) : '?') + '（git 权威）· 稿 ' + working.length + 'B vs HEAD ' + base.length + 'B（现读，不缓存）</div>';
       }, function (e) {
         var el = $('#apdiff-' + cssId(key));
-        if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">diff 读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
+        if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">差异暂不可读（' + esc(String((e && e.message) || e)) + '）</div>';
       });
       return;
     }
@@ -4350,11 +4458,11 @@
       var dr = rs[0], face = rs[1];
       var base = face ? String(face.content || '') : '（对象不在册——apply 将 404）';
       var working = String((dr && dr.content) || '');
-      el.innerHTML = (dr ? '' : '<div class="small faint">稿正文读面缺席（超时）——重进即现读</div>') + apDiffHtml(diffLines(base, working)) +
-        '<div class="small faint" style="margin-top:4px">基准=r' + (dr ? dr.baseResourceVersion : '?') + ' · 稿 ' + working.length + 'B vs 面 ' + base.length + 'B（现读，不缓存）</div>';
+      el.innerHTML = (dr ? '' : '<div class="small faint">正文暂不可读（超时）——重进即恢复</div>') + apDiffHtml(diffLines(base, working)) +
+        '<div class="small faint" style="margin-top:4px">基准=r' + (dr ? dr.baseResourceVersion : '?') + ' · 稿 ' + working.length + 'B vs 落库值 ' + base.length + 'B（现读，不缓存）</div>';
     }, function (e) {
       var el = $('#apdiff-' + cssId(key));
-      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">diff 读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
+      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">差异暂不可读（' + esc(String((e && e.message) || e)) + '）</div>';
     });
   }
   /* 批准=Apply 全流程复用（dry-run 三检查→人确认→fromDraft 落库）；fieldManager=console:approve */
@@ -4365,7 +4473,7 @@
       LIVE.fetchObject(d.kind, d.scope, d.name).catch(function () { return null; }),
     ]).then(function (rs) {
       var dr = rs[0], face = rs[1];
-      if (!dr) { toast('稿正文读面缺席', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
+      if (!dr) { toast('正文暂不可读', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
       var base = face ? String(face.content || '') : '';
       var working = String(dr.content || '');
       var fullDiff = diffLines(base, working);
@@ -4378,7 +4486,7 @@
         '<div class="checklist" id="ap-checks">' +
         '<div class="check-item" data-c="scheme"><span class="ci-ic">…</span>Scheme 校验（kind 注册∧spec 结构）</div>' +
         '<div class="check-item" data-c="perm"><span class="ci-ic">…</span>权限准入（主体=宿主注入 console-operator）</div>' +
-        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + baseRV + ' ↔ 面上现值）</div></div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + baseRV + ' ↔ 落库现值）</div></div>' +
         renderDiff(fullDiff, 26) +
         '<div class="small faint" id="ap-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/apply {fromDraft:true, dryRun:true}——零副作用）…</div>' +
         '</div>' +
@@ -4399,7 +4507,7 @@
           var lockOk = cur === baseRV;
           mark('scheme', true, 'kind 在册∧spec 结构过（cored admit ①）');
           mark('perm', true, '主体准入过（cored admit ②）');
-          mark('lock', lockOk, lockOk ? 'r' + baseRV + ' == 面上现值（可落）' : '稿基于 r' + baseRV + '，面上已 r' + cur + '——落库将 409（稿保留）');
+          mark('lock', lockOk, lockOk ? 'r' + baseRV + ' == 落库现值（可落）' : '稿基于 r' + baseRV + '，库中已 r' + cur + '——落库将 409（稿保留）');
           var go = $('#ap-apply-go');
           if (go && lockOk) {
             go.disabled = false;
@@ -4430,7 +4538,7 @@
       LIVE.designDraft(d.scope, d.name).catch(function () { return null; }),
     ]).then(function (rs) {
       var face = rs[0], dr = rs[1];
-      if (!dr) { toast('稿正文读面缺席', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
+      if (!dr) { toast('正文暂不可读', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
       var base = face ? String(face.content || '') : '';
       var working = String(dr.content || '');
       var baseSha = face ? String(face.sha || '') : '';
@@ -4543,7 +4651,7 @@
       return;
     }
     confirmModal('驳回（弃稿）',
-      '<div>弃稿 <b class="mono">' + esc(key) + '</b>？——零文档面动作（不发明反向写路径）；ApprovalNeeded 归档行保留（审计素材）。</div>',
+      '<div>弃稿 <b class="mono">' + esc(key) + '</b>？——零文档动作（不发明反向写路径）；ApprovalNeeded 归档行保留（审计素材）。</div>',
       '确认驳回', function () {
         __CC.live.draftDelete(it.draft.kind, it.draft.name, it.draft.scope).then(function (r) {
           if (r.ok) {
@@ -4638,7 +4746,7 @@
 
   /* ── R-UX-2：从 LIVE.state.kinds 实时获取/派生 scheme 字段控件描述符（零硬编码） ── */
   var FIELD_LABELS = {
-    title: '标题', summary: '目标', acceptance: '验收标准', impact: '影响面',
+    title: '标题', summary: '目标', acceptance: '验收标准', impact: '影响范围',
     priority: '优先级', proposer: '提出人', status: '状态', landing: '产物落点',
     'landing.target': '产物落点', 'landing.ref': '产物引用', enabled: '启用状态',
     workservice: '所属 WorkService', workflow: '绑定 Workflow', config: '配置映射 (map)',
@@ -4880,7 +4988,7 @@
         messages: [
           {
             role: 'assistant',
-            text: '已结合当前上下文自动补充缺省项：提出人=console-operator、优先级=low、产物落点=doc（右侧字段卡可随时修改，不会重复盘问已推断项）。\n请提供【标题 (title)】（默认：无（必填）；示例：编辑器深色模式；也可一段话自由描述标题/目标/验收标准/影响面）：'
+            text: '已结合当前上下文自动补充缺省项：提出人=console-operator、优先级=low、产物落点=doc（右侧字段卡可随时修改，不会重复盘问已推断项）。\n请提供【标题 (title)】（默认：无（必填）；示例：编辑器深色模式；也可一段话自由描述标题/目标/验收标准/影响范围）：'
           }
         ],
         fields: {
@@ -5114,7 +5222,7 @@
       '</div>' +
       '<div class="intake-msg-list" id="intake-messages">' + msgsHtml + '</div>' +
       '<div class="intake-input-area">' +
-      '<textarea id="intake-chat-input" class="inp" rows="2" placeholder="输入一段话自由描述需求（如：标题：…；目标：…；验收标准：1. … 2. …；影响面：…），或直接回答当前提问…"></textarea>' +
+      '<textarea id="intake-chat-input" class="inp" rows="2" placeholder="输入一段话自由描述需求（如：标题：…；目标：…；验收标准：1. … 2. …；影响范围：…），或直接回答当前提问…"></textarea>' +
       '<div class="intake-act-row">' +
       '<button class="btn primary" id="btn-intake-send" data-act="intake-send" data-kind="' + esc(kindName) + '">发送 / 抽取字段</button>' +
       (st.askingField ? '<button class="btn" id="btn-intake-skip" data-act="intake-skip" data-kind="' + esc(kindName) + '">跳过此项（使用默认/示例）</button>' : '') +
@@ -5602,7 +5710,7 @@
       }, function (e) {
         if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
         view.innerHTML = '<div class="view-inner"><div class="empty" style="padding:10vh"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
-          '<div class="e-title">提案读面不可达（' + esc(String((e && e.message) || e)) + '）</div>' +
+          '<div class="e-title">提案数据不可达（' + esc(String((e && e.message) || e)) + '）</div>' +
           '<div class="e-act"><button class="btn primary" data-act="go" data-go="proposals">回提案库</button></div></div></div>';
       });
   }
@@ -5620,12 +5728,12 @@
         : '<span class="small faint">状态=' + esc(d.status) + '（判定终态后无批准/驳回动作——状态机 proposal.md §4）</span>') + '</div></div>' +
       '<div class="settings-cards" style="grid-template-columns:1fr 1fr">' +
       '<div class="set-card"><div class="set-card-h">目标</div><div class="set-card-sub" style="white-space:pre-wrap">' + esc(d.summary || '—') + '</div></div>' +
-      '<div class="set-card"><div class="set-card-h">影响面</div><div class="set-card-sub" style="white-space:pre-wrap">' + esc(d.spec && d.spec.impact || '—（未声明）') + '</div></div>' +
+      '<div class="set-card"><div class="set-card-h">影响范围</div><div class="set-card-sub" style="white-space:pre-wrap">' + esc(d.spec && d.spec.impact || '—（未声明）') + '</div></div>' +
       '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">验收标准（' + acc.length + ' 条）</div>' +
       (acc.length ? '<div class="set-card-sub"><ul style="margin:4px 0 0 18px;padding:0">' + acc.map(function (a) { return '<li class="small" style="padding:2px 0">' + esc(a) + '</li>'; }).join('') + '</ul></div>' : '<div class="set-card-sub faint">未声明验收标准</div>') + '</div>' +
       '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">产物指针（landing）</div>' +
       '<div class="set-card-sub mono">' + esc('target=' + ((d.landing && d.landing.target) || '—') + (d.landing && d.landing.ref ? ' ref=' + d.landing.ref : '')) + '</div>' +
-      '<div class="set-card-sub faint">产物真实落盘=apply-workflow agent 真实拉起段（declared-deferred）——落盘后状态回写 landed（本轮打通到派单受理+产物指针，不冒充产物已在）。</div></div>' +
+      '<div class="set-card-sub faint">产物真实落盘=apply-workflow agent 真实拉起段（余量）——落盘后状态回写 landed（本轮打通到派单受理+产物指针，不冒充产物已在）。</div></div>' +
       '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">派单（apply-workflow）</div><div id="pd-dispatch" style="padding:6px 16px 14px">' + liveSkeletonRows(1, 0) + '</div></div>' +
       '</div>' +
       '<div class="dh" style="margin-top:18px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">对象原文</h2></div>' +
@@ -5663,10 +5771,10 @@
         '<span class="chip mute small">eventId=' + esc(String(r0.eventId || '').slice(0, 28)) + '…</span>' +
         (apState ? '<span class="chip ' + apCls + ' small">批准投影·' + esc(apState) + '</span>' : '') +
         spWord + '</div>' + actLine +
-        '<div class="small faint">受理 ≠ agent 会话已拉起（诚实投影——真实拉起=dsh 会话挂载，declared-deferred；spawn 声明=approved 批准投影的接线意图词形，wired 恒 false=零拉起执行器——红线 a）；载荷带提案名/目标/验收（执行体输入）。</div>';
+        '<div class="small faint">受理 ≠ agent 会话已拉起（诚实投影——真实拉起=dsh 会话挂载（余量）；spawn 声明=approved 批准投影的接线意图词形，wired 恒 false=零拉起执行器——红线 a）；载荷带提案名/目标/验收（执行体输入）。</div>';
     }, function () {
       var el = $('#pd-dispatch');
-      if (el) el.innerHTML = '<div class="small faint">派单投影读面暂不可达（/v1/agents/dispatches 缺席或超时）。</div>';
+      if (el) el.innerHTML = '<div class="small faint">派单记录暂不可读（服务无此投影或超时）。</div>';
     });
   }
   /* 批准/驳回=对象态翻转稿（submitted→approved|rejected）→ fromDraft Apply
@@ -5718,10 +5826,10 @@
     }).join('');
     openModal('<div class="modal-h"><span class="m-title">关于本原型</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
       '<div class="modal-b"><div class="settings-cards">' +
-      '<div class="set-card"><div class="set-card-h">说明</div><div class="set-card-sub">core console v2（E0–E7 全收口——渲染数据全部来自 cored 读面 + ops DB）</div>' +
+      '<div class="set-card"><div class="set-card-h">说明</div><div class="set-card-sub">core console（全收口——渲染数据全部来自系统文档库 + 运行数据库）</div>' +
       '<div class="set-row"><span class="sr-label">设计文档</span><span class="sr-val mono">core_system_instance/runtime/console-ui.md</span></div>' +
       '<div class="set-row"><span class="sr-label">概念对齐</span><span class="sr-val mono">core_design/concepts/apply.md · workflow.md</span></div>' +
-      '<div class="set-row"><span class="sr-label">数据</span><span class="sr-val">cored 读面（/v1/* 只读投影 + Apply/草稿写通路）——渲染数据无双源，console 不自建持久状态</span></div></div>' +
+      '<div class="set-row"><span class="sr-label">数据</span><span class="sr-val">系统文档库（/v1/* 只读投影 + Apply/草稿写通路）——渲染数据无双源，console 不自建持久状态</span></div></div>' +
       '<div class="set-card"><div class="set-card-h">核心语义</div>' +
       '<div class="set-row"><span class="sr-label">Apply</span><span class="sr-val">编辑与发布分离：改动先进草稿，Apply 才落库（Revision+1 · DocApplied 必发）；LLM 只提案，Apply 必须人点</span></div>' +
       '<div class="set-row"><span class="sr-label">一切皆文档</span><span class="sr-val">文档与资源同规则渲染（同 kind 徽章 / revision / 草稿圆点 / 状态灯）</span></div>' +
@@ -5814,7 +5922,7 @@
       var ghost = (classes.ApprovalNeeded || 0) - items.filter(function (it) { return it.class === 'ApprovalNeeded'; }).length;
       if (ghost > 0 && pendingRows === 0) {
         shown = shown.concat([{ class: 'ApprovalNeeded', kind: 'dispatch-legacy', name: '', scope: '',
-          digest: '派单待批（批准投影挂起 ×' + ghost + '——读面行集缺席=旧代 cored 词形，计数照实）',
+          digest: '派单待批（批准投影挂起 ×' + ghost + '——投影行集缺席=旧代 cored 词形，计数照实）',
           eventId: '', at: '', link: '#/workflows' }]);
       }
     }
@@ -5836,8 +5944,8 @@
       '<div class="dh-actions"><button type="button" class="btn secondary" data-act="go" data-go="proposals">提交需求</button></div></div>' +
       '<div class="fbar">' + chips + '</div>' +
       '<div class="card"><div class="card-b cc-inbox-list" data-cc-inbox-list="true">' + listHtml + '</div></div>' + degraded +
-      '<div class="sec-title">watchdog 观测面</div><div class="card"><div class="card-b cc-prose" data-cc-watchdog="true">' + wdRows + '</div></div>' +
-      '<details class="cc-disclosure"><summary>接管与回链口径</summary><div class="cc-prose">完成任一操作即产事件回链（Proposal approved / DocApplied / ApprovalGranted）→ loop 自动续跑对应分支（acceptance.md §9）；无通道部署零外发——本页即唯一展示面（规则 6），条目计数不受 dedup 抑制。</div></details>' +
+      '<div class="sec-title">watchdog 观测</div><div class="card"><div class="card-b cc-prose" data-cc-watchdog="true">' + wdRows + '</div></div>' +
+      '<details class="cc-disclosure"><summary>接管与回链口径</summary><div class="cc-prose">完成任一操作即产事件回链（Proposal approved / DocApplied / ApprovalGranted）→ loop 自动续跑对应分支（acceptance.md §9）；无通道部署零外发——本页即唯一展示位置（规则 6），条目计数不受 dedup 抑制。</div></details>' +
       '</div>';
   }
   ACTIONS['ib-class'] = function (el) { S.inboxClass = (S.inboxClass === el.dataset.c ? '' : el.dataset.c); render(); };
@@ -5928,7 +6036,7 @@
     }
   }
   ACTIONS['conn-fixgate'] = function () { location.assign('/'); }; // 落点=固定钥匙门入口（key 只存部署侧，§1.5）
-  ACTIONS['conn-cycle-detail'] = function () { toast('连接态灯（§1.5）', '底座=dsh web 客户端通道活性：绿=帧新鲜（≤2×心跳周期）；琥珀=断开退避重试；红=登录面连续 3 次 401，重走固定入口即愈', ''); };
+  ACTIONS['conn-cycle-detail'] = function () { toast('连接态灯（§1.5）', '底座=dsh web 客户端通道活性：绿=帧新鲜（≤2×心跳周期）；琥珀=断开退避重试；红=登录连续 3 次 401，重走固定入口即愈', ''); };
 
   function mountConsole(rootEl) {
     ROOT = rootEl;

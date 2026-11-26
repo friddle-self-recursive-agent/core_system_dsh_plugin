@@ -16,7 +16,7 @@
     { id: 'dsh', name: '内嵌 dsh', desc: '默认 runner：宿主内原生会话（缺省 preset），身份=SessionId', enabled: true, why: '' },
     { id: 'claude-code', name: 'claude-code', desc: '经宿主现成 subagent provider 拉起（cross-agent.md §5.7）', enabled: false, why: 'provider/preset 接线=E5b 挂账（不冒充可用）' },
     { id: 'opencode', name: 'opencode cli', desc: '自写 SubagentProvider——connector 代码归 common_connector（R-ENG-3）', enabled: false, why: '自写 provider 余量（E5b 后排期）' },
-    { id: 'gotty', name: 'gotty 终端', desc: '跨机兜底终端：经 piko 暴露、独立鉴权（本机主案=dsh 内置 PTY）', enabled: false, why: '跨机场景余量（§5.7 #6：内置 PTY 全面占优）' }
+    { id: 'gotty', name: 'gotty 终端', desc: '跨机兜底终端：经 piko 暴露、独立鉴权（本机主案=dsh 内置 PTY）', enabled: false, why: '跨机场景余量（§5.7 #6：内置 PTY 优势）' }
   ];
   function runnerList() {
     return RUNNERS.map(function (r) {
@@ -122,7 +122,7 @@
     }
     /** 新建会话（opts={cwd?, agentPreset?, sessionId?}）→ 判别联合不抛错。 */
     function create(opts) {
-      if (!ready()) return Promise.resolve({ ok: false, error: '宿主会话面缺席（ctx.sessions 未在册）' });
+      if (!ready()) return Promise.resolve({ ok: false, error: '宿主会话通道缺席（ctx.sessions 未在册）' });
       var p;
       try { p = sessions.create(opts || {}); } catch (e) { return Promise.resolve({ ok: false, error: String(e) }); }
       return Promise.resolve(p).then(
@@ -132,7 +132,7 @@
     }
     /** 发消息真通路（§5.7 #2：session.prompt；mode=queue|steer）→ 判别联合。 */
     function prompt(sessionId, text, mode) {
-      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话面缺席（ctx.sessions 未在册）' });
+      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话通道缺席（ctx.sessions 未在册）' });
       if (!sessionId || !text || !String(text).trim()) return Promise.resolve({ ok: false, error: '空消息或空会话身份' });
       return sessions.using(sessionId, { source: SOURCE }, function (ref) {
         var s = ref.binding.session;
@@ -150,7 +150,7 @@
     }
     /** 会话改名（探针/识别锚：console 发起的会话显式命名）。 */
     function rename(sessionId, title) {
-      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话面缺席' });
+      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话通道缺席' });
       return sessions.using(sessionId, { source: SOURCE }, function (ref) {
         return Promise.resolve(ref.binding.session.rename(String(title))).then(
           function (r) { return r && r.ok ? { ok: true } : { ok: false, error: String((r && r.error && (r.error.message || r.error.code)) || 'rename 被拒绝') }; },

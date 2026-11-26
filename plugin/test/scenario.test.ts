@@ -79,7 +79,7 @@ test('synEvents：确定性合成窗（同种子同序列）+ synthetic 标记 +
 test('E7 静态面：四场景屏真数据换装（读面数据源标注 + 零 mock 事件名 + 诚实空态线）', () => {
   assert.ok(appSrc.includes('function screenEventsCore'), '全局/场景面共用屏核在册（过滤条同款的结构保证）')
   assert.ok(appSrc.includes('function screenSysEvents') && appSrc.includes('screenEventsCore(view, S.params.name)'), '场景事件面=共用核换装')
-  assert.ok(appSrc.includes('数据面未装配'), 'metrics 空投影诚实空态在册（不冒充曲线）')
+  assert.ok(appSrc.includes('指标数据未接入'), 'metrics 空投影诚实空态在册（不冒充曲线；R-UX-3：数据面未装配→指标数据未接入）')
   assert.ok(appSrc.includes('function hydrateMetricQueries'), '即席查询注水在册（404=无投影结果如实标注）')
   assert.ok(appSrc.includes('spec.metadata.tags'), 'tag 口径标注在册（scheme conventions 检索元数据）')
   assert.ok(appSrc.includes('function hydrateDocTags'), 'tag 现读注水在册')
@@ -101,7 +101,7 @@ test('E7 收口清扫：mock 渲染面归零（总览/palette/文档行/假动�
   assert.ok(!appSrc.includes('全部本地 mock'), 'settings「全部本地 mock」声明摘除')
   assert.ok(!appSrc.includes('ensureWorkflowDocs'), 'boot mock 播种摘除')
   assert.ok(!/M\.events\.|M\.docs\.push|M\.systems\.|M\.workflows\.forEach/.test(appSrc), 'M 渲染引用归零（数据文件保留=proto 起点代码）')
-  assert.ok(appSrc.includes('手动触发=触发面余量'), 'manual tick 诚实提示在册（不画假回执）')
+  assert.ok(appSrc.includes('手动触发暂未接线'), 'manual tick 诚实提示在册（不画假回执；R-UX-3：触发面余量→暂未接线）')
   assert.ok(appSrc.includes('新建文档=declared 余量'), 'newGoal 诚实提示在册（不推 mock 库）')
 })
 
@@ -144,7 +144,7 @@ test('能力 B 静态面：需求提案屏（console-adoption.md §1.24 L52-06 �
   assert.ok(appSrc.includes('prop-approve') && appSrc.includes('prop-reject'), '批准/驳回动作锚在册（submitted 态专用）')
   assert.ok(appSrc.includes('status=submitted'), '提交落库状态词在册（rv=1 status=submitted——L52-01）')
   assert.ok(appSrc.includes('无派单'), '驳回无派单注记在册（L52-03——rejected 不派单）')
-  assert.ok(appSrc.includes('declared-deferred'), '产物指针缺席态如实标注（本轮打通到派单受理+产物指针，不冒充产物已在）')
+  assert.ok(appSrc.includes('产物真实落盘=apply-workflow agent 真实拉起段（余量）'), '产物指针缺席态如实标注（本轮打通到派单受理+产物指针，不冒充产物已在；R-UX-3：declared-deferred 词形出界面）')
   assert.ok(appSrc.includes('R-PUB'), '提案表单 R-PUB 纪律注记在册（禁真实 IP/凭据）')
 })
 

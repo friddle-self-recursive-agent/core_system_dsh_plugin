@@ -18,7 +18,7 @@ if (typeof window !== 'undefined' && typeof window.fetch === 'function' && !wind
 window.__ModuleLoader__.load({ id: 'dsh-plugin-core-system', factory: function (require) {
 var module = { exports: {} }; var exports = module.exports;
 var React = require('react'); // 平台种子模块（dsh client 各 bundle 同款引用，无需 inject 边）
-var CC_CSS = "/* console-proto app.css 作用域化（构建手术 v3，loop-36）：全部规则选择器收进 .cc-app 容器（不污染 dsh 宿主）；:root/body→.cc-app；keyframes 与 animation 引用加 cc- 前缀；.cc-app.app 高度=100%（宿主面板内非视口）；原文注释已剥离（手术脚本管辖） */\n.cc-app{\n  --bg: #0b0e14;\n  --panel: #11151c;\n  --panel-2: #161b24;\n  --panel-3: #1a2029;\n  --border: #1e2530;\n  --border-2: #273041;\n  --text: #e6e9ef;\n  --text-2: #8b93a7;\n  --text-3: #5b6378;\n  --accent: #3b82f6;\n  --accent-dim: #1d3a68;\n  --ok: #22c55e;\n  --warn: #f59e0b;\n  --danger: #ef4444;\n  --esc: #fb7185;\n  --llm: #a78bfa;\n  --mono: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, monospace;\n  --sans: system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n  --rad: 8px;\n  --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);\n  --side-w: 240px;\n  --top-h: 46px;\n}.cc-app, .cc-app *{ box-sizing: border-box; margin: 0; padding: 0; }.cc-app, .cc-app{ height: 100%; }.cc-app{\n  background: var(--bg); color: var(--text);\n  font: 13px/1.55 var(--sans);\n  -webkit-font-smoothing: antialiased;\n  overflow: hidden;\n}.cc-app .mono{ font-family: var(--mono); }.cc-app .ic{ width: 15px; height: 15px; flex: none; vertical-align: -2px; }.cc-app a, .cc-app .lk{ color: var(--accent); text-decoration: none; cursor: pointer; }.cc-app .lk:hover, .cc-app a:hover{ text-decoration: underline; }.cc-app ::selection{ background: rgba(59,130,246,.32); }.cc-app ::-webkit-scrollbar{ width: 10px; height: 10px; }.cc-app ::-webkit-scrollbar-thumb{ background: #232b3a; border-radius: 6px; border: 2px solid var(--bg); }.cc-app ::-webkit-scrollbar-thumb:hover{ background: #2e3a4e; }.cc-app ::-webkit-scrollbar-corner, .cc-app ::-webkit-scrollbar-track{ background: transparent; }.cc-app .app{ display: flex; height: 100vh; }.cc-app .sidebar{\n  width: var(--side-w); flex: none; background: var(--panel);\n  border-right: 1px solid var(--border);\n  display: flex; flex-direction: column;\n  transition: margin-left .18s ease;\n  z-index: 30;\n}.cc-app .app.side-collapsed .sidebar{ margin-left: calc(var(--side-w) * -1); }.cc-app .side-rail{\n  display: none; position: fixed; left: 0; top: 8px; z-index: 40;\n  width: 26px; height: 26px; border-radius: 6px; background: var(--panel-2);\n  border: 1px solid var(--border-2); color: var(--accent);\n  font-size: 13px; text-align: center; line-height: 24px; cursor: pointer;\n}.cc-app .app.side-collapsed .side-rail{ display: block; }.cc-app .main{ flex: 1; min-width: 0; display: flex; flex-direction: column; }.cc-app .view{ flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 18px 22px 60px; position: relative; }.cc-app .view.nopad{ padding: 0; }.cc-app .view-inner{ max-width: 1460px; margin: 0 auto; }.cc-app .side-logo{ display: flex; align-items: center; gap: 9px; padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }.cc-app .logo-mark{ width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #1d3a68, #3b82f6); color: #dbe7ff; font-size: 13px; text-align: center; line-height: 28px; flex: none; }.cc-app .logo-name{ font-weight: 650; letter-spacing: .2px; font-size: 13.5px; }.cc-app .logo-sub{ font-size: 10.5px; color: var(--text-3); font-family: var(--mono); }.cc-app .side-collapse{ margin-left: auto; }.cc-app .side-nav{ flex: 1; overflow-y: auto; padding: 10px 8px; }.cc-app .nav-item{\n  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px;\n  color: var(--text-2); cursor: pointer; margin-bottom: 2px; user-select: none;\n  font-size: 13px; border: 1px solid transparent;\n}.cc-app .nav-item:hover{ background: var(--panel-2); color: var(--text); }.cc-app .nav-item.active{ background: var(--accent-dim); color: #dbe7ff; border-color: rgba(59,130,246,.35); }.cc-app .nav-item .ic{ opacity: .9; }.cc-app .nav-item .nav-badge{\n  margin-left: auto; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger);\n  color: #fff; font-size: 10.5px; font-weight: 600; text-align: center; line-height: 18px; padding: 0 5px;\n}.cc-app .nav-sec{ font-size: 10.5px; color: var(--text-3); letter-spacing: .8px; padding: 12px 10px 4px; text-transform: uppercase; }.cc-app .side-foot{ border-top: 1px solid var(--border); padding: 10px 14px 12px; display: grid; gap: 6px; }.cc-app .side-user{ display: flex; align-items: center; gap: 8px; color: var(--text); }.cc-app .avatar{ width: 22px; height: 22px; border-radius: 50%; background: var(--accent-dim); color: #9ec2ff; font-size: 11px; text-align: center; line-height: 22px; flex: none; }.cc-app .side-conn{ display: flex; align-items: center; gap: 7px; color: var(--text-3); font-size: 11px; }.cc-app .lamp{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }.cc-app .lamp.ok{ background: var(--ok); }.cc-app .lamp.warn{ background: var(--warn); }.cc-app .lamp.danger{ background: var(--danger); }.cc-app .lamp.esc{ background: var(--esc); }.cc-app .lamp.acc{ background: var(--accent); }.cc-app .lamp.off{ background: var(--text-3); }.cc-app .pulse-dot{ animation: cc-pulse 1.8s ease-out infinite; }@keyframes cc-pulse{\n  0% { box-shadow: 0 0 0 0 rgba(59,130,246,.45); }\n  70% { box-shadow: 0 0 0 7px rgba(59,130,246,0); }\n  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }\n}.cc-app .lamp.pulse-ok{ animation: cc-pulse-ok 1.8s ease-out infinite; }@keyframes cc-pulse-ok{ 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }.cc-app .lamp.pulse-warn{ animation: cc-pulse-warn 1.6s ease-out infinite; }@keyframes cc-pulse-warn{ 0% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); } 70% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } }.cc-app .lamp.pulse-danger{ animation: cc-pulse-danger 1.5s ease-out infinite; }@keyframes cc-pulse-danger{ 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.5); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }.cc-app .chip{\n  display: inline-flex; align-items: center; gap: 6px; padding: 1px 9px; border-radius: 20px;\n  font-size: 11.5px; font-weight: 550; border: 1px solid var(--border-2); color: var(--text-2);\n  background: var(--panel-2); white-space: nowrap; line-height: 20px;\n}.cc-app .chip.lg{ font-size: 12.5px; padding: 3px 12px; line-height: 22px; }.cc-app .chip.ok{ color: #4ade80; border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.09); }.cc-app .chip.warn{ color: #fbbf24; border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.09); }.cc-app .chip.danger{ color: #f87171; border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.09); }.cc-app .chip.esc{ color: var(--esc); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.09); }.cc-app .chip.acc{ color: #7fb0f9; border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.09); }.cc-app .chip.llm{ color: #c4b5fd; border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.09); }.cc-app .chip.mute{ color: var(--text-3); }.cc-app .chip.kind{ font-family: var(--mono); font-size: 10.5px; color: #9db2d0; background: #182130; border-color: var(--border-2); }.cc-app .chip.click{ cursor: pointer; }.cc-app .chip.click:hover{ border-color: var(--accent); color: var(--text); }.cc-app .tag{\n  display: inline-block; font-size: 10.5px; font-family: var(--mono); padding: 0 7px; line-height: 18px;\n  border-radius: 5px; background: #17202e; color: #8fa3c2; border: 1px solid var(--border);\n}.cc-app .badge-dot{ position: absolute; top: -2px; right: -3px; min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; padding: 0 4px; }.cc-app .badge-dot.hidden{ display: none; }.cc-app .draft-dot{ color: var(--warn); font-size: 15px; line-height: 1; margin-left: 4px; }.cc-app .kbd{\n  display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--text-2);\n  background: var(--panel-3); border: 1px solid var(--border-2); border-bottom-width: 2px;\n  border-radius: 5px; padding: 0 5px; line-height: 16px; margin: 0 1px;\n}.cc-app .btn{\n  display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 7px;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text);\n  font-size: 12.5px; font-weight: 550; cursor: pointer; user-select: none; white-space: nowrap;\n}.cc-app .btn:hover{ background: var(--panel-3); border-color: #33405a; }.cc-app .btn:active{ transform: translateY(1px); }.cc-app .btn.primary{ background: var(--accent); border-color: var(--accent); color: #fff; }.cc-app .btn.primary:hover{ background: #2f74e8; }.cc-app .btn.ok{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color: #4ade80; }.cc-app .btn.ok:hover{ background: rgba(34,197,94,.2); }.cc-app .btn.danger{ background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.45); color: #f87171; }.cc-app .btn.danger:hover{ background: rgba(239,68,68,.18); }.cc-app .btn.llm{ background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.45); color: #c4b5fd; }.cc-app .btn.llm:hover{ background: rgba(167,139,250,.2); }.cc-app .btn.sm{ padding: 2px 9px; font-size: 11.5px; border-radius: 6px; }.cc-app .btn.xs{ padding: 1px 7px; font-size: 11px; border-radius: 5px; }.cc-app .btn.lg{ padding: 8px 18px; font-size: 13.5px; }.cc-app .btn.block{ width: 100%; justify-content: center; }.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }.cc-app .btn:disabled:active{ transform: none; }.cc-app .icon-btn{\n  position: relative; width: 28px; height: 28px; border-radius: 7px; display: inline-flex;\n  align-items: center; justify-content: center; background: transparent; border: none;\n  color: var(--text-2); cursor: pointer;\n}.cc-app .icon-btn:hover{ background: var(--panel-3); color: var(--text); }.cc-app .icon-btn.on{ color: var(--accent); background: var(--accent-dim); }.cc-app .btn-group{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }.cc-app .topbar{\n  height: var(--top-h); flex: none; display: flex; align-items: center; gap: 16px;\n  border-bottom: 1px solid var(--border); background: rgba(17,21,28,.75); backdrop-filter: blur(6px);\n  padding: 0 18px; position: sticky; top: 0; z-index: 20;\n}.cc-app .crumbs{ display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 12.5px; }.cc-app .crumb{ color: var(--text-2); cursor: pointer; padding: 3px 6px; border-radius: 5px; }.cc-app .crumb:hover{ background: var(--panel-2); color: var(--text); }.cc-app .crumb.here{ color: var(--text); font-weight: 600; cursor: default; }.cc-app .crumb.here:hover{ background: transparent; }.cc-app .crumb-sep{ color: var(--text-3); }.cc-app .top-search{\n  margin-left: auto; display: flex; align-items: center; gap: 8px; width: 330px; height: 29px;\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 8px; padding: 0 9px;\n  color: var(--text-3); cursor: pointer; font-size: 12px;\n}.cc-app .top-search:hover{ border-color: #33405a; color: var(--text-2); }.cc-app .ts-placeholder{ flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }.cc-app .top-right{ display: flex; align-items: center; gap: 10px; }.cc-app .ev-count{ font-size: 11px; color: var(--text-2); background: var(--panel-2); border: 1px solid var(--border-2); padding: 2px 9px; border-radius: 14px; }.cc-app .ev-count b{ color: var(--text); }.cc-app .panel{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); box-shadow: var(--shadow); }.cc-app .card-h{ display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--border); }.cc-app .card-h .h-title{ font-weight: 620; font-size: 13px; }.cc-app .card-h .h-sub{ color: var(--text-3); font-size: 11.5px; }.cc-app .card-h .h-right{ margin-left: auto; display: flex; gap: 8px; align-items: center; }.cc-app .card-b{ padding: 14px; }.cc-app .grid{ display: grid; gap: 14px; }.cc-app .cols-2{ grid-template-columns: 1fr 1fr; }.cc-app .cols-3{ grid-template-columns: repeat(3, 1fr); }.cc-app .muted{ color: var(--text-2); }.cc-app .faint{ color: var(--text-3); }.cc-app .small{ font-size: 11.5px; }.cc-app .sec-title{ font-size: 12px; font-weight: 650; color: var(--text-2); letter-spacing: .4px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }.cc-app .hr{ border: 0; border-top: 1px solid var(--border); margin: 10px 0; }.cc-app .tbl{ width: 100%; border-collapse: collapse; font-size: 12.5px; }.cc-app .tbl th{\n  text-align: left; font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .3px;\n  padding: 6px 12px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 2;\n  white-space: nowrap;\n}.cc-app .tbl td{ padding: 0 12px; height: 36px; border-bottom: 1px solid rgba(30,37,48,.6); vertical-align: middle; }.cc-app .tbl tr.row-click{ cursor: pointer; }.cc-app .tbl tbody tr.row-click:hover{ background: rgba(59,130,246,.06); }.cc-app .tbl tbody tr:hover{ background: rgba(255,255,255,.018); }.cc-app .tbl .num{ font-variant-numeric: tabular-nums; }.cc-app .tbl-mini{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .tbl-mini td{ padding: 5px 8px; border-bottom: 1px solid rgba(30,37,48,.55); }.cc-app .tabs{ display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }.cc-app .tab{\n  padding: 7px 14px; font-size: 12.5px; font-weight: 560; color: var(--text-2); cursor: pointer;\n  border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; user-select: none; white-space: nowrap;\n}.cc-app .tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .tab .t-badge{ font-size: 10px; background: var(--panel-3); border-radius: 8px; padding: 0 5px; margin-left: 4px; color: var(--text-2); }.cc-app .tab.active .t-badge{ background: var(--accent-dim); color: #9ec2ff; }.cc-app .empty{ text-align: center; padding: 42px 20px; color: var(--text-3); }.cc-app .empty .ic{ width: 34px; height: 34px; opacity: .4; margin-bottom: 10px; }.cc-app .empty .e-title{ color: var(--text-2); font-weight: 600; margin-bottom: 4px; }.cc-app .empty .e-act{ margin-top: 14px; }.cc-app .skel{ position: relative; overflow: hidden; background: var(--panel-2); border-radius: 5px; height: 14px; }.cc-app .skel::after{\n  content: \"\"; position: absolute; inset: 0; transform: translateX(-100%);\n  background: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent);\n  animation: cc-shimmer 1.2s infinite;\n}@keyframes cc-shimmer{ to { transform: translateX(100%); } }.cc-app .skel-row{ display: flex; align-items: center; gap: 10px; padding: 9px 12px; }.cc-app .diff{ font-family: var(--mono); font-size: 11.5px; line-height: 1.65; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; overflow-x: auto; }.cc-app .diff-line{ padding: 0 10px; white-space: pre; }.cc-app .diff-line.add{ background: rgba(34,197,94,.09); color: #86efac; }.cc-app .diff-line.del{ background: rgba(239,68,68,.09); color: #fca5a5; }.cc-app .diff-line.ctx{ color: var(--text-2); }.cc-app .diff-line .d-sign{ display: inline-block; width: 12px; color: var(--text-3); }.cc-app .toast-stack{ position: fixed; right: 18px; bottom: 60px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }.cc-app .toast{\n  min-width: 240px; max-width: 380px; background: var(--panel-2); border: 1px solid var(--border-2);\n  border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; box-shadow: var(--shadow);\n  animation: cc-toast-in .22s ease; font-size: 12.5px;\n}.cc-app .toast.ok{ border-left-color: var(--ok); }.cc-app .toast.warn{ border-left-color: var(--warn); }.cc-app .toast.err{ border-left-color: var(--danger); }.cc-app .toast .t-msg{ color: var(--text); }.cc-app .toast .t-sub{ color: var(--text-3); font-size: 11px; margin-top: 2px; }@keyframes cc-toast-in{ from { opacity: 0; transform: translateY(8px); } }.cc-app .overlay{ position: fixed; inset: 0; background: rgba(4,6,10,.62); backdrop-filter: blur(2px); z-index: 100; display: flex; align-items: flex-start; justify-content: center; }.cc-app .overlay[hidden]{ display: none; }.cc-app .modal{\n  margin-top: 12vh; width: min(720px, 92vw); max-height: 76vh; display: flex; flex-direction: column;\n  background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow);\n  animation: cc-modal-in .16s ease;\n}.cc-app .modal.wide{ width: min(900px, 94vw); }.cc-app .modal.narrow{ width: min(480px, 92vw); }@keyframes cc-modal-in{ from { opacity: 0; transform: translateY(-6px) scale(.985); } }.cc-app .modal-h{ display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 10px; }.cc-app .modal-h .m-title{ font-weight: 650; font-size: 14px; }.cc-app .modal-h .icon-btn{ margin-left: auto; }.cc-app .modal-b{ padding: 16px; overflow-y: auto; }.cc-app .modal-f{ padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }.cc-app .palette{ margin-top: 11vh; width: min(640px, 92vw); background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; animation: cc-modal-in .16s ease; }.cc-app .pal-input-row{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text-3); }.cc-app .pal-input-row input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; font-family: var(--sans); }.cc-app .pal-list{ max-height: 46vh; overflow-y: auto; padding: 6px; }.cc-app .pal-item{ display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 7px; cursor: pointer; color: var(--text-2); }.cc-app .pal-item .pi-label{ color: var(--text); }.cc-app .pal-item .pi-sub{ color: var(--text-3); font-size: 11px; margin-left: auto; font-family: var(--mono); }.cc-app .pal-item.sel{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .pal-item.sel .pi-label{ color: #fff; }.cc-app .pal-item.sel .pi-sub{ color: #9ec2ff; }.cc-app .pal-sec{ font-size: 10.5px; color: var(--text-3); padding: 8px 12px 2px; letter-spacing: .6px; }.cc-app .pal-foot{ display: flex; gap: 14px; padding: 9px 16px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 11px; }.cc-app .drawer-wrap{ position: fixed; inset: 0; z-index: 90; }.cc-app .drawer-mask{ position: absolute; inset: 0; background: rgba(4,6,10,.5); }.cc-app .drawer{\n  position: absolute; top: 0; right: 0; bottom: 0; width: min(680px, 86vw);\n  background: var(--panel); border-left: 1px solid var(--border-2); box-shadow: var(--shadow);\n  display: flex; flex-direction: column; animation: cc-drawer-in .2s ease;\n}@keyframes cc-drawer-in{ from { transform: translateX(30px); opacity: .6; } }.cc-app .drawer-h{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); }.cc-app .drawer-h .d-title{ font-weight: 650; }.cc-app .drawer-b{ flex: 1; overflow-y: auto; padding: 16px; }.cc-app .help-fab{\n  position: fixed; right: 16px; bottom: 16px; width: 32px; height: 32px; border-radius: 50%;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text-2);\n  font-size: 14px; font-weight: 700; cursor: pointer; z-index: 80; box-shadow: var(--shadow);\n}.cc-app .help-fab:hover{ color: var(--accent); border-color: var(--accent); }.cc-app .settings-cards{ display: grid; gap: 14px; max-width: 760px; }.cc-app .set-card{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }.cc-app .set-card-h{ padding: 12px 16px 4px; font-weight: 650; font-size: 13px; }.cc-app .set-card-sub{ padding: 0 16px 8px; color: var(--text-3); font-size: 11.5px; }.cc-app .set-row{ display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid rgba(30,37,48,.6); font-size: 12.5px; }.cc-app .set-row .sr-label{ color: var(--text-2); width: 150px; flex: none; }.cc-app .set-row .sr-val{ color: var(--text); flex: 1; min-width: 0; }.cc-app .set-row .sr-ctl{ margin-left: auto; flex: none; }.cc-app .switch{ position: relative; width: 34px; height: 19px; border-radius: 10px; background: var(--panel-3); border: 1px solid var(--border-2); cursor: pointer; flex: none; transition: background .15s; }.cc-app .switch::after{ content: \"\"; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-3); transition: all .15s; }.cc-app .switch.on{ background: var(--accent); border-color: var(--accent); }.cc-app .switch.on::after{ left: 16px; background: #fff; }.cc-app .kv{ display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 12px; }.cc-app .kv .k{ color: var(--text-3); white-space: nowrap; }.cc-app .kv .v{ color: var(--text); min-width: 0; }.cc-app .progress{ height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; }.cc-app .progress > i{ display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }.cc-app .bar-mini{ display: inline-block; width: 56px; height: 5px; border-radius: 3px; background: var(--panel-3); overflow: hidden; vertical-align: middle; margin-right: 6px; }.cc-app .bar-mini > i{ display: block; height: 100%; background: var(--ok); }.cc-app .bar-mini.mid > i{ background: var(--warn); }.cc-app .bar-mini.low > i{ background: var(--danger); }.cc-app .spin{ animation: cc-rot 1s linear infinite; display: inline-block; }@keyframes cc-rot{ to { transform: rotate(360deg); } }.cc-app .typing-caret::after{ content: \"▍\"; color: var(--llm); animation: cc-blink .9s steps(1) infinite; }@keyframes cc-blink{ 50% { opacity: 0; } }.cc-app .welcome{ max-width: 1180px; margin: 0 auto; padding-top: 4vh; }.cc-app .w-hello{ display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; }.cc-app .w-hello h1{ font-size: 26px; font-weight: 700; letter-spacing: .3px; }.cc-app .w-hello .w-date{ color: var(--text-3); font-size: 13px; }.cc-app .w-health-row{ display: flex; gap: 18px; align-items: stretch; margin-bottom: 30px; flex-wrap: wrap; }.cc-app .w-health{\n  flex: none; display: flex; align-items: center; gap: 18px; background: var(--panel);\n  border: 1px solid var(--border); border-radius: 14px; padding: 20px 26px; box-shadow: var(--shadow);\n  position: relative;\n}.cc-app .w-health-num{ font-size: 54px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }.cc-app .w-health-num .unit{ font-size: 20px; color: var(--text-3); font-weight: 500; }.cc-app .w-health.good{ color: #4ade80; }.cc-app .w-health.mid{ color: var(--warn); }.cc-app .w-health.bad{ color: var(--danger); }.cc-app .w-health-meta{ font-size: 12px; color: var(--text-2); line-height: 1.7; }.cc-app .w-health-meta b{ color: var(--text); }.cc-app .w-insync{ flex: 1; min-width: 260px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }.cc-app .w-insync-num{ font-size: 30px; font-weight: 700; }.cc-app .w-insync-bar{ display: flex; gap: 5px; }.cc-app .w-insync-cell{ flex: 1; height: 10px; border-radius: 4px; background: var(--panel-3); position: relative; }.cc-app .w-insync-cell.lit-ok{ background: var(--ok); }.cc-app .w-insync-cell.lit-warn{ background: var(--warn); }.cc-app .w-insync-cell.lit-acc{ background: var(--accent); }.cc-app .w-insync-cell.lit-esc{ background: var(--esc); }.cc-app .w-insync-cell .cell-tip{ position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-3); white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; }.cc-app .w-insync-cell:hover .cell-tip{ opacity: 1; }.cc-app .w-quick{ display: flex; gap: 10px; align-items: center; margin-left: auto; }.cc-app .w-stagebar{ margin-bottom: 30px; }.cc-app .w-stages{ display: flex; align-items: center; gap: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; overflow-x: auto; }.cc-app .w-stage{ flex: 1; min-width: 108px; position: relative; cursor: pointer; text-align: center; padding-top: 4px; }.cc-app .w-stage:hover .ws-name{ color: var(--accent); }.cc-app .w-stage::before{ content: \"\"; position: absolute; top: 16px; left: -50%; width: 100%; height: 2px; background: var(--border-2); }.cc-app .w-stage:first-child::before{ display: none; }.cc-app .w-stage.done::before{ background: var(--ok); }.cc-app .w-stage.current::before{ background: var(--accent); }.cc-app .w-stage-dot{\n  width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 8px; position: relative; z-index: 1;\n  background: var(--panel-3); border: 2px solid var(--border-2); color: var(--text-3);\n  font-size: 11px; font-weight: 700; line-height: 20px; text-align: center;\n}.cc-app .w-stage.done .w-stage-dot{ background: rgba(34,197,94,.15); border-color: var(--ok); color: #4ade80; }.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent); color: #7fb0f9; animation: cc-pulse 1.8s ease-out infinite; }.cc-app .w-stage.wait .w-stage-dot{ border-color: var(--warn); color: #fbbf24; }.cc-app .ws-name{ font-weight: 640; font-size: 12.5px; }.cc-app .ws-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; }.cc-app .ws-note{ font-size: 10.5px; color: var(--text-2); margin-top: 4px; max-width: 140px; margin-left: auto; margin-right: auto; }.cc-app .w-services{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }.cc-app .w-svc{\n  display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border);\n  border-radius: 10px; padding: 13px 16px; cursor: pointer; transition: border-color .12s;\n}.cc-app .w-svc:hover{ border-color: var(--border-2); background: var(--panel-2); }.cc-app .w-svc .ws-main{ min-width: 0; }.cc-app .w-svc .ws-title{ font-weight: 620; font-family: var(--mono); font-size: 12.5px; }.cc-app .w-svc .ws-desc{ color: var(--text-3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.cc-app .w-svc .ws-chip{ margin-left: auto; }.cc-app .w-ev-filter{ display: flex; gap: 8px; margin-bottom: 10px; }.cc-app .fchip{ padding: 3px 12px; border-radius: 16px; font-size: 12px; font-weight: 560; border: 1px solid var(--border-2); color: var(--text-2); cursor: pointer; background: var(--panel-2); }.cc-app .fchip:hover{ color: var(--text); }.cc-app .fchip.on{ border-color: var(--accent); color: #7fb0f9; background: rgba(59,130,246,.1); }.cc-app .fchip.on.crit{ border-color: var(--danger); color: #f87171; background: rgba(239,68,68,.09); }.cc-app .w-ev-item{ display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid rgba(30,37,48,.6); }.cc-app .w-ev-item:hover{ background: rgba(255,255,255,.02); }.cc-app .w-ev-dot{ width: 8px; height: 8px; border-radius: 50%; flex: none; }.cc-app .w-ev-title{ color: var(--text); }.cc-app .w-ev-obj{ margin-left: auto; }.cc-app .w-ev-time{ color: var(--text-3); font-size: 11px; width: 44px; text-align: right; }.cc-app .statbar{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }.cc-app .stat{\n  background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);\n  padding: 12px 16px; display: flex; flex-direction: column; gap: 2px;\n}.cc-app .stat .st-num{ font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }.cc-app .stat .st-num .dim{ color: var(--text-3); font-size: 14px; font-weight: 500; }.cc-app .stat .st-label{ font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }.cc-app .stat.alert .st-num{ color: var(--esc); }.cc-app .syscards{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }.cc-app .syscard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; cursor: pointer; transition: border-color .12s, transform .12s; }.cc-app .syscard:hover{ border-color: var(--border-2); transform: translateY(-1px); }.cc-app .syscard .sc-top{ display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }.cc-app .syscard .sc-name{ font-family: var(--mono); font-weight: 650; font-size: 13px; }.cc-app .syscard .sc-meta{ display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 11.5px; color: var(--text-2); margin-bottom: 10px; }.cc-app .syscard .sc-meta .k{ color: var(--text-3); }.cc-app .syscard .sc-foot{ display: flex; align-items: center; gap: 8px; border-top: 1px solid rgba(30,37,48,.6); padding-top: 9px; }.cc-app .mini-list{ display: flex; flex-direction: column; }.cc-app .mini-row{ display: flex; align-items: center; gap: 9px; padding: 8px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; font-size: 12.5px; }.cc-app .mini-row:hover{ background: rgba(59,130,246,.06); }.cc-app .mini-row:last-child{ border-bottom: none; }.cc-app .mini-row .mr-main{ min-width: 0; flex: 1; }.cc-app .mini-row .mr-sub{ color: var(--text-3); font-size: 11px; }.cc-app .tree-toolbar{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }.cc-app .tree-box{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .tree-node{ user-select: none; }.cc-app .tree-row{\n  display: flex; align-items: center; gap: 7px; padding: 0 10px; height: 34px; cursor: pointer;\n  border-bottom: 1px solid rgba(30,37,48,.45); font-size: 12.5px; position: relative;\n}.cc-app .tree-row:hover{ background: rgba(59,130,246,.05); }.cc-app .tree-row .t-caret{ width: 14px; color: var(--text-3); flex: none; transition: transform .12s; font-size: 10px; text-align: center; }.cc-app .tree-row .t-caret.open{ transform: rotate(90deg); }.cc-app .tree-row .t-name{ font-family: var(--mono); font-weight: 560; color: var(--text); }.cc-app .tree-row:hover .t-name{ color: var(--accent); }.cc-app .tree-row .t-kind{ margin-left: 2px; }.cc-app .tree-row .t-meta{ margin-left: auto; display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 11px; flex: none; }.cc-app .tree-row .t-rev{ font-family: var(--mono); }.cc-app .tree-children.skeletonizing{ opacity: .7; }.cc-app .tree-root-badge{ font-size: 10px; color: var(--llm); border: 1px solid rgba(167,139,250,.4); border-radius: 4px; padding: 0 5px; margin-left: 4px; }.cc-app .dh{ display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }.cc-app .dh-main{ min-width: 0; }.cc-app .dh-title{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .dh-title h1{ font-size: 18px; font-weight: 700; font-family: var(--mono); letter-spacing: .2px; }.cc-app .dh-sub{ color: var(--text-2); font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.cc-app .dh-actions{ margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .path-mono{ font-family: var(--mono); color: var(--text-2); background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; }.cc-app .filter-bar{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }.cc-app .filter-bar select, .cc-app .filter-bar input[type=\"text\"], .cc-app .filter-bar input[type=\"search\"]{\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; color: var(--text);\n  font-size: 12px; padding: 5px 9px; outline: none; font-family: var(--sans);\n}.cc-app .filter-bar select:focus, .cc-app .filter-bar input:focus{ border-color: var(--accent); }.cc-app .filter-bar select option{ background: var(--panel); }.cc-app .count-note{ color: var(--text-3); font-size: 11.5px; margin-left: auto; font-family: var(--mono); }.cc-app .vlist{ position: relative; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--rad); background: var(--panel); }.cc-app .vlist-canvas{ position: absolute; top: 0; left: 0; right: 0; }.cc-app .vrow{ display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; cursor: pointer; }.cc-app .vrow:hover{ background: rgba(59,130,246,.06); }.cc-app .vrow .vc{ flex: none; }.cc-app .vrow .grow{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.cc-app .jobs-layout{ display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 14px; align-items: start; }.cc-app .jobs-list{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; max-height: 72vh; display: flex; flex-direction: column; }.cc-app .jobs-list .jl-scroll{ overflow-y: auto; flex: 1; }.cc-app .job-item{ padding: 10px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; }.cc-app .job-item:hover{ background: rgba(255,255,255,.02); }.cc-app .job-item.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .job-item .ji-top{ display: flex; align-items: center; gap: 8px; }.cc-app .job-item .ji-no{ font-family: var(--mono); font-weight: 700; color: var(--text-2); }.cc-app .job-item.sel .ji-no{ color: #9ec2ff; }.cc-app .job-item .ji-sub{ color: var(--text-3); font-size: 11px; margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .job-detail{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }.cc-app .jd-head{ padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }.cc-app .jd-title{ font-weight: 700; font-size: 14px; }.cc-app .jd-kvrow{ display: flex; gap: 18px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2); }.cc-app .jd-kvrow b{ color: var(--text); font-weight: 600; }.cc-app .jd-body{ padding: 14px 16px; display: grid; gap: 16px; }.cc-app .follow-tag{ display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-family: var(--mono); }.cc-app .follow-tag.off{ color: var(--text-3); }.cc-app .logbox{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 11.5px; max-height: 320px; overflow-y: auto; }.cc-app .log-line{ padding: 4px 12px; border-bottom: 1px solid rgba(30,37,48,.4); display: flex; gap: 10px; }.cc-app .log-line:hover{ background: rgba(255,255,255,.02); }.cc-app .log-line .lg-op{ color: #7fb0f9; flex: none; min-width: 170px; }.cc-app .log-line .lg-ts{ color: var(--text-3); flex: none; }.cc-app .log-more{ display: block; width: 100%; text-align: center; padding: 8px; background: none; border: none; border-top: 1px solid var(--border); color: var(--accent); font-size: 11.5px; cursor: pointer; font-family: var(--mono); }.cc-app .log-more:hover{ background: var(--panel-2); }.cc-app .phase-tl{ display: flex; flex-direction: column; gap: 0; }.cc-app .ptl-item{ display: flex; gap: 12px; position: relative; padding-bottom: 16px; }.cc-app .ptl-item:last-child{ padding-bottom: 0; }.cc-app .ptl-rail{ width: 22px; flex: none; display: flex; flex-direction: column; align-items: center; }.cc-app .ptl-node{ width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-2); background: var(--panel-2); flex: none; z-index: 1; }.cc-app .ptl-item.done .ptl-node{ border-color: var(--ok); background: rgba(34,197,94,.15); }.cc-app .ptl-item.current .ptl-node{ border-color: var(--accent); background: rgba(59,130,246,.2); animation: cc-pulse 1.8s ease-out infinite; }.cc-app .ptl-item.fail .ptl-node{ border-color: var(--danger); background: rgba(239,68,68,.15); }.cc-app .ptl-item.wait .ptl-node{ border-color: var(--warn); background: rgba(245,158,11,.12); }.cc-app .ptl-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .ptl-item.done .ptl-line{ background: var(--ok); }.cc-app .ptl-main{ flex: 1; min-width: 0; padding-top: 0; }.cc-app .ptl-head{ display: flex; align-items: baseline; gap: 8px; }.cc-app .ptl-phase{ font-weight: 650; font-size: 12.5px; }.cc-app .ptl-ts{ color: var(--text-3); font-size: 11px; font-family: var(--mono); }.cc-app .ptl-note{ color: var(--text-2); font-size: 11.5px; margin-top: 2px; }.cc-app .flowwrap{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 22px; overflow-x: auto; }.cc-app .fnode{ cursor: pointer; }.cc-app .fnode rect{ fill: var(--panel-2); stroke: var(--border-2); stroke-width: 1.4; rx: 8; }.cc-app .fnode:hover rect{ stroke: var(--accent); }.cc-app .fnode.cur rect{ stroke: var(--accent); stroke-width: 2; fill: rgba(59,130,246,.1); }.cc-app .fnode.abn rect{ stroke: var(--danger); }.cc-app .fnode text{ fill: var(--text); font-size: 12px; font-family: var(--sans); }.cc-app .fnode .fsub{ fill: var(--text-3); font-size: 10px; }.cc-app .fedge{ stroke: var(--border-2); stroke-width: 1.6; fill: none; marker-end: url(#arrow); }.cc-app .fedge.hot{ stroke: var(--accent); }.cc-app .fedge.abn{ stroke: var(--danger); stroke-dasharray: 4 3; }.cc-app .topo-svg text{ fill: var(--text-2); font-size: 11px; font-family: var(--mono); }.cc-app .topo-node{ cursor: pointer; }.cc-app .topo-node rect{ fill: var(--panel-2); stroke: var(--border-2); rx: 7; }.cc-app .topo-node:hover rect{ stroke: var(--accent); }.cc-app .topo-edge{ stroke: #2b3646; stroke-width: 1.4; fill: none; cursor: pointer; }.cc-app .topo-edge:hover{ stroke: var(--accent); }.cc-app .metric-chart{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; }.cc-app .metric-chart text{ font-size: 9.5px; fill: var(--text-3); font-family: var(--mono); }.cc-app .doc-layout{ display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }.cc-app .doc-main{ min-width: 0; display: grid; gap: 12px; }.cc-app .doc-headbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .doc-path{ font-family: var(--mono); font-size: 13px; font-weight: 650; }.cc-app .doc-meta-row{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text-2); font-size: 12px; }.cc-app .doc-editor-wrap{ position: relative; }.cc-app textarea.doc-editor{\n  width: 100%; min-height: 480px; background: var(--bg); color: var(--text);\n  border: 1px solid var(--border-2); border-radius: var(--rad); padding: 14px 16px;\n  font: 12px/1.7 var(--mono); outline: none; resize: vertical; tab-size: 2;\n}.cc-app textarea.doc-editor:focus{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,.15); }.cc-app .doc-collab{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); position: sticky; top: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 90px); }.cc-app .collab-tabs{ display: flex; border-bottom: 1px solid var(--border); flex: none; }.cc-app .collab-tab{ flex: 1; text-align: center; padding: 9px 4px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .collab-tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .collab-tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .collab-tab .ct-badge{ font-size: 9.5px; background: var(--warn); color: #201200; border-radius: 8px; padding: 0 5px; margin-left: 3px; font-weight: 700; }.cc-app .collab-body{ flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; min-height: 0; }.cc-app .llm-msgs{ flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 120px; }.cc-app .llm-msg{ border-radius: 9px; padding: 9px 12px; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }.cc-app .llm-msg.user{ background: var(--accent-dim); align-self: flex-end; max-width: 90%; }.cc-app .llm-msg.agent{ background: var(--panel-2); border: 1px solid var(--border); border-left: 2px solid var(--llm); }.cc-app .llm-chips{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; flex: none; }.cc-app .llm-chip{ font-size: 11px; padding: 3px 10px; border-radius: 14px; border: 1px solid rgba(167,139,250,.4); color: #c4b5fd; background: rgba(167,139,250,.07); cursor: pointer; }.cc-app .llm-chip:hover{ background: rgba(167,139,250,.16); }.cc-app .llm-input-row{ display: flex; gap: 8px; margin-top: 10px; flex: none; }.cc-app .llm-input-row input{ flex: 1; background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; padding: 7px 10px; color: var(--text); font-size: 12.5px; outline: none; }.cc-app .llm-input-row input:focus{ border-color: var(--llm); }.cc-app .draft-card{ border: 1px solid rgba(167,139,250,.35); border-radius: 9px; margin-top: 8px; overflow: hidden; background: var(--bg); }.cc-app .draft-card .dc-head{ display: flex; align-items: center; gap: 8px; padding: 7px 11px; font-size: 11.5px; color: #c4b5fd; background: rgba(167,139,250,.07); }.cc-app .draft-card .dc-body{ padding: 8px; }.cc-app .draft-card .dc-acts{ display: flex; gap: 8px; padding: 8px; border-top: 1px solid var(--border); }.cc-app .draft-item{ border: 1px solid var(--border-2); border-radius: 9px; margin-bottom: 10px; overflow: hidden; }.cc-app .draft-item .di-head{ display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--panel-2); font-size: 12px; }.cc-app .draft-item .di-src{ font-size: 10px; border-radius: 4px; padding: 0 6px; font-weight: 700; }.cc-app .draft-item .di-src.llm{ background: rgba(167,139,250,.15); color: #c4b5fd; }.cc-app .draft-item .di-src.manual{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .draft-item .di-acts{ display: flex; gap: 8px; padding: 8px 11px; border-top: 1px solid var(--border); }.cc-app .apply-dock{ position: sticky; bottom: 0; padding: 12px; border-top: 1px solid var(--border); background: var(--panel); flex: none; }.cc-app .apply-dock .hint{ font-size: 11px; color: var(--text-3); margin-bottom: 8px; }.cc-app .rev-item{ display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; font-size: 12px; border-radius: 6px; }.cc-app .rev-item:hover{ background: var(--panel-2); }.cc-app .rev-item .rv-no{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; width: 34px; }.cc-app .rev-item .rv-author{ color: var(--text-2); }.cc-app .rev-item .rv-sum{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }.cc-app .checklist{ display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }.cc-app .check-item{ display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--text-2); padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; }.cc-app .check-item .ci-ic{ color: var(--text-3); }.cc-app .check-item.pass .ci-ic{ color: var(--ok); }.cc-app .check-item.pass{ color: var(--text); border-color: rgba(34,197,94,.3); }.cc-app .apply-progress{ margin: 14px 0 6px; }.cc-app .chat-layout{ display: grid; grid-template-columns: 240px 1fr 300px; height: calc(100vh - var(--top-h)); }.cc-app .chat-sub{ background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }.cc-app .cs-head{ padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }.cc-app .cs-agent{ display: flex; align-items: center; gap: 9px; }.cc-app .cs-agent .ca-name{ font-family: var(--mono); font-weight: 700; font-size: 13px; }.cc-app .cs-agent .ca-sub{ color: var(--text-3); font-size: 10.5px; }.cc-app .cs-filter{ display: flex; gap: 4px; }.cc-app .cs-filter .cf-tab{ flex: 1; text-align: center; font-size: 11px; padding: 3px 0; border-radius: 5px; color: var(--text-3); cursor: pointer; }.cc-app .cs-filter .cf-tab.on{ background: var(--panel-3); color: var(--text); }.cc-app .cs-search{ display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border-2); border-radius: 6px; padding: 4px 8px; color: var(--text-3); }.cc-app .cs-search input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 11.5px; min-width: 0; }.cc-app .cs-list{ flex: 1; overflow-y: auto; }.cc-app .sess-row{ padding: 9px 12px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; position: relative; }.cc-app .sess-row:hover{ background: var(--panel-2); }.cc-app .sess-row.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .sess-row.archived{ opacity: .55; }.cc-app .sess-row .ss-title{ font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 18px; }.cc-app .sess-row .ss-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; display: flex; gap: 7px; align-items: center; }.cc-app .sess-row .ss-pin{ position: absolute; top: 8px; right: 8px; color: var(--warn); }.cc-app .sess-row .ss-menu{ position: absolute; top: 6px; right: 6px; opacity: 0; }.cc-app .sess-row:hover .ss-menu{ opacity: 1; }.cc-app .runner-tag{ font-size: 9.5px; font-family: var(--mono); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; color: var(--text-2); }.cc-app .chat-main{ display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }.cc-app .chat-headbar{ display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); flex: none; background: var(--panel); }.cc-app .view-switch{ display: flex; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 7px; overflow: hidden; }.cc-app .view-switch .vs-opt{ padding: 4px 13px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }.cc-app .view-switch .vs-opt.on{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .chat-scroll{ flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }.cc-app .msg-row{ display: flex; gap: 10px; margin-bottom: 18px; }.cc-app .msg-avatar{ width: 26px; height: 26px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; }.cc-app .msg-avatar.user{ background: var(--panel-3); color: var(--text-2); }.cc-app .msg-avatar.agent{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .msg-body{ flex: 1; min-width: 0; }.cc-app .msg-who{ font-size: 11px; color: var(--text-3); margin-bottom: 3px; display: flex; gap: 8px; align-items: center; }.cc-app .msg-who .who-name{ font-weight: 650; color: var(--text-2); }.cc-app .msg-text{ white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.65; }.cc-app .msg-cards{ display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }.cc-app .mcard{ border: 1px solid var(--border-2); border-radius: 9px; background: var(--panel); overflow: hidden; max-width: 640px; }.cc-app .mcard .mc-head{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12px; color: var(--text-2); cursor: pointer; }.cc-app .mcard .mc-head:hover{ background: var(--panel-2); }.cc-app .mcard .mc-op{ font-family: var(--mono); color: #7fb0f9; font-weight: 650; }.cc-app .mcard .mc-title{ color: var(--text); font-weight: 600; }.cc-app .mcard .mc-body{ border-top: 1px solid var(--border); padding: 10px 12px; font-size: 12px; }.cc-app .mcard.op{ border-left: 3px solid var(--accent); }.cc-app .mcard.files{ border-left: 3px solid var(--warn); }.cc-app .mcard.proposal{ border-left: 3px solid var(--llm); }.cc-app .mcard.approval{ border-left: 3px solid var(--danger); }.cc-app .mcard.diag{ border-left: 3px solid var(--esc); }.cc-app .mcard .mc-status{ margin-left: auto; }.cc-app .file-row{ display: flex; align-items: center; gap: 10px; padding: 5px 4px; font-family: var(--mono); font-size: 11.5px; border-bottom: 1px solid rgba(30,37,48,.4); }.cc-app .file-row:last-child{ border-bottom: none; }.cc-app .file-row .fp{ color: var(--text); }.cc-app .file-row .fadd{ color: #4ade80; }.cc-app .file-row .fdel{ color: #f87171; }.cc-app .file-row .fst{ margin-left: auto; }.cc-app .diag-item{ display: flex; gap: 8px; padding: 4px 0; font-size: 12px; align-items: baseline; }.cc-app .diag-item .d-sev{ font-family: var(--mono); font-size: 10px; padding: 0 5px; border-radius: 4px; flex: none; }.cc-app .diag-item .d-sev.error{ background: rgba(239,68,68,.15); color: #f87171; }.cc-app .diag-item .d-sev.warning{ background: rgba(245,158,11,.15); color: #fbbf24; }.cc-app .turn-tail{ margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-2); display: flex; gap: 14px; font-size: 10.5px; color: var(--text-3); font-family: var(--mono); flex-wrap: wrap; }.cc-app .chat-inputbar{ border-top: 1px solid var(--border); padding: 12px 16px; flex: none; background: var(--panel); }.cc-app .chat-input-wrap{ display: flex; gap: 10px; align-items: flex-end; background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 9px 12px; }.cc-app .chat-input-wrap:focus-within{ border-color: var(--accent); }.cc-app .chat-input-wrap textarea{ flex: 1; background: none; border: none; outline: none; color: var(--text); font: 13px/1.5 var(--sans); resize: none; max-height: 120px; min-height: 22px; }.cc-app .chat-hints{ display: flex; gap: 12px; margin-top: 7px; font-size: 10.5px; color: var(--text-3); }.cc-app .traj-scroll{ flex: 1; overflow-y: auto; padding: 16px 22px; min-height: 0; }.cc-app .traj-item{ display: flex; gap: 12px; position: relative; padding-bottom: 14px; }.cc-app .traj-rail{ width: 20px; display: flex; flex-direction: column; align-items: center; flex: none; }.cc-app .traj-dot{ width: 12px; height: 12px; border-radius: 3px; border: 2px solid var(--border-2); background: var(--panel-2); z-index: 1; }.cc-app .traj-item.kind-tool .traj-dot{ border-color: var(--accent); }.cc-app .traj-item.kind-doc .traj-dot{ border-color: var(--llm); }.cc-app .traj-item.kind-user .traj-dot{ border-color: var(--text-2); }.cc-app .traj-item.kind-agent .traj-dot{ border-color: var(--ok); }.cc-app .traj-item.kind-files .traj-dot{ border-color: var(--warn); }.cc-app .traj-item.kind-diag .traj-dot{ border-color: var(--esc); }.cc-app .traj-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .traj-kind{ font-size: 10px; font-family: var(--mono); color: var(--text-3); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; }.cc-app .traj-label{ font-weight: 600; font-size: 12.5px; }.cc-app .traj-detail{ color: var(--text-2); font-size: 11.5px; }.cc-app .chat-ctx{ background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }.cc-app .ctx-sec{ border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }.cc-app .ctx-sec .cx-h{ padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: .5px; background: var(--panel-2); border-bottom: 1px solid var(--border); }.cc-app .ctx-sec .cx-b{ padding: 9px 12px; display: flex; flex-direction: column; gap: 7px; font-size: 12px; }.cc-app .ctx-row{ display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; flex-wrap: wrap; }.cc-app .ctx-row .cr-k{ color: var(--text-3); width: 78px; flex: none; }.cc-app .live-status{ display: flex; align-items: center; gap: 8px; font-size: 12px; }.cc-app .term-tabs{ display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }.cc-app .term-tab{ padding: 7px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .term-tab.active{ color: #4ade80; border-bottom-color: var(--ok); }.cc-app .term-wrap{ flex: 1; min-height: 0; padding: 14px 22px; display: flex; }.cc-app .term{\n  flex: 1; background: #060a0f; border: 1px solid #14202c; border-radius: 10px; overflow-y: auto;\n  font: 12px/1.6 var(--mono); color: #9fd8b8; padding: 14px 16px; cursor: text;\n}.cc-app .term .t-line{ white-space: pre-wrap; word-break: break-all; }.cc-app .term .t-cmd{ color: #7fb0f9; }.cc-app .term .t-dim{ color: #4d6076; }.cc-app .term .caret{ display: inline-block; width: 7px; height: 14px; background: #9fd8b8; vertical-align: -2px; animation: cc-blink .9s steps(1) infinite; }.cc-app .runner-cards{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.cc-app .runner-card{ border: 1px solid var(--border-2); border-radius: 10px; padding: 13px; cursor: pointer; background: var(--panel-2); }.cc-app .runner-card:hover{ border-color: #33405a; }.cc-app .runner-card.sel{ border-color: var(--accent); background: var(--accent-dim); }.cc-app .runner-card .rc-name{ font-weight: 700; font-size: 13px; margin-bottom: 3px; }.cc-app .runner-card .rc-desc{ font-size: 11px; color: var(--text-2); }.cc-app .runner-card.sel .rc-desc{ color: #9ec2ff; }.cc-app .conn-group{ margin-bottom: 22px; }.cc-app .conncards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .conncard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 13px 15px; cursor: pointer; transition: border-color .12s; }.cc-app .conncard:hover{ border-color: var(--border-2); }.cc-app .conncard .cc-top{ display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }.cc-app .conncard .cc-name{ font-family: var(--mono); font-weight: 650; font-size: 12.5px; }.cc-app .conncard .cc-desc{ font-size: 11px; color: var(--text-3); min-height: 30px; }.cc-app .op-cards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .op-card{ background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 12px 14px; }.cc-app .op-card .oc-name{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; font-size: 12.5px; }.cc-app .op-card .oc-desc{ font-size: 11px; color: var(--text-2); margin-top: 4px; }.cc-app .yaml-block{ background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font: 11.5px/1.7 var(--mono); overflow-x: auto; white-space: pre; color: #b6c2d9; }.cc-app .yaml-block .y-key{ color: #7fb0f9; }.cc-app .env-table{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .env-table th{ text-align: left; color: var(--text-3); font-size: 11px; padding: 6px 10px; border-bottom: 1px solid var(--border); }.cc-app .env-table td{ padding: 6px 10px; border-bottom: 1px solid rgba(30,37,48,.5); }.cc-app .env-table td.mono{ color: #7fb0f9; }.cc-app .ap-card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); margin-bottom: 14px; overflow: hidden; }.cc-app .ap-card.resolved{ opacity: .68; }.cc-app .ap-card .ap-head{ display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }.cc-app .ap-card .ap-title{ font-weight: 650; font-size: 13px; }.cc-app .ap-card .ap-meta{ display: flex; gap: 14px; padding: 9px 16px; color: var(--text-2); font-size: 11.5px; flex-wrap: wrap; }.cc-app .ap-card .ap-body{ padding: 0 16px 14px; }.cc-app .ap-card .ap-acts{ display: flex; gap: 8px; padding: 0 16px 14px; }.cc-app .keys-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }.cc-app .keys-row{ display: flex; align-items: center; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; }.cc-app .keys-row .kr-desc{ color: var(--text-2); }.cc-app .keys-row .kr-keys{ display: flex; gap: 3px; }@media (max-width: 1100px){.cc-app .doc-layout{ grid-template-columns: 1fr; }.cc-app .doc-collab{ position: static; max-height: none; }.cc-app .chat-layout{ grid-template-columns: 220px 1fr; }.cc-app .chat-ctx{ display: none; }.cc-app .jobs-layout{ grid-template-columns: 1fr; }.cc-app .statbar{ grid-template-columns: repeat(3, 1fr); }.cc-app .syscards, .cc-app .w-services{ grid-template-columns: 1fr 1fr; }.cc-app .conncards{ grid-template-columns: 1fr 1fr; }\n}\n\n/* E2 真数据屏补充（welcome 阶段条失败态 + 对象 viewer 正文块） */\n.cc-app .w-stage.bad::before{ background: var(--danger); }\n.cc-app .w-stage.bad .w-stage-dot{ background: rgba(239,68,68,.15); border-color: var(--danger); color: var(--danger); }\n.cc-app pre.mono{ font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace); color: var(--text-2); }\n/* E4 编辑器增量：确认弹窗三检查的失败态与行内判据注记（console-adoption.md §1.10） */\n.cc-app .check-item.fail .ci-ic{ color: var(--danger); }\n.cc-app .check-item.fail{ color: var(--text); border-color: rgba(239,68,68,.35); }\n.cc-app .check-item .ci-note{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }\n/* v0.52 能力 A：设计文档工作台（屏 6「设计文档」页签 + #/designdoc 深链——三栏=文件树/编辑器/协作） */\n.cc-app .dd-layout{ display: grid; grid-template-columns: 250px minmax(0,1fr) 340px; gap: 14px; align-items: start; }\n.cc-app .dd-tree{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); max-height: calc(100vh - 90px); overflow-y: auto; position: sticky; top: 12px; }\n.cc-app .dd-search{ padding: 8px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); }\n.cc-app .dd-search input{ width: 100%; background: var(--bg); border: 1px solid var(--border-2); border-radius: 6px; padding: 5px 8px; color: var(--text); font-size: 11.5px; outline: none; box-sizing: border-box; }\n.cc-app .dd-group{ padding-bottom: 6px; }\n.cc-app .dd-group-h{ display: flex; align-items: center; gap: 8px; padding: 7px 10px 3px; font-size: 11px; color: var(--text-3); letter-spacing: .4px; }\n.cc-app .dd-group-h .mono{ font-weight: 700; color: var(--text-2); font-size: 11.5px; }\n.cc-app .dd-file{ padding: 4px 10px 4px 14px; font-size: 11.5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }\n.cc-app .dd-file:hover{ background: rgba(59,130,246,.06); color: var(--text); }\n.cc-app .dd-file.sel{ background: var(--accent-dim); color: #dbe7ff; }\n.cc-app .dd-commit-row{ font-size: 11px; }\n.cc-app textarea.dd-editor{ min-height: 52vh; }\n@media (max-width: 1250px){ .cc-app .dd-layout{ grid-template-columns: 1fr; } .cc-app .dd-tree{ position: static; max-height: 40vh; } }\n/* v0.53 能力 D + R-UX-1/R-UX-2：对话式录入工作台（左 2/3 对话区 + 右 1/3 实时 scheme 驱动字段卡 + 预览确认区，对齐 console-ui.md §11/§12） */\n.cc-app .intake-wrap{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; }\n.cc-app .intake-head{ display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; }\n.cc-app .intake-grid{ display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(340px, 1fr); gap: 16px; align-items: start; }\n.cc-app .intake-chat-pane{ background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }\n.cc-app .intake-ctx-bar{ background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 11.5px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }\n.cc-app .intake-msg-list{ display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; padding: 4px 2px; }\n.cc-app .intake-msg{ padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.55; max-width: 72ch; white-space: pre-wrap; word-break: break-word; }\n.cc-app .intake-msg.assistant{ background: var(--panel); border: 1px solid var(--border-2); color: var(--text); align-self: flex-start; }\n.cc-app .intake-msg.user{ background: var(--accent-dim); border: 1px solid rgba(59,130,246,.4); color: #e6f0ff; align-self: flex-end; }\n.cc-app .intake-msg-role{ font-size: 11px; color: var(--text-3); margin-bottom: 4px; font-family: var(--mono); display: flex; align-items: center; gap: 6px; }\n.cc-app .intake-input-area{ display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }\n.cc-app .intake-act-row{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }\n.cc-app .intake-card-pane{ background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }\n.cc-app .intake-card-h{ display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 650; font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }\n.cc-app .intake-field-list{ display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow-y: auto; padding-right: 2px; }\n.cc-app .intake-field-row{ background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; transition: border-color .15s; }\n.cc-app .intake-field-row.asking{ border-color: var(--accent); box-shadow: 0 0 0 1px rgba(59,130,246,.25); }\n.cc-app .intake-field-row.field-row-error{ border-color: var(--danger); background: rgba(239,68,68,.06); }\n.cc-app .ifr-top{ display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12px; }\n.cc-app .ifr-label{ font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }\n.cc-app .ifr-status{ font-size: 11px; font-family: var(--mono); padding: 1px 7px; border-radius: 99px; }\n.cc-app .ifr-status.st-filled{ background: rgba(34,197,94,.16); color: var(--ok); }\n.cc-app .ifr-status.st-default{ background: rgba(59,130,246,.16); color: #93c5fd; }\n.cc-app .ifr-status.st-missing{ background: rgba(245,158,11,.15); color: var(--warn); }\n.cc-app .ifr-status.st-conflict{ background: rgba(239,68,68,.18); color: var(--danger); font-weight: 600; }\n.cc-app .field-err-msg{ font-size: 11.5px; color: var(--danger); margin-top: 2px; line-height: 1.4; }\n.cc-app .scheme-list-editor, .cc-app .scheme-map-editor{ display: flex; flex-direction: column; gap: 6px; }\n.cc-app .sle-row, .cc-app .sme-row{ display: flex; align-items: center; gap: 6px; }\n.cc-app .scheme-switch{ display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }\n.cc-app .intake-preview-pane{ margin-top: 16px; background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }\n@media (max-width: 1200px){ .cc-app .intake-grid{ grid-template-columns: 1fr; } }\n\n/* ===== §11 原生风格覆盖层（console-adoption.md §1.23）=====\n * 只作用域于 .cc-app；宿主侧栏由 entry.js 的 Slot/native CSS 负责。\n * token 缺席时保留原深色 fallback，宿主提供 token 时自动继承深浅色。 */\n.cc-app{\n  --bg: var(--dsw-alias-bg-base, #0b0e14);\n  --panel: var(--dsw-alias-card-fill, var(--dsw-alias-bg-layer-1, #11151c));\n  --panel-2: var(--dsw-alias-bg-layer-2, #161b24);\n  --panel-3: var(--dsw-alias-bg-layer-3, #1a2029);\n  --border: var(--dsw-alias-border-l2, #1e2530);\n  --border-2: var(--dsw-alias-border-l3, #273041);\n  --text: var(--dsw-alias-label-primary, #e6e9ef);\n  --text-2: var(--dsw-alias-label-secondary, #8b93a7);\n  --text-3: var(--dsw-alias-label-tertiary, #5b6378);\n  --accent: var(--dsw-alias-state-business, var(--dsw-alias-state-business-primary, #3b82f6));\n  --ok: var(--dsw-alias-state-success, var(--dsw-alias-state-success-primary, #22c55e));\n  --warn: var(--dsw-alias-state-warn, var(--dsw-alias-state-warn-primary, #f59e0b));\n  --danger: var(--dsw-alias-state-error, var(--dsw-alias-state-error-primary, #ef4444));\n  --esc: var(--danger);\n  --llm: var(--accent);\n  --accent-dim: color-mix(in srgb, var(--accent) 16%, transparent);\n  --ok-dim: color-mix(in srgb, var(--ok) 14%, transparent);\n  --warn-dim: color-mix(in srgb, var(--warn) 14%, transparent);\n  --danger-dim: color-mix(in srgb, var(--danger) 12%, transparent);\n  --on-color: var(--dsw-alias-label-on-color, #fff);\n  --sans: var(--dsw-font-family, system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif);\n  --mono: var(--ds-font-family-code, ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, monospace);\n  --radius-xs: var(--dsw-radius-xs, 4px);\n  --radius-sm: var(--dsw-radius-sm, 6px);\n  --radius-md: var(--dsw-radius-md, 8px);\n  --radius-lg: var(--dsw-radius-lg, 10px);\n  --radius-xl: var(--dsw-radius-xl, 12px);\n  --radius-full: var(--dsw-radius-full, 999px);\n  --rad: var(--dsw-radius-lg, 10px);\n  --shadow: none;\n  --space-1: 4px;\n  --space-2: 8px;\n  --space-3: 12px;\n  --space-4: 16px;\n  --space-6: 24px;\n}\n\n/* 壳与导航：内容区独占宿主主面板，旧第二列 nav 即使有残留 DOM 也不渲染。 */\n.cc-app .app{ display: block !important; height: 100% !important; }\n.cc-app .main{ display: flex !important; flex-direction: column; height: 100%; min-width: 0; }\n.cc-app :is(.sidebar, .side-logo, .side-nav, .side-foot, .side-rail, .side-collapse, .nav-item, .nav-sec, .nav-badge){\n  display: none !important;\n}\n.cc-app .view{ min-width: 0; padding: var(--space-6) !important; }\n.cc-app .view.nopad{ padding: 0 !important; }\n.cc-app .view-inner{ width: 100%; min-width: 0; }\n\n/* 字号阶梯只保留 11/13/15/20/28；通配规则同时压平旧类与行内 font-size。 */\n.cc-app{ font: 13px/1.55 var(--sans) !important; word-spacing: .25em; font-variant-numeric: tabular-nums; }\n.cc-app *{ font-size: 13px !important; }\n.cc-app h1{ font-size: 28px !important; }\n.cc-app h2{ font-size: 20px !important; }\n.cc-app h3{ font-size: 15px !important; }\n.cc-app .dh-title h1{ font-size: 20px !important; }\n.cc-app :is(.st-num, .w-health-num, .w-insync-num, .cm-value){ font-size: 28px !important; line-height: 1.1; }\n.cc-app .sec-title{ font-size: 15px !important; }\n.cc-app :is(.small, .tiny, caption, .cm-label, .cm-note, .cm-unit, .st-label, .ws-sub, .ws-note, .h-sub,\n  .logo-sub, .nav-sec, .side-conn, .avatar, .chip, .chip.lg, .tag, .kbd, .badge-dot, .draft-dot,\n  .crumbs, .crumb, .top-search, .ev-count, .tbl th, .tbl-mini, .tab, .path-mono, .count-note,\n  .sc-meta, .sc-foot, .mini-row .mr-sub, .tree-row .t-meta, .ji-sub, .cx-h, .cr-k, .ss-sub,\n  .w-ev-obj, .w-ev-time, .refresh-state, .svc-projects, .cc-conn-header, .host-sessions summary,\n  .intake-ctx-bar, .intake-msg-role, .ifr-status, .field-err-msg, .set-card-sub, .set-row,\n  .conncard .cc-desc, .op-card .oc-desc, .runner-card .rc-desc, .pal-sec, .pal-foot, .pal-item .pi-sub){\n  font-size: 11px !important;\n}\n.cc-app :is(.btn, .btn.sm, .btn.xs, .btn.lg, input, textarea, select, .tbl, .vrow, .card-h .h-title,\n  .dh-sub, .ws-name, .sc-name, .tree-row, .w-ev-title, .cc-prose, .cc-disclosure summary,\n  .intake-msg, .ifr-top, .ifr-label, .scheme-switch, .m-title, .pal-input-row input){\n  font-size: 13px !important;\n}\n.cc-app :is(.cc-prose, .intake-msg, .dh-sub, .empty, .modal-b > :not(pre):not(.diff):not(textarea)){\n  max-width: 72ch;\n}\n.cc-app :is(.mono, .num, .cm-value, .st-num, .w-health-num, .ev-count, .refresh-state, .svc-projects, time, [data-count]){\n  font-variant-numeric: tabular-nums !important;\n}\n\n/* 4 基数间距与原生控件密度。 */\n.cc-app :is(.grid, .cols-2, .cols-3){ display: grid; gap: var(--space-4) !important; }\n.cc-app :is(.statbar, .syscards, .w-services, .conncards, .op-cards, .runner-cards, .cc-metrics){\n  display: grid; gap: var(--space-3) !important;\n}\n.cc-app :is(.btn-group, .filter-bar, .tabs, .w-ev-filter, .tree-toolbar, .top-right){ gap: var(--space-2) !important; }\n.cc-app .topbar{ height: auto !important; min-height: 48px; padding: 0 var(--space-4) !important; gap: var(--space-3); }\n.cc-app :is(.card-h, .modal-h, .modal-f, .drawer-h){ padding: var(--space-3) var(--space-4) !important; }\n.cc-app .card-b{ padding: var(--space-4) !important; }\n.cc-app :is(.intake-wrap, .intake-chat-pane, .intake-card-pane, .intake-preview-pane, .intake-field-row){\n  padding: var(--space-4) !important;\n}\n.cc-app :is(.intake-head, .intake-input-area){ padding-top: var(--space-3) !important; padding-bottom: var(--space-3) !important; }\n.cc-app :is(.intake-chat-pane, .intake-card-pane, .intake-field-list, .intake-act-row){ gap: var(--space-3) !important; }\n.cc-app :is(.stat, .syscard, .w-svc, .conncard, .runner-card, .set-card){ padding: var(--space-4) !important; }\n.cc-app .w-stages{ padding: var(--space-4) !important; }\n.cc-app .btn{\n  min-height: 32px; padding: var(--space-2) var(--space-3) !important; border-radius: var(--radius-md);\n  font-family: var(--sans); line-height: 1.2;\n}\n.cc-app .btn.sm, .cc-app .btn.xs{ min-height: 24px; padding: var(--space-1) var(--space-2) !important; }\n.cc-app .btn.lg{ min-height: 40px; padding: var(--space-3) var(--space-4) !important; }\n.cc-app .icon-btn{ width: 32px; height: 32px; padding: var(--space-2) !important; border-radius: var(--radius-md); }\n.cc-app :is(.chip, .fchip, .kbd, .tag, .ev-count){ padding: var(--space-1) var(--space-2) !important; }\n.cc-app .top-search{ width: min(330px, 32vw); height: 32px; padding: 0 var(--space-3) !important; }\n.cc-app :is(.statbar, .syscards, .w-services, .conn-group){ margin-bottom: var(--space-6) !important; }\n.cc-app :is(.tabs, .dh){ margin-bottom: var(--space-4) !important; }\n.cc-app :is(.sec-title, .filter-bar, .tree-toolbar, .w-ev-filter){ margin-bottom: var(--space-2) !important; }\n.cc-app .hr{ margin: var(--space-3) 0 !important; }\n.cc-app :is(.jobs-layout, .dd-layout, .chat-layout){ gap: var(--space-3) !important; }\n.cc-app .intake-wrap{ margin-bottom: var(--space-6) !important; }\n.cc-app .intake-msg{ padding: var(--space-3) var(--space-4) !important; }\n.cc-app :is(.intake-msg-list, .intake-field-list, .intake-field-row, .scheme-list-editor, .scheme-map-editor, .sle-row, .sme-row){\n  gap: var(--space-2) !important;\n}\n.cc-app .intake-field-list{ padding-right: 0 !important; }\n.cc-app .intake-msg-list{ padding: var(--space-1) !important; }\n.cc-app .empty{ padding: var(--space-6) var(--space-4) !important; }\n.cc-app .w-ev-dot{ margin-top: var(--space-1); }\n\n/* 统一卡片：10px 圆角、1px neutral border、无重阴影。 */\n.cc-app :is(.card, .panel, .stat, .syscard, .w-svc, .w-stages, .tree-box, .vlist, .jobs-list, .job-detail,\n  .doc-collab, .dd-tree, .intake-wrap, .intake-chat-pane, .intake-card-pane, .intake-field-row,\n  .intake-preview-pane, .conncard, .op-card, .runner-card, .set-card, .cc-metric, .cc-empty-inline,\n  .host-sessions, .sess-row){\n  background: var(--panel) !important;\n  border: 1px solid var(--border) !important;\n  border-radius: 10px !important;\n  box-shadow: none !important;\n}\n.cc-app .card{ padding: 0 !important; }\n\n/* 按钮三级：primary / secondary / ghost；语义动作只改颜色，不改层级。 */\n.cc-app .btn{\n  background: var(--panel-2) !important; border: 1px solid var(--border-2) !important; color: var(--text) !important;\n}\n.cc-app .btn:hover{ background: var(--panel-3) !important; border-color: var(--accent) !important; }\n.cc-app :is(.btn.primary, .btn[data-cc-primary=\"true\"]){\n  background: var(--accent) !important; border-color: var(--accent) !important; color: var(--on-color) !important;\n}\n.cc-app :is(.btn.primary, .btn[data-cc-primary=\"true\"]):hover{ filter: brightness(1.06); }\n.cc-app .btn.ghost{ background: transparent !important; border-color: transparent !important; color: var(--text-2) !important; }\n.cc-app .btn.ghost:hover{ background: var(--panel-2) !important; color: var(--text) !important; }\n.cc-app .btn.ok{ background: var(--ok-dim) !important; border-color: color-mix(in srgb, var(--ok) 45%, var(--border)) !important; color: var(--ok) !important; }\n.cc-app .btn.warn{ background: var(--warn-dim) !important; border-color: color-mix(in srgb, var(--warn) 45%, var(--border)) !important; color: var(--warn) !important; }\n.cc-app .btn.danger{ background: var(--danger-dim) !important; border-color: color-mix(in srgb, var(--danger) 45%, var(--border)) !important; color: var(--danger) !important; }\n.cc-app .btn.llm{ background: var(--accent-dim) !important; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)) !important; color: var(--accent) !important; }\n.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }\n\n/* 图标、焦点与基础表面全部继承宿主 token。 */\n.cc-app .ic{ width: 16px !important; height: 16px !important; flex: none; }\n.cc-app :is(a, button, [role=\"button\"], [tabindex], input, textarea, select, summary):focus-visible{\n  outline: 2px solid var(--accent) !important; outline-offset: 2px !important; box-shadow: none !important;\n}\n.cc-app :is(.topbar, .card, .panel, .stat, .syscard, .w-svc, .w-stages, .tree-box, .vlist, .jobs-list,\n  .job-detail, .doc-collab, .dd-tree, .intake-wrap, .intake-chat-pane, .intake-card-pane, .conncard,\n  .op-card, .runner-card, .set-card){\n  color: var(--text) !important;\n}\n.cc-app .topbar{ background: var(--panel) !important; border-bottom-color: var(--border) !important; backdrop-filter: none; }\n.cc-app :is(.doc-editor, .diff, .yaml-block, .term, .intake-ctx-bar, .path-mono, .top-search){\n  background: var(--bg) !important; border-color: var(--border-2) !important; color: var(--text) !important;\n}\n.cc-app :is(.doc-editor, .diff, .yaml-block, .term){ font-family: var(--mono) !important; }\n.cc-app .term .t-cmd{ color: var(--accent) !important; }\n.cc-app .term .t-dim{ color: var(--text-3) !important; }\n.cc-app .term .caret{ background: var(--accent) !important; }\n.cc-app .avatar{ background: var(--accent-dim) !important; color: var(--accent) !important; }\n.cc-app ::selection{ background: var(--accent-dim); }\n.cc-app ::-webkit-scrollbar-thumb{ background: var(--border-2); border-color: var(--bg); }\n\n/* 语义色：success / warn / danger / neutral；事件计数保持中性。 */\n.cc-app .chip{ background: var(--panel-2) !important; border-color: var(--border-2) !important; color: var(--text-2) !important; }\n.cc-app .chip.ok{ background: var(--ok-dim) !important; border-color: color-mix(in srgb, var(--ok) 40%, var(--border)) !important; color: var(--ok) !important; }\n.cc-app .chip.warn{ background: var(--warn-dim) !important; border-color: color-mix(in srgb, var(--warn) 40%, var(--border)) !important; color: var(--warn) !important; }\n.cc-app :is(.chip.danger, .chip.esc){ background: var(--danger-dim) !important; border-color: color-mix(in srgb, var(--danger) 40%, var(--border)) !important; color: var(--danger) !important; }\n.cc-app :is(.chip.acc, .chip.llm){ background: var(--accent-dim) !important; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)) !important; color: var(--accent) !important; }\n.cc-app :is(.chip.mute, .chip.kind, .tag){ background: var(--panel-2) !important; border-color: var(--border) !important; color: var(--text-3) !important; }\n.cc-app .lamp.ok{ background: var(--ok) !important; }\n.cc-app .lamp.warn{ background: var(--warn) !important; }\n.cc-app :is(.lamp.danger, .lamp.esc){ background: var(--danger) !important; }\n.cc-app .lamp.acc{ background: var(--accent) !important; }\n.cc-app .lamp.off{ background: var(--text-3) !important; }\n.cc-app :is(.badge-dot, .nav-badge){ background: var(--danger) !important; color: var(--on-color) !important; }\n.cc-app .draft-dot{ color: var(--warn) !important; }\n.cc-app :is(.ev-count, .ev-count b){\n  background: var(--panel-2) !important; border-color: var(--border) !important; color: var(--text-2) !important;\n}\n.cc-app :is(.refresh-state, .svc-projects, .svc-projects b, .cc-conn-header){\n  background: transparent !important; border-color: transparent !important; color: var(--text-2) !important;\n}\n.cc-app .ev-count b{ color: var(--text) !important; }\n.cc-app .stat.alert .st-num{ color: var(--danger) !important; }\n.cc-app .w-health.good{ color: var(--ok) !important; }\n.cc-app .w-health.mid{ color: var(--warn) !important; }\n.cc-app .w-health.bad{ color: var(--danger) !important; }\n.cc-app .w-insync-cell{ background: var(--panel-3) !important; }\n.cc-app .w-insync-cell.lit-ok{ background: var(--ok) !important; }\n.cc-app .w-insync-cell.lit-warn{ background: var(--warn) !important; }\n.cc-app :is(.w-insync-cell.lit-acc, .w-insync-cell.lit-esc){ background: var(--accent) !important; }\n.cc-app .w-stage.done .w-stage-dot{ background: var(--ok-dim) !important; border-color: var(--ok) !important; color: var(--ok) !important; }\n.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent) !important; color: var(--accent) !important; }\n.cc-app .w-stage.wait .w-stage-dot{ background: var(--panel-3) !important; border-color: var(--border-2) !important; color: var(--text-3) !important; }\n.cc-app .w-stage.bad .w-stage-dot{ background: var(--danger-dim) !important; border-color: var(--danger) !important; color: var(--danger) !important; }\n.cc-app .w-ev-dot{ background: var(--text-3) !important; }\n.cc-app .w-ev-dot.critical{ background: var(--danger) !important; }\n.cc-app .w-ev-dot.high{ background: var(--warn) !important; }\n.cc-app .w-ev-dot.info{ background: var(--accent) !important; }\n.cc-app .fchip{ background: var(--panel-2) !important; border-color: var(--border-2) !important; color: var(--text-2) !important; }\n.cc-app .fchip.on{ background: var(--accent-dim) !important; border-color: var(--accent) !important; color: var(--accent) !important; }\n.cc-app .toast{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }\n.cc-app .toast.ok{ border-left-color: var(--ok) !important; }\n.cc-app .toast.warn{ border-left-color: var(--warn) !important; }\n.cc-app .toast.err{ border-left-color: var(--danger) !important; }\n.cc-app .diff-line.add{ background: var(--ok-dim) !important; color: var(--ok) !important; }\n.cc-app .diff-line.del{ background: var(--danger-dim) !important; color: var(--danger) !important; }\n\n/* §11 C1：三张同基线指标卡。 */\n.cc-app .cc-metrics{ grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 var(--space-6); }\n.cc-app .cc-metric{\n  appearance: none; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2);\n  width: 100%; min-width: 0; min-height: 112px; padding: var(--space-4); text-align: left; cursor: pointer;\n  font-family: var(--sans); color: var(--text);\n}\n.cc-app .cc-metric:hover{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }\n.cc-app .cm-label{ color: var(--text-2); }\n.cc-app .cm-value{ display: block; color: var(--text); font-weight: 700; letter-spacing: -.02em; }\n.cc-app .cm-unit{ color: var(--text-3); font-weight: 500; }\n.cc-app .cm-note{ color: var(--text-2); line-height: 1.45; }\n.cc-app .cc-metric.success .cm-value{ color: var(--ok); }\n.cc-app .cc-metric.warn .cm-value{ color: var(--warn); }\n.cc-app .cc-metric.danger{ border-color: color-mix(in srgb, var(--danger) 45%, var(--border)) !important; }\n.cc-app .cc-metric.danger .cm-value{ color: var(--danger); }\n.cc-app .cc-metric.neutral .cm-value{ color: var(--text); }\n\n/* §11 C2/C3/C4：显式空态、待接入与有 run 才出现的阶段条。 */\n.cc-app .cc-empty-inline{\n  display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-6);\n  color: var(--text-2); line-height: 1.5;\n}\n.cc-app .cc-empty-inline .empty-icon{\n  display: grid; place-items: center; width: 32px; height: 32px; flex: none;\n  border-radius: var(--radius-md); background: var(--panel-2); color: var(--text-3);\n}\n.cc-app .cc-empty-inline b{ display: block; margin-bottom: var(--space-1); color: var(--text); font-size: 13px !important; }\n.cc-app .cc-empty-inline .btn{ margin-left: auto; }\n.cc-app .w-services{ grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }\n.cc-app .w-svc{\n  appearance: none; display: flex; align-items: center; gap: var(--space-3); width: 100%; min-width: 0;\n  text-align: left; cursor: pointer; color: var(--text);\n}\n.cc-app .w-svc:hover{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }\n.cc-app .w-svc[data-service-state=\"neutral\"] .lamp{ background: var(--text-3) !important; }\n.cc-app .w-svc[data-service-state=\"success\"] .lamp{ background: var(--ok) !important; }\n.cc-app .w-svc[data-service-state=\"warn\"] .lamp{ background: var(--warn) !important; }\n.cc-app .w-svc[data-service-state=\"danger\"] .lamp{ background: var(--danger) !important; }\n.cc-app .w-stagebar{ margin-bottom: var(--space-6); }\n.cc-app .w-stages{ display: flex; gap: var(--space-2); }\n.cc-app .w-stage{\n  appearance: none; min-width: 0; padding: var(--space-2); border: 0; background: transparent !important;\n  color: var(--text); cursor: pointer;\n}\n.cc-app .w-stage-dot{ width: 32px; height: 32px; line-height: 1; }\n.cc-app .w-stage-dot .ic{ width: 16px !important; height: 16px !important; }\n\n/* §11 C5/C6：事件两行制、对象链右截断、相对时间与计数 chip。 */\n.cc-app .cc-event-list{ padding: var(--space-4) !important; }\n.cc-app .w-ev-item{\n  appearance: none; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: start; gap: var(--space-3);\n  width: 100%; padding: var(--space-3) 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0;\n  background: transparent !important; color: var(--text); text-align: left; font-family: var(--sans);\n}\n.cc-app .w-ev-item:last-child{ border-bottom: 0; }\n.cc-app .w-ev-item:hover{ background: var(--panel-2) !important; }\n.cc-app .w-ev-dot{ width: 8px; height: 8px; margin-top: var(--space-1); }\n.cc-app .w-ev-main{ display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }\n.cc-app .w-ev-title{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cc-app .w-ev-obj{ min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }\n.cc-app .w-ev-time{ color: var(--text-3); white-space: nowrap; }\n.cc-app .w-ev-filter{ margin-bottom: var(--space-3); }\n\n/* §11 B8/D6：展开说明、Workspace/连接/刷新状态与窄屏菜单。 */\n.cc-app .cc-disclosure{ margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }\n.cc-app .cc-disclosure summary{ width: fit-content; padding: var(--space-1) 0; color: var(--text-2); cursor: pointer; }\n.cc-app .cc-disclosure summary::marker{ color: var(--accent); }\n.cc-app .cc-prose{ padding: var(--space-3) 0; color: var(--text-2); line-height: 1.7; white-space: normal; }\n.cc-app .svc-projects, .cc-app .refresh-state{\n  display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; white-space: nowrap;\n  font-family: var(--mono); color: var(--text-3);\n}\n.cc-app .refresh-state[data-pending=\"true\"]{ color: var(--warn) !important; }\n.cc-app .cc-conn-header{ display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }\n.cc-app .cc-narrow-menu{ display: none; flex: none; }\n.cc-app .host-sessions{ margin-top: var(--space-3); padding: var(--space-3); }\n.cc-app .host-sessions summary{ color: var(--text-2); cursor: pointer; }\n.cc-app .host-session-list{ display: flex; flex-direction: column; gap: var(--space-2); max-height: 240px; overflow-y: auto; margin-top: var(--space-2); }\n.cc-app .host-sessions .sess-row{ padding: var(--space-2) var(--space-3); background: var(--panel-2) !important; }\n.cc-app .host-sessions .sess-row.sel{ border-color: var(--accent) !important; background: var(--accent-dim) !important; }\n\n/* <1200：宿主侧栏收起后不挤压内容；指标卡自适应。 */\n@media (max-width: 1199px){\n  .cc-app .top-search{ display: none !important; }\n  .cc-app .cc-metrics{ grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }\n  .cc-app .topbar{ padding: 0 var(--space-3) !important; gap: var(--space-2) !important; }\n  .cc-app .top-right{ min-width: 0; gap: var(--space-2) !important; }\n  .cc-app .refresh-state{ max-width: 132px; overflow: hidden; text-overflow: ellipsis; }\n  .cc-app .cc-narrow-menu{ display: inline-flex !important; }\n}\n\n/* <900：双栏/三栏改单栏，长内容可换行而不是横向挤压。 */\n@media (max-width: 899px){\n  .cc-app .view{ padding: var(--space-4) !important; }\n  .cc-app :is(.grid, .cols-2, .cols-3, .jobs-layout, .dd-layout, .chat-layout, .intake-grid){\n    grid-template-columns: minmax(0, 1fr) !important;\n  }\n  .cc-app .chat-layout{ display: block !important; }\n  .cc-app :is(.chat-sub, .chat-main, .chat-ctx){ margin-bottom: var(--space-3); }\n  .cc-app .cc-metrics{ grid-template-columns: 1fr !important; }\n  .cc-app :is(.svc-projects, .ev-count){ display: none !important; }\n  .cc-app .topbar{ flex-wrap: wrap; padding: var(--space-2) var(--space-3) !important; }\n  .cc-app .crumbs{ flex: 1; min-width: 0; }\n  .cc-app .w-stages{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }\n  .cc-app .w-stage::before{ display: none; }\n  .cc-app .cc-empty-inline{ align-items: flex-start; flex-wrap: wrap; }\n  .cc-app .cc-empty-inline .btn{ margin-left: 0; }\n}\n/* ── v0.56 R-10：待你处理收件箱（screenInbox——console-adoption.md §1.25 页面兜底） ── */\n.cc-app .cc-inbox-list{ display:flex; flex-direction:column; }\n.cc-app .ib-item{ display:flex; align-items:center; gap:12px; padding:10px 8px; border:0; border-bottom:1px solid var(--border-1); background:transparent; color:var(--text-2); cursor:pointer; text-align:left; width:100%; }\n.cc-app .ib-item:hover{ background:var(--panel-2); }\n.cc-app .ib-item:last-child{ border-bottom:0; }\n.cc-app .ib-main{ display:flex; flex-direction:column; gap:2px; min-width:0; }\n.cc-app .ib-digest{ color:var(--text); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\n.cc-app .ib-link{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\n.cc-app .ib-at{ margin-left:auto; flex:none; color:var(--text-3); }\n";
+var CC_CSS = "/* console-proto app.css 作用域化（构建手术 v3，loop-36）：全部规则选择器收进 .cc-app 容器（不污染 dsh 宿主）；:root/body→.cc-app；keyframes 与 animation 引用加 cc- 前缀；.cc-app.app 高度=100%（宿主面板内非视口）；原文注释已剥离（手术脚本管辖） */\n.cc-app{\n  --bg: #0b0e14;\n  --panel: #11151c;\n  --panel-2: #161b24;\n  --panel-3: #1a2029;\n  --border: #1e2530;\n  --border-2: #273041;\n  --text: #e6e9ef;\n  --text-2: #8b93a7;\n  --text-3: #5b6378;\n  --accent: #3b82f6;\n  --accent-dim: #1d3a68;\n  --ok: #22c55e;\n  --warn: #f59e0b;\n  --danger: #ef4444;\n  --esc: #fb7185;\n  --llm: #a78bfa;\n  --mono: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, monospace;\n  --sans: system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;\n  --rad: 8px;\n  --shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25);\n  --side-w: 240px;\n  --top-h: 46px;\n}.cc-app, .cc-app *{ box-sizing: border-box; margin: 0; padding: 0; }.cc-app, .cc-app{ height: 100%; }.cc-app{\n  background: var(--bg); color: var(--text);\n  font: 13px/1.55 var(--sans);\n  -webkit-font-smoothing: antialiased;\n  overflow: hidden;\n}.cc-app .mono{ font-family: var(--mono); }.cc-app .ic{ width: 15px; height: 15px; flex: none; vertical-align: -2px; }.cc-app a, .cc-app .lk{ color: var(--accent); text-decoration: none; cursor: pointer; }.cc-app .lk:hover, .cc-app a:hover{ text-decoration: underline; }.cc-app ::selection{ background: rgba(59,130,246,.32); }.cc-app ::-webkit-scrollbar{ width: 10px; height: 10px; }.cc-app ::-webkit-scrollbar-thumb{ background: #232b3a; border-radius: 6px; border: 2px solid var(--bg); }.cc-app ::-webkit-scrollbar-thumb:hover{ background: #2e3a4e; }.cc-app ::-webkit-scrollbar-corner, .cc-app ::-webkit-scrollbar-track{ background: transparent; }.cc-app .app{ display: flex; height: 100vh; }.cc-app .sidebar{\n  width: var(--side-w); flex: none; background: var(--panel);\n  border-right: 1px solid var(--border);\n  display: flex; flex-direction: column;\n  transition: margin-left .18s ease;\n  z-index: 30;\n}.cc-app .app.side-collapsed .sidebar{ margin-left: calc(var(--side-w) * -1); }.cc-app .side-rail{\n  display: none; position: fixed; left: 0; top: 8px; z-index: 40;\n  width: 26px; height: 26px; border-radius: 6px; background: var(--panel-2);\n  border: 1px solid var(--border-2); color: var(--accent);\n  font-size: 13px; text-align: center; line-height: 24px; cursor: pointer;\n}.cc-app .app.side-collapsed .side-rail{ display: block; }.cc-app .main{ flex: 1; min-width: 0; display: flex; flex-direction: column; }.cc-app .view{ flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 18px 22px 60px; position: relative; }.cc-app .view.nopad{ padding: 0; }.cc-app .view-inner{ max-width: 1460px; margin: 0 auto; }.cc-app .side-logo{ display: flex; align-items: center; gap: 9px; padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }.cc-app .logo-mark{ width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #1d3a68, #3b82f6); color: #dbe7ff; font-size: 13px; text-align: center; line-height: 28px; flex: none; }.cc-app .logo-name{ font-weight: 650; letter-spacing: .2px; font-size: 13.5px; }.cc-app .logo-sub{ font-size: 10.5px; color: var(--text-3); font-family: var(--mono); }.cc-app .side-collapse{ margin-left: auto; }.cc-app .side-nav{ flex: 1; overflow-y: auto; padding: 10px 8px; }.cc-app .nav-item{\n  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px;\n  color: var(--text-2); cursor: pointer; margin-bottom: 2px; user-select: none;\n  font-size: 13px; border: 1px solid transparent;\n}.cc-app .nav-item:hover{ background: var(--panel-2); color: var(--text); }.cc-app .nav-item.active{ background: var(--accent-dim); color: #dbe7ff; border-color: rgba(59,130,246,.35); }.cc-app .nav-item .ic{ opacity: .9; }.cc-app .nav-item .nav-badge{\n  margin-left: auto; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger);\n  color: #fff; font-size: 10.5px; font-weight: 600; text-align: center; line-height: 18px; padding: 0 5px;\n}.cc-app .nav-sec{ font-size: 10.5px; color: var(--text-3); letter-spacing: .8px; padding: 12px 10px 4px; text-transform: uppercase; }.cc-app .side-foot{ border-top: 1px solid var(--border); padding: 10px 14px 12px; display: grid; gap: 6px; }.cc-app .side-user{ display: flex; align-items: center; gap: 8px; color: var(--text); }.cc-app .avatar{ width: 22px; height: 22px; border-radius: 50%; background: var(--accent-dim); color: #9ec2ff; font-size: 11px; text-align: center; line-height: 22px; flex: none; }.cc-app .side-conn{ display: flex; align-items: center; gap: 7px; color: var(--text-3); font-size: 11px; }.cc-app .lamp{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }.cc-app .lamp.ok{ background: var(--ok); }.cc-app .lamp.warn{ background: var(--warn); }.cc-app .lamp.danger{ background: var(--danger); }.cc-app .lamp.esc{ background: var(--esc); }.cc-app .lamp.acc{ background: var(--accent); }.cc-app .lamp.off{ background: var(--text-3); }.cc-app .pulse-dot{ animation: cc-pulse 1.8s ease-out infinite; }@keyframes cc-pulse{\n  0% { box-shadow: 0 0 0 0 rgba(59,130,246,.45); }\n  70% { box-shadow: 0 0 0 7px rgba(59,130,246,0); }\n  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }\n}.cc-app .lamp.pulse-ok{ animation: cc-pulse-ok 1.8s ease-out infinite; }@keyframes cc-pulse-ok{ 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }.cc-app .lamp.pulse-warn{ animation: cc-pulse-warn 1.6s ease-out infinite; }@keyframes cc-pulse-warn{ 0% { box-shadow: 0 0 0 0 rgba(245,158,11,.5); } 70% { box-shadow: 0 0 0 7px rgba(245,158,11,0); } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } }.cc-app .lamp.pulse-danger{ animation: cc-pulse-danger 1.5s ease-out infinite; }@keyframes cc-pulse-danger{ 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.5); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }.cc-app .chip{\n  display: inline-flex; align-items: center; gap: 6px; padding: 1px 9px; border-radius: 20px;\n  font-size: 11.5px; font-weight: 550; border: 1px solid var(--border-2); color: var(--text-2);\n  background: var(--panel-2); white-space: nowrap; line-height: 20px;\n}.cc-app .chip.lg{ font-size: 12.5px; padding: 3px 12px; line-height: 22px; }.cc-app .chip.ok{ color: #4ade80; border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.09); }.cc-app .chip.warn{ color: #fbbf24; border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.09); }.cc-app .chip.danger{ color: #f87171; border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.09); }.cc-app .chip.esc{ color: var(--esc); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.09); }.cc-app .chip.acc{ color: #7fb0f9; border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.09); }.cc-app .chip.llm{ color: #c4b5fd; border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.09); }.cc-app .chip.mute{ color: var(--text-3); }.cc-app .chip.kind{ font-family: var(--mono); font-size: 10.5px; color: #9db2d0; background: #182130; border-color: var(--border-2); }.cc-app .chip.click{ cursor: pointer; }.cc-app .chip.click:hover{ border-color: var(--accent); color: var(--text); }.cc-app .tag{\n  display: inline-block; font-size: 10.5px; font-family: var(--mono); padding: 0 7px; line-height: 18px;\n  border-radius: 5px; background: #17202e; color: #8fa3c2; border: 1px solid var(--border);\n}.cc-app .badge-dot{ position: absolute; top: -2px; right: -3px; min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; padding: 0 4px; }.cc-app .badge-dot.hidden{ display: none; }.cc-app .draft-dot{ color: var(--warn); font-size: 15px; line-height: 1; margin-left: 4px; }.cc-app .kbd{\n  display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--text-2);\n  background: var(--panel-3); border: 1px solid var(--border-2); border-bottom-width: 2px;\n  border-radius: 5px; padding: 0 5px; line-height: 16px; margin: 0 1px;\n}.cc-app .btn{\n  display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 7px;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text);\n  font-size: 12.5px; font-weight: 550; cursor: pointer; user-select: none; white-space: nowrap;\n}.cc-app .btn:hover{ background: var(--panel-3); border-color: #33405a; }.cc-app .btn:active{ transform: translateY(1px); }.cc-app .btn.primary{ background: var(--accent); border-color: var(--accent); color: #fff; }.cc-app .btn.primary:hover{ background: #2f74e8; }.cc-app .btn.ok{ background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.45); color: #4ade80; }.cc-app .btn.ok:hover{ background: rgba(34,197,94,.2); }.cc-app .btn.danger{ background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.45); color: #f87171; }.cc-app .btn.danger:hover{ background: rgba(239,68,68,.18); }.cc-app .btn.llm{ background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.45); color: #c4b5fd; }.cc-app .btn.llm:hover{ background: rgba(167,139,250,.2); }.cc-app .btn.sm{ padding: 2px 9px; font-size: 11.5px; border-radius: 6px; }.cc-app .btn.xs{ padding: 1px 7px; font-size: 11px; border-radius: 5px; }.cc-app .btn.lg{ padding: 8px 18px; font-size: 13.5px; }.cc-app .btn.block{ width: 100%; justify-content: center; }.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }.cc-app .btn:disabled:active{ transform: none; }.cc-app .icon-btn{\n  position: relative; width: 28px; height: 28px; border-radius: 7px; display: inline-flex;\n  align-items: center; justify-content: center; background: transparent; border: none;\n  color: var(--text-2); cursor: pointer;\n}.cc-app .icon-btn:hover{ background: var(--panel-3); color: var(--text); }.cc-app .icon-btn.on{ color: var(--accent); background: var(--accent-dim); }.cc-app .btn-group{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }.cc-app .topbar{\n  height: var(--top-h); flex: none; display: flex; align-items: center; gap: 16px;\n  border-bottom: 1px solid var(--border); background: rgba(17,21,28,.75); backdrop-filter: blur(6px);\n  padding: 0 18px; position: sticky; top: 0; z-index: 20;\n}.cc-app .crumbs{ display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 12.5px; }.cc-app .crumb{ color: var(--text-2); cursor: pointer; padding: 3px 6px; border-radius: 5px; }.cc-app .crumb:hover{ background: var(--panel-2); color: var(--text); }.cc-app .crumb.here{ color: var(--text); font-weight: 600; cursor: default; }.cc-app .crumb.here:hover{ background: transparent; }.cc-app .crumb-sep{ color: var(--text-3); }.cc-app .top-search{\n  margin-left: auto; display: flex; align-items: center; gap: 8px; width: 330px; height: 29px;\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 8px; padding: 0 9px;\n  color: var(--text-3); cursor: pointer; font-size: 12px;\n}.cc-app .top-search:hover{ border-color: #33405a; color: var(--text-2); }.cc-app .ts-placeholder{ flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }.cc-app .top-right{ display: flex; align-items: center; gap: 10px; }.cc-app .ev-count{ font-size: 11px; color: var(--text-2); background: var(--panel-2); border: 1px solid var(--border-2); padding: 2px 9px; border-radius: 14px; }.cc-app .ev-count b{ color: var(--text); }.cc-app .panel{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); box-shadow: var(--shadow); }.cc-app .card-h{ display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--border); }.cc-app .card-h .h-title{ font-weight: 620; font-size: 13px; }.cc-app .card-h .h-sub{ color: var(--text-3); font-size: 11.5px; }.cc-app .card-h .h-right{ margin-left: auto; display: flex; gap: 8px; align-items: center; }.cc-app .card-b{ padding: 14px; }.cc-app .grid{ display: grid; gap: 14px; }.cc-app .cols-2{ grid-template-columns: 1fr 1fr; }.cc-app .cols-3{ grid-template-columns: repeat(3, 1fr); }.cc-app .muted{ color: var(--text-2); }.cc-app .faint{ color: var(--text-3); }.cc-app .small{ font-size: 11.5px; }.cc-app .sec-title{ font-size: 12px; font-weight: 650; color: var(--text-2); letter-spacing: .4px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }.cc-app .hr{ border: 0; border-top: 1px solid var(--border); margin: 10px 0; }.cc-app .tbl{ width: 100%; border-collapse: collapse; font-size: 12.5px; }.cc-app .tbl th{\n  text-align: left; font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .3px;\n  padding: 6px 12px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 2;\n  white-space: nowrap;\n}.cc-app .tbl td{ padding: 0 12px; height: 36px; border-bottom: 1px solid rgba(30,37,48,.6); vertical-align: middle; }.cc-app .tbl tr.row-click{ cursor: pointer; }.cc-app .tbl tbody tr.row-click:hover{ background: rgba(59,130,246,.06); }.cc-app .tbl tbody tr:hover{ background: rgba(255,255,255,.018); }.cc-app .tbl .num{ font-variant-numeric: tabular-nums; }.cc-app .tbl-mini{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .tbl-mini td{ padding: 5px 8px; border-bottom: 1px solid rgba(30,37,48,.55); }.cc-app .tabs{ display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }.cc-app .tab{\n  padding: 7px 14px; font-size: 12.5px; font-weight: 560; color: var(--text-2); cursor: pointer;\n  border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; user-select: none; white-space: nowrap;\n}.cc-app .tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .tab .t-badge{ font-size: 10px; background: var(--panel-3); border-radius: 8px; padding: 0 5px; margin-left: 4px; color: var(--text-2); }.cc-app .tab.active .t-badge{ background: var(--accent-dim); color: #9ec2ff; }.cc-app .empty{ text-align: center; padding: 42px 20px; color: var(--text-3); }.cc-app .empty .ic{ width: 34px; height: 34px; opacity: .4; margin-bottom: 10px; }.cc-app .empty .e-title{ color: var(--text-2); font-weight: 600; margin-bottom: 4px; }.cc-app .empty .e-act{ margin-top: 14px; }.cc-app .skel{ position: relative; overflow: hidden; background: var(--panel-2); border-radius: 5px; height: 14px; }.cc-app .skel::after{\n  content: \"\"; position: absolute; inset: 0; transform: translateX(-100%);\n  background: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent);\n  animation: cc-shimmer 1.2s infinite;\n}@keyframes cc-shimmer{ to { transform: translateX(100%); } }.cc-app .skel-row{ display: flex; align-items: center; gap: 10px; padding: 9px 12px; }.cc-app .diff{ font-family: var(--mono); font-size: 11.5px; line-height: 1.65; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; overflow-x: auto; }.cc-app .diff-line{ padding: 0 10px; white-space: pre; }.cc-app .diff-line.add{ background: rgba(34,197,94,.09); color: #86efac; }.cc-app .diff-line.del{ background: rgba(239,68,68,.09); color: #fca5a5; }.cc-app .diff-line.ctx{ color: var(--text-2); }.cc-app .diff-line .d-sign{ display: inline-block; width: 12px; color: var(--text-3); }.cc-app .toast-stack{ position: fixed; right: 18px; bottom: 60px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }.cc-app .toast{\n  min-width: 240px; max-width: 380px; background: var(--panel-2); border: 1px solid var(--border-2);\n  border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; box-shadow: var(--shadow);\n  animation: cc-toast-in .22s ease; font-size: 12.5px;\n}.cc-app .toast.ok{ border-left-color: var(--ok); }.cc-app .toast.warn{ border-left-color: var(--warn); }.cc-app .toast.err{ border-left-color: var(--danger); }.cc-app .toast .t-msg{ color: var(--text); }.cc-app .toast .t-sub{ color: var(--text-3); font-size: 11px; margin-top: 2px; }@keyframes cc-toast-in{ from { opacity: 0; transform: translateY(8px); } }.cc-app .overlay{ position: fixed; inset: 0; background: rgba(4,6,10,.62); backdrop-filter: blur(2px); z-index: 100; display: flex; align-items: flex-start; justify-content: center; }.cc-app .overlay[hidden]{ display: none; }.cc-app .modal{\n  margin-top: 12vh; width: min(720px, 92vw); max-height: 76vh; display: flex; flex-direction: column;\n  background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow);\n  animation: cc-modal-in .16s ease;\n}.cc-app .modal.wide{ width: min(900px, 94vw); }.cc-app .modal.narrow{ width: min(480px, 92vw); }@keyframes cc-modal-in{ from { opacity: 0; transform: translateY(-6px) scale(.985); } }.cc-app .modal-h{ display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); gap: 10px; }.cc-app .modal-h .m-title{ font-weight: 650; font-size: 14px; }.cc-app .modal-h .icon-btn{ margin-left: auto; }.cc-app .modal-b{ padding: 16px; overflow-y: auto; }.cc-app .modal-f{ padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }.cc-app .palette{ margin-top: 11vh; width: min(640px, 92vw); background: var(--panel); border: 1px solid var(--border-2); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; animation: cc-modal-in .16s ease; }.cc-app .pal-input-row{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text-3); }.cc-app .pal-input-row input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; font-family: var(--sans); }.cc-app .pal-list{ max-height: 46vh; overflow-y: auto; padding: 6px; }.cc-app .pal-item{ display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 7px; cursor: pointer; color: var(--text-2); }.cc-app .pal-item .pi-label{ color: var(--text); }.cc-app .pal-item .pi-sub{ color: var(--text-3); font-size: 11px; margin-left: auto; font-family: var(--mono); }.cc-app .pal-item.sel{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .pal-item.sel .pi-label{ color: #fff; }.cc-app .pal-item.sel .pi-sub{ color: #9ec2ff; }.cc-app .pal-sec{ font-size: 10.5px; color: var(--text-3); padding: 8px 12px 2px; letter-spacing: .6px; }.cc-app .pal-foot{ display: flex; gap: 14px; padding: 9px 16px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 11px; }.cc-app .drawer-wrap{ position: fixed; inset: 0; z-index: 90; }.cc-app .drawer-mask{ position: absolute; inset: 0; background: rgba(4,6,10,.5); }.cc-app .drawer{\n  position: absolute; top: 0; right: 0; bottom: 0; width: min(680px, 86vw);\n  background: var(--panel); border-left: 1px solid var(--border-2); box-shadow: var(--shadow);\n  display: flex; flex-direction: column; animation: cc-drawer-in .2s ease;\n}@keyframes cc-drawer-in{ from { transform: translateX(30px); opacity: .6; } }.cc-app .drawer-h{ display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border); }.cc-app .drawer-h .d-title{ font-weight: 650; }.cc-app .drawer-b{ flex: 1; overflow-y: auto; padding: 16px; }.cc-app .help-fab{\n  position: fixed; right: 16px; bottom: 16px; width: 32px; height: 32px; border-radius: 50%;\n  background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text-2);\n  font-size: 14px; font-weight: 700; cursor: pointer; z-index: 80; box-shadow: var(--shadow);\n}.cc-app .help-fab:hover{ color: var(--accent); border-color: var(--accent); }.cc-app .settings-cards{ display: grid; gap: 14px; max-width: 760px; }.cc-app .set-card{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }.cc-app .set-card-h{ padding: 12px 16px 4px; font-weight: 650; font-size: 13px; }.cc-app .set-card-sub{ padding: 0 16px 8px; color: var(--text-3); font-size: 11.5px; }.cc-app .set-row{ display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid rgba(30,37,48,.6); font-size: 12.5px; }.cc-app .set-row .sr-label{ color: var(--text-2); width: 150px; flex: none; }.cc-app .set-row .sr-val{ color: var(--text); flex: 1; min-width: 0; }.cc-app .set-row .sr-ctl{ margin-left: auto; flex: none; }.cc-app .switch{ position: relative; width: 34px; height: 19px; border-radius: 10px; background: var(--panel-3); border: 1px solid var(--border-2); cursor: pointer; flex: none; transition: background .15s; }.cc-app .switch::after{ content: \"\"; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-3); transition: all .15s; }.cc-app .switch.on{ background: var(--accent); border-color: var(--accent); }.cc-app .switch.on::after{ left: 16px; background: #fff; }.cc-app .kv{ display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 12px; }.cc-app .kv .k{ color: var(--text-3); white-space: nowrap; }.cc-app .kv .v{ color: var(--text); min-width: 0; }.cc-app .progress{ height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; }.cc-app .progress > i{ display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }.cc-app .bar-mini{ display: inline-block; width: 56px; height: 5px; border-radius: 3px; background: var(--panel-3); overflow: hidden; vertical-align: middle; margin-right: 6px; }.cc-app .bar-mini > i{ display: block; height: 100%; background: var(--ok); }.cc-app .bar-mini.mid > i{ background: var(--warn); }.cc-app .bar-mini.low > i{ background: var(--danger); }.cc-app .spin{ animation: cc-rot 1s linear infinite; display: inline-block; }@keyframes cc-rot{ to { transform: rotate(360deg); } }.cc-app .typing-caret::after{ content: \"▍\"; color: var(--llm); animation: cc-blink .9s steps(1) infinite; }@keyframes cc-blink{ 50% { opacity: 0; } }.cc-app .welcome{ max-width: 1180px; margin: 0 auto; padding-top: 4vh; }.cc-app .w-hello{ display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; }.cc-app .w-hello h1{ font-size: 26px; font-weight: 700; letter-spacing: .3px; }.cc-app .w-hello .w-date{ color: var(--text-3); font-size: 13px; }.cc-app .w-health-row{ display: flex; gap: 18px; align-items: stretch; margin-bottom: 30px; flex-wrap: wrap; }.cc-app .w-health{\n  flex: none; display: flex; align-items: center; gap: 18px; background: var(--panel);\n  border: 1px solid var(--border); border-radius: 14px; padding: 20px 26px; box-shadow: var(--shadow);\n  position: relative;\n}.cc-app .w-health-num{ font-size: 54px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }.cc-app .w-health-num .unit{ font-size: 20px; color: var(--text-3); font-weight: 500; }.cc-app .w-health.good{ color: #4ade80; }.cc-app .w-health.mid{ color: var(--warn); }.cc-app .w-health.bad{ color: var(--danger); }.cc-app .w-health-meta{ font-size: 12px; color: var(--text-2); line-height: 1.7; }.cc-app .w-health-meta b{ color: var(--text); }.cc-app .w-insync{ flex: 1; min-width: 260px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }.cc-app .w-insync-num{ font-size: 30px; font-weight: 700; }.cc-app .w-insync-bar{ display: flex; gap: 5px; }.cc-app .w-insync-cell{ flex: 1; height: 10px; border-radius: 4px; background: var(--panel-3); position: relative; }.cc-app .w-insync-cell.lit-ok{ background: var(--ok); }.cc-app .w-insync-cell.lit-warn{ background: var(--warn); }.cc-app .w-insync-cell.lit-acc{ background: var(--accent); }.cc-app .w-insync-cell.lit-esc{ background: var(--esc); }.cc-app .w-insync-cell .cell-tip{ position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-3); white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; }.cc-app .w-insync-cell:hover .cell-tip{ opacity: 1; }.cc-app .w-quick{ display: flex; gap: 10px; align-items: center; margin-left: auto; }.cc-app .w-stagebar{ margin-bottom: 30px; }.cc-app .w-stages{ display: flex; align-items: center; gap: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; overflow-x: auto; }.cc-app .w-stage{ flex: 1; min-width: 108px; position: relative; cursor: pointer; text-align: center; padding-top: 4px; }.cc-app .w-stage:hover .ws-name{ color: var(--accent); }.cc-app .w-stage::before{ content: \"\"; position: absolute; top: 16px; left: -50%; width: 100%; height: 2px; background: var(--border-2); }.cc-app .w-stage:first-child::before{ display: none; }.cc-app .w-stage.done::before{ background: var(--ok); }.cc-app .w-stage.current::before{ background: var(--accent); }.cc-app .w-stage-dot{\n  width: 24px; height: 24px; border-radius: 50%; margin: 0 auto 8px; position: relative; z-index: 1;\n  background: var(--panel-3); border: 2px solid var(--border-2); color: var(--text-3);\n  font-size: 11px; font-weight: 700; line-height: 20px; text-align: center;\n}.cc-app .w-stage.done .w-stage-dot{ background: rgba(34,197,94,.15); border-color: var(--ok); color: #4ade80; }.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent); color: #7fb0f9; animation: cc-pulse 1.8s ease-out infinite; }.cc-app .w-stage.wait .w-stage-dot{ border-color: var(--warn); color: #fbbf24; }.cc-app .ws-name{ font-weight: 640; font-size: 12.5px; }.cc-app .ws-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; }.cc-app .ws-note{ font-size: 10.5px; color: var(--text-2); margin-top: 4px; max-width: 140px; margin-left: auto; margin-right: auto; }.cc-app .w-services{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }.cc-app .w-svc{\n  display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--border);\n  border-radius: 10px; padding: 13px 16px; cursor: pointer; transition: border-color .12s;\n}.cc-app .w-svc:hover{ border-color: var(--border-2); background: var(--panel-2); }.cc-app .w-svc .ws-main{ min-width: 0; }.cc-app .w-svc .ws-title{ font-weight: 620; font-family: var(--mono); font-size: 12.5px; }.cc-app .w-svc .ws-desc{ color: var(--text-3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.cc-app .w-svc .ws-chip{ margin-left: auto; }.cc-app .w-ev-filter{ display: flex; gap: 8px; margin-bottom: 10px; }.cc-app .fchip{ padding: 3px 12px; border-radius: 16px; font-size: 12px; font-weight: 560; border: 1px solid var(--border-2); color: var(--text-2); cursor: pointer; background: var(--panel-2); }.cc-app .fchip:hover{ color: var(--text); }.cc-app .fchip.on{ border-color: var(--accent); color: #7fb0f9; background: rgba(59,130,246,.1); }.cc-app .fchip.on.crit{ border-color: var(--danger); color: #f87171; background: rgba(239,68,68,.09); }.cc-app .w-ev-item{ display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid rgba(30,37,48,.6); }.cc-app .w-ev-item:hover{ background: rgba(255,255,255,.02); }.cc-app .w-ev-dot{ width: 8px; height: 8px; border-radius: 50%; flex: none; }.cc-app .w-ev-title{ color: var(--text); }.cc-app .w-ev-obj{ margin-left: auto; }.cc-app .w-ev-time{ color: var(--text-3); font-size: 11px; width: 44px; text-align: right; }.cc-app .statbar{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }.cc-app .stat{\n  background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad);\n  padding: 12px 16px; display: flex; flex-direction: column; gap: 2px;\n}.cc-app .stat .st-num{ font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }.cc-app .stat .st-num .dim{ color: var(--text-3); font-size: 14px; font-weight: 500; }.cc-app .stat .st-label{ font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }.cc-app .stat.alert .st-num{ color: var(--esc); }.cc-app .syscards{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }.cc-app .syscard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 14px 16px; cursor: pointer; transition: border-color .12s, transform .12s; }.cc-app .syscard:hover{ border-color: var(--border-2); transform: translateY(-1px); }.cc-app .syscard .sc-top{ display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }.cc-app .syscard .sc-name{ font-family: var(--mono); font-weight: 650; font-size: 13px; }.cc-app .syscard .sc-meta{ display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 11.5px; color: var(--text-2); margin-bottom: 10px; }.cc-app .syscard .sc-meta .k{ color: var(--text-3); }.cc-app .syscard .sc-foot{ display: flex; align-items: center; gap: 8px; border-top: 1px solid rgba(30,37,48,.6); padding-top: 9px; }.cc-app .mini-list{ display: flex; flex-direction: column; }.cc-app .mini-row{ display: flex; align-items: center; gap: 9px; padding: 8px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; font-size: 12.5px; }.cc-app .mini-row:hover{ background: rgba(59,130,246,.06); }.cc-app .mini-row:last-child{ border-bottom: none; }.cc-app .mini-row .mr-main{ min-width: 0; flex: 1; }.cc-app .mini-row .mr-sub{ color: var(--text-3); font-size: 11px; }.cc-app .tree-toolbar{ display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }.cc-app .tree-box{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); }.cc-app .tree-node{ user-select: none; }.cc-app .tree-row{\n  display: flex; align-items: center; gap: 7px; padding: 0 10px; height: 34px; cursor: pointer;\n  border-bottom: 1px solid rgba(30,37,48,.45); font-size: 12.5px; position: relative;\n}.cc-app .tree-row:hover{ background: rgba(59,130,246,.05); }.cc-app .tree-row .t-caret{ width: 14px; color: var(--text-3); flex: none; transition: transform .12s; font-size: 10px; text-align: center; }.cc-app .tree-row .t-caret.open{ transform: rotate(90deg); }.cc-app .tree-row .t-name{ font-family: var(--mono); font-weight: 560; color: var(--text); }.cc-app .tree-row:hover .t-name{ color: var(--accent); }.cc-app .tree-row .t-kind{ margin-left: 2px; }.cc-app .tree-row .t-meta{ margin-left: auto; display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 11px; flex: none; }.cc-app .tree-row .t-rev{ font-family: var(--mono); }.cc-app .tree-children.skeletonizing{ opacity: .7; }.cc-app .tree-root-badge{ font-size: 10px; color: var(--llm); border: 1px solid rgba(167,139,250,.4); border-radius: 4px; padding: 0 5px; margin-left: 4px; }.cc-app .dh{ display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }.cc-app .dh-main{ min-width: 0; }.cc-app .dh-title{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .dh-title h1{ font-size: 18px; font-weight: 700; font-family: var(--mono); letter-spacing: .2px; }.cc-app .dh-sub{ color: var(--text-2); font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.cc-app .dh-actions{ margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .path-mono{ font-family: var(--mono); color: var(--text-2); background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; }.cc-app .filter-bar{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }.cc-app .filter-bar select, .cc-app .filter-bar input[type=\"text\"], .cc-app .filter-bar input[type=\"search\"]{\n  background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; color: var(--text);\n  font-size: 12px; padding: 5px 9px; outline: none; font-family: var(--sans);\n}.cc-app .filter-bar select:focus, .cc-app .filter-bar input:focus{ border-color: var(--accent); }.cc-app .filter-bar select option{ background: var(--panel); }.cc-app .count-note{ color: var(--text-3); font-size: 11.5px; margin-left: auto; font-family: var(--mono); }.cc-app .vlist{ position: relative; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--rad); background: var(--panel); }.cc-app .vlist-canvas{ position: absolute; top: 0; left: 0; right: 0; }.cc-app .vrow{ display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; cursor: pointer; }.cc-app .vrow:hover{ background: rgba(59,130,246,.06); }.cc-app .vrow .vc{ flex: none; }.cc-app .vrow .grow{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.cc-app .jobs-layout{ display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 14px; align-items: start; }.cc-app .jobs-list{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; max-height: 72vh; display: flex; flex-direction: column; }.cc-app .jobs-list .jl-scroll{ overflow-y: auto; flex: 1; }.cc-app .job-item{ padding: 10px 14px; border-bottom: 1px solid rgba(30,37,48,.55); cursor: pointer; }.cc-app .job-item:hover{ background: rgba(255,255,255,.02); }.cc-app .job-item.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .job-item .ji-top{ display: flex; align-items: center; gap: 8px; }.cc-app .job-item .ji-no{ font-family: var(--mono); font-weight: 700; color: var(--text-2); }.cc-app .job-item.sel .ji-no{ color: #9ec2ff; }.cc-app .job-item .ji-sub{ color: var(--text-3); font-size: 11px; margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }.cc-app .job-detail{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); overflow: hidden; }.cc-app .jd-head{ padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }.cc-app .jd-title{ font-weight: 700; font-size: 14px; }.cc-app .jd-kvrow{ display: flex; gap: 18px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2); }.cc-app .jd-kvrow b{ color: var(--text); font-weight: 600; }.cc-app .jd-body{ padding: 14px 16px; display: grid; gap: 16px; }.cc-app .follow-tag{ display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ok); font-family: var(--mono); }.cc-app .follow-tag.off{ color: var(--text-3); }.cc-app .logbox{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; font-family: var(--mono); font-size: 11.5px; max-height: 320px; overflow-y: auto; }.cc-app .log-line{ padding: 4px 12px; border-bottom: 1px solid rgba(30,37,48,.4); display: flex; gap: 10px; }.cc-app .log-line:hover{ background: rgba(255,255,255,.02); }.cc-app .log-line .lg-op{ color: #7fb0f9; flex: none; min-width: 170px; }.cc-app .log-line .lg-ts{ color: var(--text-3); flex: none; }.cc-app .log-more{ display: block; width: 100%; text-align: center; padding: 8px; background: none; border: none; border-top: 1px solid var(--border); color: var(--accent); font-size: 11.5px; cursor: pointer; font-family: var(--mono); }.cc-app .log-more:hover{ background: var(--panel-2); }.cc-app .phase-tl{ display: flex; flex-direction: column; gap: 0; }.cc-app .ptl-item{ display: flex; gap: 12px; position: relative; padding-bottom: 16px; }.cc-app .ptl-item:last-child{ padding-bottom: 0; }.cc-app .ptl-rail{ width: 22px; flex: none; display: flex; flex-direction: column; align-items: center; }.cc-app .ptl-node{ width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-2); background: var(--panel-2); flex: none; z-index: 1; }.cc-app .ptl-item.done .ptl-node{ border-color: var(--ok); background: rgba(34,197,94,.15); }.cc-app .ptl-item.current .ptl-node{ border-color: var(--accent); background: rgba(59,130,246,.2); animation: cc-pulse 1.8s ease-out infinite; }.cc-app .ptl-item.fail .ptl-node{ border-color: var(--danger); background: rgba(239,68,68,.15); }.cc-app .ptl-item.wait .ptl-node{ border-color: var(--warn); background: rgba(245,158,11,.12); }.cc-app .ptl-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .ptl-item.done .ptl-line{ background: var(--ok); }.cc-app .ptl-main{ flex: 1; min-width: 0; padding-top: 0; }.cc-app .ptl-head{ display: flex; align-items: baseline; gap: 8px; }.cc-app .ptl-phase{ font-weight: 650; font-size: 12.5px; }.cc-app .ptl-ts{ color: var(--text-3); font-size: 11px; font-family: var(--mono); }.cc-app .ptl-note{ color: var(--text-2); font-size: 11.5px; margin-top: 2px; }.cc-app .flowwrap{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 22px; overflow-x: auto; }.cc-app .fnode{ cursor: pointer; }.cc-app .fnode rect{ fill: var(--panel-2); stroke: var(--border-2); stroke-width: 1.4; rx: 8; }.cc-app .fnode:hover rect{ stroke: var(--accent); }.cc-app .fnode.cur rect{ stroke: var(--accent); stroke-width: 2; fill: rgba(59,130,246,.1); }.cc-app .fnode.abn rect{ stroke: var(--danger); }.cc-app .fnode text{ fill: var(--text); font-size: 12px; font-family: var(--sans); }.cc-app .fnode .fsub{ fill: var(--text-3); font-size: 10px; }.cc-app .fedge{ stroke: var(--border-2); stroke-width: 1.6; fill: none; marker-end: url(#arrow); }.cc-app .fedge.hot{ stroke: var(--accent); }.cc-app .fedge.abn{ stroke: var(--danger); stroke-dasharray: 4 3; }.cc-app .topo-svg text{ fill: var(--text-2); font-size: 11px; font-family: var(--mono); }.cc-app .topo-node{ cursor: pointer; }.cc-app .topo-node rect{ fill: var(--panel-2); stroke: var(--border-2); rx: 7; }.cc-app .topo-node:hover rect{ stroke: var(--accent); }.cc-app .topo-edge{ stroke: #2b3646; stroke-width: 1.4; fill: none; cursor: pointer; }.cc-app .topo-edge:hover{ stroke: var(--accent); }.cc-app .metric-chart{ background: var(--bg); border: 1px solid var(--border); border-radius: 7px; }.cc-app .metric-chart text{ font-size: 9.5px; fill: var(--text-3); font-family: var(--mono); }.cc-app .doc-layout{ display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }.cc-app .doc-main{ min-width: 0; display: grid; gap: 12px; }.cc-app .doc-headbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }.cc-app .doc-path{ font-family: var(--mono); font-size: 13px; font-weight: 650; }.cc-app .doc-meta-row{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--text-2); font-size: 12px; }.cc-app .doc-editor-wrap{ position: relative; }.cc-app textarea.doc-editor{\n  width: 100%; min-height: 480px; background: var(--bg); color: var(--text);\n  border: 1px solid var(--border-2); border-radius: var(--rad); padding: 14px 16px;\n  font: 12px/1.7 var(--mono); outline: none; resize: vertical; tab-size: 2;\n}.cc-app textarea.doc-editor:focus{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,.15); }.cc-app .doc-collab{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); position: sticky; top: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 90px); }.cc-app .collab-tabs{ display: flex; border-bottom: 1px solid var(--border); flex: none; }.cc-app .collab-tab{ flex: 1; text-align: center; padding: 9px 4px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .collab-tab:hover{ color: var(--text); background: var(--panel-2); }.cc-app .collab-tab.active{ color: var(--accent); border-bottom-color: var(--accent); }.cc-app .collab-tab .ct-badge{ font-size: 9.5px; background: var(--warn); color: #201200; border-radius: 8px; padding: 0 5px; margin-left: 3px; font-weight: 700; }.cc-app .collab-body{ flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; min-height: 0; }.cc-app .llm-msgs{ flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 120px; }.cc-app .llm-msg{ border-radius: 9px; padding: 9px 12px; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }.cc-app .llm-msg.user{ background: var(--accent-dim); align-self: flex-end; max-width: 90%; }.cc-app .llm-msg.agent{ background: var(--panel-2); border: 1px solid var(--border); border-left: 2px solid var(--llm); }.cc-app .llm-chips{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; flex: none; }.cc-app .llm-chip{ font-size: 11px; padding: 3px 10px; border-radius: 14px; border: 1px solid rgba(167,139,250,.4); color: #c4b5fd; background: rgba(167,139,250,.07); cursor: pointer; }.cc-app .llm-chip:hover{ background: rgba(167,139,250,.16); }.cc-app .llm-input-row{ display: flex; gap: 8px; margin-top: 10px; flex: none; }.cc-app .llm-input-row input{ flex: 1; background: var(--bg); border: 1px solid var(--border-2); border-radius: 7px; padding: 7px 10px; color: var(--text); font-size: 12.5px; outline: none; }.cc-app .llm-input-row input:focus{ border-color: var(--llm); }.cc-app .draft-card{ border: 1px solid rgba(167,139,250,.35); border-radius: 9px; margin-top: 8px; overflow: hidden; background: var(--bg); }.cc-app .draft-card .dc-head{ display: flex; align-items: center; gap: 8px; padding: 7px 11px; font-size: 11.5px; color: #c4b5fd; background: rgba(167,139,250,.07); }.cc-app .draft-card .dc-body{ padding: 8px; }.cc-app .draft-card .dc-acts{ display: flex; gap: 8px; padding: 8px; border-top: 1px solid var(--border); }.cc-app .draft-item{ border: 1px solid var(--border-2); border-radius: 9px; margin-bottom: 10px; overflow: hidden; }.cc-app .draft-item .di-head{ display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--panel-2); font-size: 12px; }.cc-app .draft-item .di-src{ font-size: 10px; border-radius: 4px; padding: 0 6px; font-weight: 700; }.cc-app .draft-item .di-src.llm{ background: rgba(167,139,250,.15); color: #c4b5fd; }.cc-app .draft-item .di-src.manual{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .draft-item .di-acts{ display: flex; gap: 8px; padding: 8px 11px; border-top: 1px solid var(--border); }.cc-app .apply-dock{ position: sticky; bottom: 0; padding: 12px; border-top: 1px solid var(--border); background: var(--panel); flex: none; }.cc-app .apply-dock .hint{ font-size: 11px; color: var(--text-3); margin-bottom: 8px; }.cc-app .rev-item{ display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; font-size: 12px; border-radius: 6px; }.cc-app .rev-item:hover{ background: var(--panel-2); }.cc-app .rev-item .rv-no{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; width: 34px; }.cc-app .rev-item .rv-author{ color: var(--text-2); }.cc-app .rev-item .rv-sum{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }.cc-app .checklist{ display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }.cc-app .check-item{ display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--text-2); padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; }.cc-app .check-item .ci-ic{ color: var(--text-3); }.cc-app .check-item.pass .ci-ic{ color: var(--ok); }.cc-app .check-item.pass{ color: var(--text); border-color: rgba(34,197,94,.3); }.cc-app .apply-progress{ margin: 14px 0 6px; }.cc-app .chat-layout{ display: grid; grid-template-columns: 240px 1fr 300px; height: calc(100vh - var(--top-h)); }.cc-app .chat-sub{ background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }.cc-app .cs-head{ padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }.cc-app .cs-agent{ display: flex; align-items: center; gap: 9px; }.cc-app .cs-agent .ca-name{ font-family: var(--mono); font-weight: 700; font-size: 13px; }.cc-app .cs-agent .ca-sub{ color: var(--text-3); font-size: 10.5px; }.cc-app .cs-filter{ display: flex; gap: 4px; }.cc-app .cs-filter .cf-tab{ flex: 1; text-align: center; font-size: 11px; padding: 3px 0; border-radius: 5px; color: var(--text-3); cursor: pointer; }.cc-app .cs-filter .cf-tab.on{ background: var(--panel-3); color: var(--text); }.cc-app .cs-search{ display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border-2); border-radius: 6px; padding: 4px 8px; color: var(--text-3); }.cc-app .cs-search input{ flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 11.5px; min-width: 0; }.cc-app .cs-list{ flex: 1; overflow-y: auto; }.cc-app .sess-row{ padding: 9px 12px; border-bottom: 1px solid rgba(30,37,48,.5); cursor: pointer; position: relative; }.cc-app .sess-row:hover{ background: var(--panel-2); }.cc-app .sess-row.sel{ background: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }.cc-app .sess-row.archived{ opacity: .55; }.cc-app .sess-row .ss-title{ font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 18px; }.cc-app .sess-row .ss-sub{ font-size: 10.5px; color: var(--text-3); margin-top: 2px; display: flex; gap: 7px; align-items: center; }.cc-app .sess-row .ss-pin{ position: absolute; top: 8px; right: 8px; color: var(--warn); }.cc-app .sess-row .ss-menu{ position: absolute; top: 6px; right: 6px; opacity: 0; }.cc-app .sess-row:hover .ss-menu{ opacity: 1; }.cc-app .runner-tag{ font-size: 9.5px; font-family: var(--mono); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; color: var(--text-2); }.cc-app .chat-main{ display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }.cc-app .chat-headbar{ display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); flex: none; background: var(--panel); }.cc-app .view-switch{ display: flex; background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 7px; overflow: hidden; }.cc-app .view-switch .vs-opt{ padding: 4px 13px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }.cc-app .view-switch .vs-opt.on{ background: var(--accent-dim); color: #dbe7ff; }.cc-app .chat-scroll{ flex: 1; overflow-y: auto; padding: 18px 22px; min-height: 0; }.cc-app .msg-row{ display: flex; gap: 10px; margin-bottom: 18px; }.cc-app .msg-avatar{ width: 26px; height: 26px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; }.cc-app .msg-avatar.user{ background: var(--panel-3); color: var(--text-2); }.cc-app .msg-avatar.agent{ background: rgba(59,130,246,.15); color: #7fb0f9; }.cc-app .msg-body{ flex: 1; min-width: 0; }.cc-app .msg-who{ font-size: 11px; color: var(--text-3); margin-bottom: 3px; display: flex; gap: 8px; align-items: center; }.cc-app .msg-who .who-name{ font-weight: 650; color: var(--text-2); }.cc-app .msg-text{ white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.65; }.cc-app .msg-cards{ display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }.cc-app .mcard{ border: 1px solid var(--border-2); border-radius: 9px; background: var(--panel); overflow: hidden; max-width: 640px; }.cc-app .mcard .mc-head{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12px; color: var(--text-2); cursor: pointer; }.cc-app .mcard .mc-head:hover{ background: var(--panel-2); }.cc-app .mcard .mc-op{ font-family: var(--mono); color: #7fb0f9; font-weight: 650; }.cc-app .mcard .mc-title{ color: var(--text); font-weight: 600; }.cc-app .mcard .mc-body{ border-top: 1px solid var(--border); padding: 10px 12px; font-size: 12px; }.cc-app .mcard.op{ border-left: 3px solid var(--accent); }.cc-app .mcard.files{ border-left: 3px solid var(--warn); }.cc-app .mcard.proposal{ border-left: 3px solid var(--llm); }.cc-app .mcard.approval{ border-left: 3px solid var(--danger); }.cc-app .mcard.diag{ border-left: 3px solid var(--esc); }.cc-app .mcard .mc-status{ margin-left: auto; }.cc-app .file-row{ display: flex; align-items: center; gap: 10px; padding: 5px 4px; font-family: var(--mono); font-size: 11.5px; border-bottom: 1px solid rgba(30,37,48,.4); }.cc-app .file-row:last-child{ border-bottom: none; }.cc-app .file-row .fp{ color: var(--text); }.cc-app .file-row .fadd{ color: #4ade80; }.cc-app .file-row .fdel{ color: #f87171; }.cc-app .file-row .fst{ margin-left: auto; }.cc-app .diag-item{ display: flex; gap: 8px; padding: 4px 0; font-size: 12px; align-items: baseline; }.cc-app .diag-item .d-sev{ font-family: var(--mono); font-size: 10px; padding: 0 5px; border-radius: 4px; flex: none; }.cc-app .diag-item .d-sev.error{ background: rgba(239,68,68,.15); color: #f87171; }.cc-app .diag-item .d-sev.warning{ background: rgba(245,158,11,.15); color: #fbbf24; }.cc-app .turn-tail{ margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-2); display: flex; gap: 14px; font-size: 10.5px; color: var(--text-3); font-family: var(--mono); flex-wrap: wrap; }.cc-app .chat-inputbar{ border-top: 1px solid var(--border); padding: 12px 16px; flex: none; background: var(--panel); }.cc-app .chat-input-wrap{ display: flex; gap: 10px; align-items: flex-end; background: var(--bg); border: 1px solid var(--border-2); border-radius: 10px; padding: 9px 12px; }.cc-app .chat-input-wrap:focus-within{ border-color: var(--accent); }.cc-app .chat-input-wrap textarea{ flex: 1; background: none; border: none; outline: none; color: var(--text); font: 13px/1.5 var(--sans); resize: none; max-height: 120px; min-height: 22px; }.cc-app .chat-hints{ display: flex; gap: 12px; margin-top: 7px; font-size: 10.5px; color: var(--text-3); }.cc-app .traj-scroll{ flex: 1; overflow-y: auto; padding: 16px 22px; min-height: 0; }.cc-app .traj-item{ display: flex; gap: 12px; position: relative; padding-bottom: 14px; }.cc-app .traj-rail{ width: 20px; display: flex; flex-direction: column; align-items: center; flex: none; }.cc-app .traj-dot{ width: 12px; height: 12px; border-radius: 3px; border: 2px solid var(--border-2); background: var(--panel-2); z-index: 1; }.cc-app .traj-item.kind-tool .traj-dot{ border-color: var(--accent); }.cc-app .traj-item.kind-doc .traj-dot{ border-color: var(--llm); }.cc-app .traj-item.kind-user .traj-dot{ border-color: var(--text-2); }.cc-app .traj-item.kind-agent .traj-dot{ border-color: var(--ok); }.cc-app .traj-item.kind-files .traj-dot{ border-color: var(--warn); }.cc-app .traj-item.kind-diag .traj-dot{ border-color: var(--esc); }.cc-app .traj-line{ flex: 1; width: 2px; background: var(--border-2); margin-top: 2px; }.cc-app .traj-kind{ font-size: 10px; font-family: var(--mono); color: var(--text-3); border: 1px solid var(--border-2); border-radius: 4px; padding: 0 5px; }.cc-app .traj-label{ font-weight: 600; font-size: 12.5px; }.cc-app .traj-detail{ color: var(--text-2); font-size: 11.5px; }.cc-app .chat-ctx{ background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }.cc-app .ctx-sec{ border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }.cc-app .ctx-sec .cx-h{ padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: .5px; background: var(--panel-2); border-bottom: 1px solid var(--border); }.cc-app .ctx-sec .cx-b{ padding: 9px 12px; display: flex; flex-direction: column; gap: 7px; font-size: 12px; }.cc-app .ctx-row{ display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; flex-wrap: wrap; }.cc-app .ctx-row .cr-k{ color: var(--text-3); width: 78px; flex: none; }.cc-app .live-status{ display: flex; align-items: center; gap: 8px; font-size: 12px; }.cc-app .term-tabs{ display: flex; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }.cc-app .term-tab{ padding: 7px 14px; font-size: 12px; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; }.cc-app .term-tab.active{ color: #4ade80; border-bottom-color: var(--ok); }.cc-app .term-wrap{ flex: 1; min-height: 0; padding: 14px 22px; display: flex; }.cc-app .term{\n  flex: 1; background: #060a0f; border: 1px solid #14202c; border-radius: 10px; overflow-y: auto;\n  font: 12px/1.6 var(--mono); color: #9fd8b8; padding: 14px 16px; cursor: text;\n}.cc-app .term .t-line{ white-space: pre-wrap; word-break: break-all; }.cc-app .term .t-cmd{ color: #7fb0f9; }.cc-app .term .t-dim{ color: #4d6076; }.cc-app .term .caret{ display: inline-block; width: 7px; height: 14px; background: #9fd8b8; vertical-align: -2px; animation: cc-blink .9s steps(1) infinite; }.cc-app .runner-cards{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.cc-app .runner-card{ border: 1px solid var(--border-2); border-radius: 10px; padding: 13px; cursor: pointer; background: var(--panel-2); }.cc-app .runner-card:hover{ border-color: #33405a; }.cc-app .runner-card.sel{ border-color: var(--accent); background: var(--accent-dim); }.cc-app .runner-card .rc-name{ font-weight: 700; font-size: 13px; margin-bottom: 3px; }.cc-app .runner-card .rc-desc{ font-size: 11px; color: var(--text-2); }.cc-app .runner-card.sel .rc-desc{ color: #9ec2ff; }.cc-app .conn-group{ margin-bottom: 22px; }.cc-app .conncards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .conncard{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); padding: 13px 15px; cursor: pointer; transition: border-color .12s; }.cc-app .conncard:hover{ border-color: var(--border-2); }.cc-app .conncard .cc-top{ display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }.cc-app .conncard .cc-name{ font-family: var(--mono); font-weight: 650; font-size: 12.5px; }.cc-app .conncard .cc-desc{ font-size: 11px; color: var(--text-3); min-height: 30px; }.cc-app .op-cards{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.cc-app .op-card{ background: var(--panel-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 12px 14px; }.cc-app .op-card .oc-name{ font-family: var(--mono); font-weight: 700; color: #7fb0f9; font-size: 12.5px; }.cc-app .op-card .oc-desc{ font-size: 11px; color: var(--text-2); margin-top: 4px; }.cc-app .yaml-block{ background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font: 11.5px/1.7 var(--mono); overflow-x: auto; white-space: pre; color: #b6c2d9; }.cc-app .yaml-block .y-key{ color: #7fb0f9; }.cc-app .env-table{ width: 100%; border-collapse: collapse; font-size: 12px; }.cc-app .env-table th{ text-align: left; color: var(--text-3); font-size: 11px; padding: 6px 10px; border-bottom: 1px solid var(--border); }.cc-app .env-table td{ padding: 6px 10px; border-bottom: 1px solid rgba(30,37,48,.5); }.cc-app .env-table td.mono{ color: #7fb0f9; }.cc-app .ap-card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); margin-bottom: 14px; overflow: hidden; }.cc-app .ap-card.resolved{ opacity: .68; }.cc-app .ap-card .ap-head{ display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }.cc-app .ap-card .ap-title{ font-weight: 650; font-size: 13px; }.cc-app .ap-card .ap-meta{ display: flex; gap: 14px; padding: 9px 16px; color: var(--text-2); font-size: 11.5px; flex-wrap: wrap; }.cc-app .ap-card .ap-body{ padding: 0 16px 14px; }.cc-app .ap-card .ap-acts{ display: flex; gap: 8px; padding: 0 16px 14px; }.cc-app .keys-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }.cc-app .keys-row{ display: flex; align-items: center; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid rgba(30,37,48,.5); font-size: 12.5px; }.cc-app .keys-row .kr-desc{ color: var(--text-2); }.cc-app .keys-row .kr-keys{ display: flex; gap: 3px; }@media (max-width: 1100px){.cc-app .doc-layout{ grid-template-columns: 1fr; }.cc-app .doc-collab{ position: static; max-height: none; }.cc-app .chat-layout{ grid-template-columns: 220px 1fr; }.cc-app .chat-ctx{ display: none; }.cc-app .jobs-layout{ grid-template-columns: 1fr; }.cc-app .statbar{ grid-template-columns: repeat(3, 1fr); }.cc-app .syscards, .cc-app .w-services{ grid-template-columns: 1fr 1fr; }.cc-app .conncards{ grid-template-columns: 1fr 1fr; }\n}\n\n/* E2 真数据屏补充（welcome 阶段条失败态 + 对象 viewer 正文块） */\n.cc-app .w-stage.bad::before{ background: var(--danger); }\n.cc-app .w-stage.bad .w-stage-dot{ background: rgba(239,68,68,.15); border-color: var(--danger); color: var(--danger); }\n.cc-app pre.mono{ font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace); color: var(--text-2); }\n/* E4 编辑器增量：确认弹窗三检查的失败态与行内判据注记（console-adoption.md §1.10） */\n.cc-app .check-item.fail .ci-ic{ color: var(--danger); }\n.cc-app .check-item.fail{ color: var(--text); border-color: rgba(239,68,68,.35); }\n.cc-app .check-item .ci-note{ color: var(--text-3); font-size: 11px; margin-left: auto; text-align: right; }\n/* v0.52 能力 A：设计文档工作台（屏 6「设计文档」页签 + #/designdoc 深链——三栏=文件树/编辑器/协作） */\n.cc-app .dd-layout{ display: grid; grid-template-columns: 250px minmax(0,1fr) 340px; gap: 14px; align-items: start; }\n.cc-app .dd-tree{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--rad); max-height: calc(100vh - 90px); overflow-y: auto; position: sticky; top: 12px; }\n.cc-app .dd-search{ padding: 8px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); }\n.cc-app .dd-search input{ width: 100%; background: var(--bg); border: 1px solid var(--border-2); border-radius: 6px; padding: 5px 8px; color: var(--text); font-size: 11.5px; outline: none; box-sizing: border-box; }\n.cc-app .dd-group{ padding-bottom: 6px; }\n.cc-app .dd-group-h{ display: flex; align-items: center; gap: 8px; padding: 7px 10px 3px; font-size: 11px; color: var(--text-3); letter-spacing: .4px; }\n.cc-app .dd-group-h .mono{ font-weight: 700; color: var(--text-2); font-size: 11.5px; }\n.cc-app .dd-file{ padding: 4px 10px 4px 14px; font-size: 11.5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }\n.cc-app .dd-file:hover{ background: rgba(59,130,246,.06); color: var(--text); }\n.cc-app .dd-file.sel{ background: var(--accent-dim); color: #dbe7ff; }\n.cc-app .dd-commit-row{ font-size: 11px; }\n.cc-app textarea.dd-editor{ min-height: 52vh; }\n@media (max-width: 1250px){ .cc-app .dd-layout{ grid-template-columns: 1fr; } .cc-app .dd-tree{ position: static; max-height: 40vh; } }\n/* v0.53 能力 D + R-UX-1/R-UX-2：对话式录入工作台（左 2/3 对话区 + 右 1/3 实时 scheme 驱动字段卡 + 预览确认区，对齐 console-ui.md §11/§12） */\n.cc-app .intake-wrap{ background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; }\n.cc-app .intake-head{ display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; }\n.cc-app .intake-grid{ display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(340px, 1fr); gap: 16px; align-items: start; }\n.cc-app .intake-chat-pane{ background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }\n.cc-app .intake-ctx-bar{ background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 11.5px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }\n.cc-app .intake-msg-list{ display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; padding: 4px 2px; }\n.cc-app .intake-msg{ padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.55; max-width: 72ch; white-space: pre-wrap; word-break: break-word; }\n.cc-app .intake-msg.assistant{ background: var(--panel); border: 1px solid var(--border-2); color: var(--text); align-self: flex-start; }\n.cc-app .intake-msg.user{ background: var(--accent-dim); border: 1px solid rgba(59,130,246,.4); color: #e6f0ff; align-self: flex-end; }\n.cc-app .intake-msg-role{ font-size: 11px; color: var(--text-3); margin-bottom: 4px; font-family: var(--mono); display: flex; align-items: center; gap: 6px; }\n.cc-app .intake-input-area{ display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }\n.cc-app .intake-act-row{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }\n.cc-app .intake-card-pane{ background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }\n.cc-app .intake-card-h{ display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 650; font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }\n.cc-app .intake-field-list{ display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow-y: auto; padding-right: 2px; }\n.cc-app .intake-field-row{ background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; transition: border-color .15s; }\n.cc-app .intake-field-row.asking{ border-color: var(--accent); box-shadow: 0 0 0 1px rgba(59,130,246,.25); }\n.cc-app .intake-field-row.field-row-error{ border-color: var(--danger); background: rgba(239,68,68,.06); }\n.cc-app .ifr-top{ display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12px; }\n.cc-app .ifr-label{ font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }\n.cc-app .ifr-status{ font-size: 11px; font-family: var(--mono); padding: 1px 7px; border-radius: 99px; }\n.cc-app .ifr-status.st-filled{ background: rgba(34,197,94,.16); color: var(--ok); }\n.cc-app .ifr-status.st-default{ background: rgba(59,130,246,.16); color: #93c5fd; }\n.cc-app .ifr-status.st-missing{ background: rgba(245,158,11,.15); color: var(--warn); }\n.cc-app .ifr-status.st-conflict{ background: rgba(239,68,68,.18); color: var(--danger); font-weight: 600; }\n.cc-app .field-err-msg{ font-size: 11.5px; color: var(--danger); margin-top: 2px; line-height: 1.4; }\n.cc-app .scheme-list-editor, .cc-app .scheme-map-editor{ display: flex; flex-direction: column; gap: 6px; }\n.cc-app .sle-row, .cc-app .sme-row{ display: flex; align-items: center; gap: 6px; }\n.cc-app .scheme-switch{ display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }\n.cc-app .intake-preview-pane{ margin-top: 16px; background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }\n@media (max-width: 1200px){ .cc-app .intake-grid{ grid-template-columns: 1fr; } }\n\n/* ===== §11 原生风格覆盖层（console-adoption.md §1.23）=====\n * 只作用域于 .cc-app；宿主侧栏由 entry.js 的 Slot/native CSS 负责。\n * token 缺席时保留原深色 fallback，宿主提供 token 时自动继承深浅色。 */\n.cc-app{\n  --bg: var(--dsw-alias-bg-base, #0b0e14);\n  --panel: var(--dsw-alias-card-fill, var(--dsw-alias-bg-layer-1, #11151c));\n  --panel-2: var(--dsw-alias-bg-layer-2, #161b24);\n  --panel-3: var(--dsw-alias-bg-layer-3, #1a2029);\n  --border: var(--dsw-alias-border-l2, #1e2530);\n  --border-2: var(--dsw-alias-border-l3, #273041);\n  --text: var(--dsw-alias-label-primary, #e6e9ef);\n  --text-2: var(--dsw-alias-label-secondary, #8b93a7);\n  --text-3: var(--dsw-alias-label-tertiary, #5b6378);\n  --accent: var(--dsw-alias-state-business, var(--dsw-alias-state-business-primary, #3b82f6));\n  --ok: var(--dsw-alias-state-success, var(--dsw-alias-state-success-primary, #22c55e));\n  --warn: var(--dsw-alias-state-warn, var(--dsw-alias-state-warn-primary, #f59e0b));\n  --danger: var(--dsw-alias-state-error, var(--dsw-alias-state-error-primary, #ef4444));\n  --esc: var(--danger);\n  --llm: var(--accent);\n  --accent-dim: color-mix(in srgb, var(--accent) 16%, transparent);\n  --ok-dim: color-mix(in srgb, var(--ok) 14%, transparent);\n  --warn-dim: color-mix(in srgb, var(--warn) 14%, transparent);\n  --danger-dim: color-mix(in srgb, var(--danger) 12%, transparent);\n  --on-color: var(--dsw-alias-label-on-color, #fff);\n  --sans: var(--dsw-font-family, system-ui, -apple-system, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif);\n  --mono: var(--ds-font-family-code, ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, monospace);\n  --radius-xs: var(--dsw-radius-xs, 4px);\n  --radius-sm: var(--dsw-radius-sm, 6px);\n  --radius-md: var(--dsw-radius-md, 8px);\n  --radius-lg: var(--dsw-radius-lg, 10px);\n  --radius-xl: var(--dsw-radius-xl, 12px);\n  --radius-full: var(--dsw-radius-full, 999px);\n  --rad: var(--dsw-radius-lg, 10px);\n  --shadow: none;\n  --space-1: 4px;\n  --space-2: 8px;\n  --space-3: 12px;\n  --space-4: 16px;\n  --space-6: 24px;\n}\n\n/* 壳与导航：内容区独占宿主主面板，旧第二列 nav 即使有残留 DOM 也不渲染。 */\n.cc-app .app{ display: block !important; height: 100% !important; }\n.cc-app .main{ display: flex !important; flex-direction: column; height: 100%; min-width: 0; }\n.cc-app :is(.sidebar, .side-logo, .side-nav, .side-foot, .side-rail, .side-collapse, .nav-item, .nav-sec, .nav-badge){\n  display: none !important;\n}\n.cc-app .view{ min-width: 0; padding: var(--space-6) !important; }\n.cc-app .view.nopad{ padding: 0 !important; }\n.cc-app .view-inner{ width: 100%; min-width: 0; }\n\n/* 字号阶梯只保留 11/13/15/20/28；通配规则同时压平旧类与行内 font-size。 */\n.cc-app{ font: 13px/1.55 var(--sans) !important; word-spacing: .25em; font-variant-numeric: tabular-nums; }\n.cc-app *{ font-size: 13px !important; }\n.cc-app h1{ font-size: 28px !important; }\n.cc-app h2{ font-size: 20px !important; }\n.cc-app h3{ font-size: 15px !important; }\n.cc-app .dh-title h1{ font-size: 20px !important; }\n.cc-app :is(.st-num, .w-health-num, .w-insync-num, .cm-value){ font-size: 28px !important; line-height: 1.1; }\n.cc-app .sec-title{ font-size: 15px !important; }\n.cc-app :is(.small, .tiny, caption, .cm-label, .cm-note, .cm-unit, .st-label, .ws-sub, .ws-note, .h-sub,\n  .logo-sub, .nav-sec, .side-conn, .avatar, .chip, .chip.lg, .tag, .kbd, .badge-dot, .draft-dot,\n  .crumbs, .crumb, .top-search, .ev-count, .tbl th, .tbl-mini, .tab, .path-mono, .count-note,\n  .sc-meta, .sc-foot, .mini-row .mr-sub, .tree-row .t-meta, .ji-sub, .cx-h, .cr-k, .ss-sub,\n  .w-ev-obj, .w-ev-time, .refresh-state, .svc-projects, .cc-conn-header, .host-sessions summary,\n  .intake-ctx-bar, .intake-msg-role, .ifr-status, .field-err-msg, .set-card-sub, .set-row,\n  .conncard .cc-desc, .op-card .oc-desc, .runner-card .rc-desc, .pal-sec, .pal-foot, .pal-item .pi-sub){\n  font-size: 11px !important;\n}\n.cc-app :is(.btn, .btn.sm, .btn.xs, .btn.lg, input, textarea, select, .tbl, .vrow, .card-h .h-title,\n  .dh-sub, .ws-name, .sc-name, .tree-row, .w-ev-title, .cc-prose, .cc-disclosure summary,\n  .intake-msg, .ifr-top, .ifr-label, .scheme-switch, .m-title, .pal-input-row input){\n  font-size: 13px !important;\n}\n.cc-app :is(.cc-prose, .intake-msg, .dh-sub, .empty, .modal-b > :not(pre):not(.diff):not(textarea)){\n  max-width: 72ch;\n}\n.cc-app :is(.mono, .num, .cm-value, .st-num, .w-health-num, .ev-count, .refresh-state, .svc-projects, time, [data-count]){\n  font-variant-numeric: tabular-nums !important;\n}\n\n/* 4 基数间距与原生控件密度。 */\n.cc-app :is(.grid, .cols-2, .cols-3){ display: grid; gap: var(--space-4) !important; }\n.cc-app :is(.statbar, .syscards, .w-services, .conncards, .op-cards, .runner-cards, .cc-metrics){\n  display: grid; gap: var(--space-3) !important;\n}\n.cc-app :is(.btn-group, .filter-bar, .tabs, .w-ev-filter, .tree-toolbar, .top-right){ gap: var(--space-2) !important; }\n.cc-app .topbar{ height: auto !important; min-height: 48px; padding: 0 var(--space-4) !important; gap: var(--space-3); }\n.cc-app :is(.card-h, .modal-h, .modal-f, .drawer-h){ padding: var(--space-3) var(--space-4) !important; }\n.cc-app .card-b{ padding: var(--space-4) !important; }\n.cc-app :is(.intake-wrap, .intake-chat-pane, .intake-card-pane, .intake-preview-pane, .intake-field-row){\n  padding: var(--space-4) !important;\n}\n.cc-app :is(.intake-head, .intake-input-area){ padding-top: var(--space-3) !important; padding-bottom: var(--space-3) !important; }\n.cc-app :is(.intake-chat-pane, .intake-card-pane, .intake-field-list, .intake-act-row){ gap: var(--space-3) !important; }\n.cc-app :is(.stat, .syscard, .w-svc, .conncard, .runner-card, .set-card){ padding: var(--space-4) !important; }\n.cc-app .w-stages{ padding: var(--space-4) !important; }\n.cc-app .btn{\n  min-height: 32px; padding: var(--space-2) var(--space-3) !important; border-radius: var(--radius-md);\n  font-family: var(--sans); line-height: 1.2;\n}\n.cc-app .btn.sm, .cc-app .btn.xs{ min-height: 24px; padding: var(--space-1) var(--space-2) !important; }\n.cc-app .btn.lg{ min-height: 40px; padding: var(--space-3) var(--space-4) !important; }\n.cc-app .icon-btn{ width: 32px; height: 32px; padding: var(--space-2) !important; border-radius: var(--radius-md); }\n.cc-app :is(.chip, .fchip, .kbd, .tag, .ev-count){ padding: var(--space-1) var(--space-2) !important; }\n.cc-app .top-search{ width: min(330px, 32vw); height: 32px; padding: 0 var(--space-3) !important; }\n.cc-app :is(.statbar, .syscards, .w-services, .conn-group){ margin-bottom: var(--space-6) !important; }\n.cc-app :is(.tabs, .dh){ margin-bottom: var(--space-4) !important; }\n.cc-app :is(.sec-title, .filter-bar, .tree-toolbar, .w-ev-filter){ margin-bottom: var(--space-2) !important; }\n.cc-app .hr{ margin: var(--space-3) 0 !important; }\n.cc-app :is(.jobs-layout, .dd-layout, .chat-layout){ gap: var(--space-3) !important; }\n.cc-app .intake-wrap{ margin-bottom: var(--space-6) !important; }\n.cc-app .intake-msg{ padding: var(--space-3) var(--space-4) !important; }\n.cc-app :is(.intake-msg-list, .intake-field-list, .intake-field-row, .scheme-list-editor, .scheme-map-editor, .sle-row, .sme-row){\n  gap: var(--space-2) !important;\n}\n.cc-app .intake-field-list{ padding-right: 0 !important; }\n.cc-app .intake-msg-list{ padding: var(--space-1) !important; }\n.cc-app .empty{ padding: var(--space-6) var(--space-4) !important; }\n.cc-app .w-ev-dot{ margin-top: var(--space-1); }\n\n/* 统一卡片：10px 圆角、1px neutral border、无重阴影。 */\n.cc-app :is(.card, .panel, .stat, .syscard, .w-svc, .w-stages, .tree-box, .vlist, .jobs-list, .job-detail,\n  .doc-collab, .dd-tree, .intake-wrap, .intake-chat-pane, .intake-card-pane, .intake-field-row,\n  .intake-preview-pane, .conncard, .op-card, .runner-card, .set-card, .cc-metric, .cc-empty-inline,\n  .host-sessions, .sess-row){\n  background: var(--panel) !important;\n  border: 1px solid var(--border) !important;\n  border-radius: 10px !important;\n  box-shadow: none !important;\n}\n.cc-app .card{ padding: 0 !important; }\n\n/* 按钮三级：primary / secondary / ghost；语义动作只改颜色，不改层级。 */\n.cc-app .btn{\n  background: var(--panel-2) !important; border: 1px solid var(--border-2) !important; color: var(--text) !important;\n}\n.cc-app .btn:hover{ background: var(--panel-3) !important; border-color: var(--accent) !important; }\n.cc-app :is(.btn.primary, .btn[data-cc-primary=\"true\"]){\n  background: var(--accent) !important; border-color: var(--accent) !important; color: var(--on-color) !important;\n}\n.cc-app :is(.btn.primary, .btn[data-cc-primary=\"true\"]):hover{ filter: brightness(1.06); }\n.cc-app .btn.ghost{ background: transparent !important; border-color: transparent !important; color: var(--text-2) !important; }\n.cc-app .btn.ghost:hover{ background: var(--panel-2) !important; color: var(--text) !important; }\n.cc-app .btn.ok{ background: var(--ok-dim) !important; border-color: color-mix(in srgb, var(--ok) 45%, var(--border)) !important; color: var(--ok) !important; }\n.cc-app .btn.warn{ background: var(--warn-dim) !important; border-color: color-mix(in srgb, var(--warn) 45%, var(--border)) !important; color: var(--warn) !important; }\n.cc-app .btn.danger{ background: var(--danger-dim) !important; border-color: color-mix(in srgb, var(--danger) 45%, var(--border)) !important; color: var(--danger) !important; }\n.cc-app .btn.llm{ background: var(--accent-dim) !important; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)) !important; color: var(--accent) !important; }\n.cc-app .btn:disabled{ opacity: .45; cursor: not-allowed; }\n\n/* 图标、焦点与基础表面全部继承宿主 token。 */\n.cc-app .ic{ width: 16px !important; height: 16px !important; flex: none; }\n.cc-app :is(a, button, [role=\"button\"], [tabindex], input, textarea, select, summary):focus-visible{\n  outline: 2px solid var(--accent) !important; outline-offset: 2px !important; box-shadow: none !important;\n}\n.cc-app :is(.topbar, .card, .panel, .stat, .syscard, .w-svc, .w-stages, .tree-box, .vlist, .jobs-list,\n  .job-detail, .doc-collab, .dd-tree, .intake-wrap, .intake-chat-pane, .intake-card-pane, .conncard,\n  .op-card, .runner-card, .set-card){\n  color: var(--text) !important;\n}\n.cc-app .topbar{ background: var(--panel) !important; border-bottom-color: var(--border) !important; backdrop-filter: none; }\n.cc-app :is(.doc-editor, .diff, .yaml-block, .term, .intake-ctx-bar, .path-mono, .top-search){\n  background: var(--bg) !important; border-color: var(--border-2) !important; color: var(--text) !important;\n}\n.cc-app :is(.doc-editor, .diff, .yaml-block, .term){ font-family: var(--mono) !important; }\n.cc-app .term .t-cmd{ color: var(--accent) !important; }\n.cc-app .term .t-dim{ color: var(--text-3) !important; }\n.cc-app .term .caret{ background: var(--accent) !important; }\n.cc-app .avatar{ background: var(--accent-dim) !important; color: var(--accent) !important; }\n.cc-app ::selection{ background: var(--accent-dim); }\n.cc-app ::-webkit-scrollbar-thumb{ background: var(--border-2); border-color: var(--bg); }\n\n/* 语义色：success / warn / danger / neutral；事件计数保持中性。 */\n.cc-app .chip{ background: var(--panel-2) !important; border-color: var(--border-2) !important; color: var(--text-2) !important; }\n.cc-app .chip.ok{ background: var(--ok-dim) !important; border-color: color-mix(in srgb, var(--ok) 40%, var(--border)) !important; color: var(--ok) !important; }\n.cc-app .chip.warn{ background: var(--warn-dim) !important; border-color: color-mix(in srgb, var(--warn) 40%, var(--border)) !important; color: var(--warn) !important; }\n.cc-app :is(.chip.danger, .chip.esc){ background: var(--danger-dim) !important; border-color: color-mix(in srgb, var(--danger) 40%, var(--border)) !important; color: var(--danger) !important; }\n.cc-app :is(.chip.acc, .chip.llm){ background: var(--accent-dim) !important; border-color: color-mix(in srgb, var(--accent) 40%, var(--border)) !important; color: var(--accent) !important; }\n.cc-app :is(.chip.mute, .chip.kind, .tag){ background: var(--panel-2) !important; border-color: var(--border) !important; color: var(--text-3) !important; }\n.cc-app .lamp.ok{ background: var(--ok) !important; }\n.cc-app .lamp.warn{ background: var(--warn) !important; }\n.cc-app :is(.lamp.danger, .lamp.esc){ background: var(--danger) !important; }\n.cc-app .lamp.acc{ background: var(--accent) !important; }\n.cc-app .lamp.off{ background: var(--text-3) !important; }\n.cc-app :is(.badge-dot, .nav-badge){ background: var(--danger) !important; color: var(--on-color) !important; }\n.cc-app .draft-dot{ color: var(--warn) !important; }\n.cc-app :is(.ev-count, .ev-count b){\n  background: var(--panel-2) !important; border-color: var(--border) !important; color: var(--text-2) !important;\n}\n.cc-app :is(.refresh-state, .svc-projects, .svc-projects b, .cc-conn-header){\n  background: transparent !important; border-color: transparent !important; color: var(--text-2) !important;\n}\n.cc-app .ev-count b{ color: var(--text) !important; }\n.cc-app .stat.alert .st-num{ color: var(--danger) !important; }\n.cc-app .w-health.good{ color: var(--ok) !important; }\n.cc-app .w-health.mid{ color: var(--warn) !important; }\n.cc-app .w-health.bad{ color: var(--danger) !important; }\n.cc-app .w-insync-cell{ background: var(--panel-3) !important; }\n.cc-app .w-insync-cell.lit-ok{ background: var(--ok) !important; }\n.cc-app .w-insync-cell.lit-warn{ background: var(--warn) !important; }\n.cc-app :is(.w-insync-cell.lit-acc, .w-insync-cell.lit-esc){ background: var(--accent) !important; }\n.cc-app .w-stage.done .w-stage-dot{ background: var(--ok-dim) !important; border-color: var(--ok) !important; color: var(--ok) !important; }\n.cc-app .w-stage.current .w-stage-dot{ border-color: var(--accent) !important; color: var(--accent) !important; }\n.cc-app .w-stage.wait .w-stage-dot{ background: var(--panel-3) !important; border-color: var(--border-2) !important; color: var(--text-3) !important; }\n.cc-app .w-stage.bad .w-stage-dot{ background: var(--danger-dim) !important; border-color: var(--danger) !important; color: var(--danger) !important; }\n.cc-app .w-ev-dot{ background: var(--text-3) !important; }\n.cc-app .w-ev-dot.critical{ background: var(--danger) !important; }\n.cc-app .w-ev-dot.high{ background: var(--warn) !important; }\n.cc-app .w-ev-dot.info{ background: var(--accent) !important; }\n.cc-app .fchip{ background: var(--panel-2) !important; border-color: var(--border-2) !important; color: var(--text-2) !important; }\n.cc-app .fchip.on{ background: var(--accent-dim) !important; border-color: var(--accent) !important; color: var(--accent) !important; }\n.cc-app .toast{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }\n.cc-app .toast.ok{ border-left-color: var(--ok) !important; }\n.cc-app .toast.warn{ border-left-color: var(--warn) !important; }\n.cc-app .toast.err{ border-left-color: var(--danger) !important; }\n.cc-app .diff-line.add{ background: var(--ok-dim) !important; color: var(--ok) !important; }\n.cc-app .diff-line.del{ background: var(--danger-dim) !important; color: var(--danger) !important; }\n\n/* §11 C1：三张同基线指标卡。 */\n.cc-app .cc-metrics{ grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 var(--space-6); }\n.cc-app .cc-metric{\n  appearance: none; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2);\n  width: 100%; min-width: 0; min-height: 112px; padding: var(--space-4); text-align: left; cursor: pointer;\n  font-family: var(--sans); color: var(--text);\n}\n.cc-app .cc-metric:hover{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }\n.cc-app .cm-label{ color: var(--text-2); }\n.cc-app .cm-value{ display: block; color: var(--text); font-weight: 700; letter-spacing: -.02em; }\n.cc-app .cm-unit{ color: var(--text-3); font-weight: 500; }\n.cc-app .cm-note{ color: var(--text-2); line-height: 1.45; }\n.cc-app .cc-metric.success .cm-value{ color: var(--ok); }\n.cc-app .cc-metric.warn .cm-value{ color: var(--warn); }\n.cc-app .cc-metric.danger{ border-color: color-mix(in srgb, var(--danger) 45%, var(--border)) !important; }\n.cc-app .cc-metric.danger .cm-value{ color: var(--danger); }\n.cc-app .cc-metric.neutral .cm-value{ color: var(--text); }\n\n/* §11 C2/C3/C4：显式空态、待接入与有 run 才出现的阶段条。 */\n.cc-app .cc-empty-inline{\n  display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-6);\n  color: var(--text-2); line-height: 1.5;\n}\n.cc-app .cc-empty-inline .empty-icon{\n  display: grid; place-items: center; width: 32px; height: 32px; flex: none;\n  border-radius: var(--radius-md); background: var(--panel-2); color: var(--text-3);\n}\n.cc-app .cc-empty-inline b{ display: block; margin-bottom: var(--space-1); color: var(--text); font-size: 13px !important; }\n.cc-app .cc-empty-inline .btn{ margin-left: auto; }\n.cc-app .w-services{ grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }\n.cc-app .w-svc{\n  appearance: none; display: flex; align-items: center; gap: var(--space-3); width: 100%; min-width: 0;\n  text-align: left; cursor: pointer; color: var(--text);\n}\n.cc-app .w-svc:hover{ background: var(--panel-2) !important; border-color: var(--border-2) !important; }\n.cc-app .w-svc[data-service-state=\"neutral\"] .lamp{ background: var(--text-3) !important; }\n.cc-app .w-svc[data-service-state=\"success\"] .lamp{ background: var(--ok) !important; }\n.cc-app .w-svc[data-service-state=\"warn\"] .lamp{ background: var(--warn) !important; }\n.cc-app .w-svc[data-service-state=\"danger\"] .lamp{ background: var(--danger) !important; }\n.cc-app .w-stagebar{ margin-bottom: var(--space-6); }\n.cc-app .w-stages{ display: flex; gap: var(--space-2); }\n.cc-app .w-stage{\n  appearance: none; min-width: 0; padding: var(--space-2); border: 0; background: transparent !important;\n  color: var(--text); cursor: pointer;\n}\n.cc-app .w-stage-dot{ width: 32px; height: 32px; line-height: 1; }\n.cc-app .w-stage-dot .ic{ width: 16px !important; height: 16px !important; }\n\n/* §11 C5/C6：事件两行制、对象链右截断、相对时间与计数 chip。 */\n.cc-app .cc-event-list{ padding: var(--space-4) !important; }\n.cc-app .w-ev-item{\n  appearance: none; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: start; gap: var(--space-3);\n  width: 100%; padding: var(--space-3) 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0;\n  background: transparent !important; color: var(--text); text-align: left; font-family: var(--sans);\n}\n.cc-app .w-ev-item:last-child{ border-bottom: 0; }\n.cc-app .w-ev-item:hover{ background: var(--panel-2) !important; }\n.cc-app .w-ev-dot{ width: 8px; height: 8px; margin-top: var(--space-1); }\n.cc-app .w-ev-main{ display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }\n.cc-app .w-ev-title{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cc-app .w-ev-obj{ min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }\n.cc-app .w-ev-time{ color: var(--text-3); white-space: nowrap; }\n.cc-app .w-ev-filter{ margin-bottom: var(--space-3); }\n\n/* §11 B8/D6：展开说明、Workspace/连接/刷新状态与窄屏菜单。 */\n.cc-app .cc-disclosure{ margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }\n.cc-app .cc-disclosure summary{ width: fit-content; padding: var(--space-1) 0; color: var(--text-2); cursor: pointer; }\n.cc-app .cc-disclosure summary::marker{ color: var(--accent); }\n.cc-app .cc-prose{ padding: var(--space-3) 0; color: var(--text-2); line-height: 1.7; white-space: normal; }\n.cc-app .svc-projects, .cc-app .refresh-state{\n  display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; white-space: nowrap;\n  font-family: var(--mono); color: var(--text-3);\n}\n.cc-app .refresh-state[data-pending=\"true\"]{ color: var(--warn) !important; }\n.cc-app .cc-conn-header{ display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }\n.cc-app .cc-narrow-menu{ display: none; flex: none; }\n.cc-app .host-sessions{ margin-top: var(--space-3); padding: var(--space-3); }\n.cc-app .host-sessions summary{ color: var(--text-2); cursor: pointer; }\n.cc-app .host-session-list{ display: flex; flex-direction: column; gap: var(--space-2); max-height: 240px; overflow-y: auto; margin-top: var(--space-2); }\n.cc-app .host-sessions .sess-row{ padding: var(--space-2) var(--space-3); background: var(--panel-2) !important; }\n.cc-app .host-sessions .sess-row.sel{ border-color: var(--accent) !important; background: var(--accent-dim) !important; }\n\n/* <1200：宿主侧栏收起后不挤压内容；指标卡自适应。 */\n@media (max-width: 1199px){\n  .cc-app .top-search{ display: none !important; }\n  .cc-app .cc-metrics{ grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }\n  .cc-app .topbar{ padding: 0 var(--space-3) !important; gap: var(--space-2) !important; }\n  .cc-app .top-right{ min-width: 0; gap: var(--space-2) !important; }\n  .cc-app .refresh-state{ max-width: 132px; overflow: hidden; text-overflow: ellipsis; }\n  .cc-app .cc-narrow-menu{ display: inline-flex !important; }\n}\n\n/* <900：双栏/三栏改单栏，长内容可换行而不是横向挤压。 */\n@media (max-width: 899px){\n  .cc-app .view{ padding: var(--space-4) !important; }\n  .cc-app :is(.grid, .cols-2, .cols-3, .jobs-layout, .dd-layout, .chat-layout, .intake-grid){\n    grid-template-columns: minmax(0, 1fr) !important;\n  }\n  .cc-app .chat-layout{ display: block !important; }\n  .cc-app :is(.chat-sub, .chat-main, .chat-ctx){ margin-bottom: var(--space-3); }\n  .cc-app .cc-metrics{ grid-template-columns: 1fr !important; }\n  .cc-app :is(.svc-projects, .ev-count){ display: none !important; }\n  .cc-app .topbar{ flex-wrap: wrap; padding: var(--space-2) var(--space-3) !important; }\n  .cc-app .crumbs{ flex: 1; min-width: 0; }\n  .cc-app .w-stages{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }\n  .cc-app .w-stage::before{ display: none; }\n  .cc-app .cc-empty-inline{ align-items: flex-start; flex-wrap: wrap; }\n  .cc-app .cc-empty-inline .btn{ margin-left: 0; }\n}\n/* ── v0.56 R-10：待你处理收件箱（screenInbox——console-adoption.md §1.25 页面兜底） ── */\n.cc-app .cc-inbox-list{ display:flex; flex-direction:column; }\n.cc-app .ib-item{ display:flex; align-items:center; gap:12px; padding:10px 8px; border:0; border-bottom:1px solid var(--border-1); background:transparent; color:var(--text-2); cursor:pointer; text-align:left; width:100%; }\n.cc-app .ib-item:hover{ background:var(--panel-2); }\n.cc-app .ib-item:last-child{ border-bottom:0; }\n.cc-app .ib-main{ display:flex; flex-direction:column; gap:2px; min-width:0; }\n.cc-app .ib-digest{ color:var(--text); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\n.cc-app .ib-link{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\n.cc-app .ib-at{ margin-left:auto; flex:none; color:var(--text-3); }\n\n/* ============ R-UX-4 渲染优先（console-md.js 展示层，2026-11-26） ============\n * dsh 原生 token（§11 基线/R-UX-5）：仅消费既有 CSS 变量（--panel-2/--border-2/--text-2/--accent…），\n * 不自造第二套视觉体系。 */\n.cc-app .md-p{ margin:0 0 8px; line-height:1.6; font-size:12.5px; color:var(--text); }\n.cc-app .md-h{ margin:14px 0 8px; color:var(--text); font-weight:650; line-height:1.4; }\n.cc-app .md-h1{ font-size:17px; } .cc-app .md-h2{ font-size:15px; } .cc-app .md-h3{ font-size:13.5px; }\n.cc-app .md-h4,.cc-app .md-h5,.cc-app .md-h6{ font-size:12.5px; color:var(--text-2); }\n.cc-app .md-list{ margin:2px 0 10px; padding-left:20px; }\n.cc-app .md-li{ margin:2px 0; line-height:1.55; font-size:12.5px; color:var(--text); }\n.cc-app .md-pre{ background:var(--panel-2); border:1px solid var(--border-2); border-radius:8px;\n  padding:10px 12px; overflow-x:auto; margin:8px 0 12px; font-family:var(--mono); font-size:12px; line-height:1.55; }\n.cc-app .md-code{ background:var(--panel-2); border:1px solid var(--border-2); border-radius:5px;\n  padding:0 5px; font-family:var(--mono); font-size:11.5px; }\n.cc-app .md-quote{ border-left:3px solid var(--accent); background:var(--panel-2); border-radius:0 8px 8px 0;\n  padding:8px 12px; margin:8px 0 12px; color:var(--text-2); font-size:12.5px; line-height:1.6; }\n.cc-app .md-hr{ border:0; border-top:1px solid var(--border-2); margin:14px 0; }\n.cc-app .md-tbl{ border-collapse:collapse; margin:8px 0 14px; font-size:12px; width:100%; }\n.cc-app .md-tbl th{ text-align:left; color:var(--text-2); font-weight:600; padding:6px 10px;\n  border-bottom:1px solid var(--border-2); background:var(--panel-2); }\n.cc-app .md-tbl td{ padding:6px 10px; border-bottom:1px solid var(--border); color:var(--text); line-height:1.5; }\n.cc-app .md-a{ color:var(--accent); cursor:pointer; text-decoration:none; }\n.cc-app .md-a:hover{ text-decoration:underline; }\n.cc-app .md-lk{ word-break:break-all; }\n.cc-app .md-raw{ margin:8px 0 4px; }\n.cc-app .md-raw>summary{ cursor:pointer; color:var(--text-2); font-size:12px; user-select:none; }\n.cc-app .md-raw>summary:hover{ color:var(--text); }\n.cc-app .md-raw-pre{ white-space:pre-wrap; margin:8px 0 0; }\n.cc-app .md-switch{ display:flex; gap:6px; align-items:center; }\n.cc-app .md-cards{ display:grid; gap:8px; margin:6px 0; }\n.cc-app .md-card{ background:var(--panel-2); border:1px solid var(--border-2); border-radius:8px; padding:8px 12px; }\n.cc-app .md-card-k{ font-size:11.5px; color:var(--text-2); font-weight:600; display:flex; align-items:center; gap:8px; }\n.cc-app .md-gloss{ font-weight:400; color:var(--text-3); font-size:11px; }\n.cc-app .md-card-v{ margin-top:5px; font-size:12.5px; color:var(--text); line-height:1.55; word-break:break-word; }\n.cc-app .md-subcards{ display:grid; gap:5px; }\n.cc-app .md-subcard{ border:1px solid var(--border); border-radius:7px; padding:5px 9px; background:var(--bg); }\n.cc-app .md-subcard-k{ font-size:11px; color:var(--text-3); font-family:var(--mono); }\n.cc-app .md-subcard-v{ margin-top:2px; font-size:12px; color:var(--text); }\n.cc-app .md-chips{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; }\n.cc-app .md-chip{ max-width:100%; }\n/* 系统卡（屏幕 3 首屏=R-UX-3③ 系统视角） */\n.cc-app .syscard{ display:flex; flex-direction:column; gap:10px; }\n.cc-app .syscard-row{ display:flex; flex-wrap:wrap; gap:18px; align-items:baseline; }\n.cc-app .syscard-kv{ display:flex; flex-direction:column; gap:1px; min-width:96px; }\n.cc-app .syscard-kv .k{ font-size:11px; color:var(--text-3); }\n.cc-app .syscard-kv .v{ font-size:13px; color:var(--text); font-weight:600; }\n.cc-app .syscard-kv .v.small{ font-weight:400; font-size:12px; color:var(--text-2); }\n.cc-app .ent-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-top:12px; }\n.cc-app .ent-card{ display:flex; flex-direction:column; gap:6px; background:var(--panel-2);\n  border:1px solid var(--border-2); border-radius:9px; padding:12px 14px; cursor:pointer; }\n.cc-app .ent-card:hover{ border-color:var(--accent); }\n.cc-app .ent-card .ec-title{ display:flex; align-items:center; gap:7px; color:var(--text); font-weight:600; font-size:13px; }\n.cc-app .ent-card .ec-sub{ color:var(--text-3); font-size:11.5px; }\n";
 var __CC = { MOCK: {} }; if (typeof window !== 'undefined') window.__CC = __CC;
 // console shell: 内容区壳（导航已由 dsh 主侧栏 Slots 承载，DOM 无第二列 nav）。
 var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite（零外链） ===== -->\n  <svg width=\"0\" height=\"0\" style=\"position:absolute\" aria-hidden=\"true\">\n    <defs>\n      <symbol id=\"cc-i-home\" viewBox=\"0 0 16 16\"><path d=\"M2 8.5 8 3l6 5.5V14H9.5v-4h-3v4H2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-grid\" viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"2\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"9\" y=\"2\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"2\" y=\"9\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><rect x=\"9\" y=\"9\" width=\"5\" height=\"5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-tree\" viewBox=\"0 0 16 16\"><path d=\"M3 2v12M3 5h5M3 9h5M8 5v1.5M8 9v1.5M8 6.5h4M8 10.5h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-flow\" viewBox=\"0 0 16 16\"><rect x=\"5.5\" y=\"1.5\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"1.5\" y=\"11\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"9.5\" y=\"11\" width=\"5\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><path d=\"M8 5v3M8 8H4v3M8 8h4v3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/></symbol>\n      <symbol id=\"cc-i-doc\" viewBox=\"0 0 16 16\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M9.5 1.5V5H13M6 8h4.5M6 10.5h4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-pulse\" viewBox=\"0 0 16 16\"><path d=\"M1.5 8h3l2-5 3 10 2-5h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-check\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"6.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m5 8.2 2.1 2.1L11.2 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-plug\" viewBox=\"0 0 16 16\"><path d=\"M5 1.5v3M11 1.5v3M4 4.5h8v3a4 4 0 0 1-8 0zM8 11.5v3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-chat\" viewBox=\"0 0 16 16\"><path d=\"M2 3.5h12v8H8l-3 3v-3H2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M5 6.5h6M5 8.8h4\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-search\" viewBox=\"0 0 16 16\"><circle cx=\"7\" cy=\"7\" r=\"4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/><path d=\"m10.5 10.5 3.5 3.5\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-bell\" viewBox=\"0 0 16 16\"><path d=\"M8 2a4 4 0 0 1 4 4c0 3 .8 4.2 1.5 5h-11C3.2 10.2 4 9 4 6a4 4 0 0 1 4-4zM6.5 13a1.6 1.6 0 0 0 3 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-chev\" viewBox=\"0 0 16 16\"><path d=\"m6 4 4 4-4 4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-down\" viewBox=\"0 0 16 16\"><path d=\"m4 6 4 4 4-4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-folder\" viewBox=\"0 0 16 16\"><path d=\"M1.5 3.5h4.5l1.5 2h7v8h-13z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-term\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"2.5\" width=\"13\" height=\"11\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m4 6 2.5 2.2L4 10.5M8.5 11h4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-close\" viewBox=\"0 0 16 16\"><path d=\"m4 4 8 8M12 4l-8 8\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-plus\" viewBox=\"0 0 16 16\"><path d=\"M8 3v10M3 8h10\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-bot\" viewBox=\"0 0 16 16\"><rect x=\"3\" y=\"5\" width=\"10\" height=\"8\" rx=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><circle cx=\"6.2\" cy=\"9\" r=\"1\" fill=\"currentColor\"/><circle cx=\"9.8\" cy=\"9\" r=\"1\" fill=\"currentColor\"/><path d=\"M8 5V2.5M1.5 8.5v2M14.5 8.5v2\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-spark\" viewBox=\"0 0 16 16\"><path d=\"M8 1.5 9.6 6 14 8l-4.4 2L8 14.5 6.4 10 2 8l4.4-2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-link\" viewBox=\"0 0 16 16\"><path d=\"M6.5 9.5a3 3 0 0 0 4.3 0l2.4-2.4a3 3 0 1 0-4.3-4.3L7.6 4.1M9.5 6.5a3 3 0 0 0-4.3 0L2.8 8.9a3 3 0 1 0 4.3 4.3l1.3-1.3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-key\" viewBox=\"0 0 16 16\"><circle cx=\"5\" cy=\"11\" r=\"2.8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"m7 9 6.5-6.5M11 5l2 2M9 7l1.6 1.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-filter\" viewBox=\"0 0 16 16\"><path d=\"M2 3.5h12L9.5 8.5v4L6.5 14V8.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-pin\" viewBox=\"0 0 16 16\"><path d=\"m8 1.5 1.8 3.4 3.7.5-2.7 2.6.7 3.7L8 9.9l-3.5 1.8.7-3.7-2.7-2.6 3.7-.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/><path d=\"M8 11v3.5\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-archive\" viewBox=\"0 0 16 16\"><rect x=\"2\" y=\"2.5\" width=\"12\" height=\"3.5\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M3.5 6v7.5h9V6M6.5 9h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-more\" viewBox=\"0 0 16 16\"><circle cx=\"3.5\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"8\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/><circle cx=\"12.5\" cy=\"8\" r=\"1.2\" fill=\"currentColor\"/></symbol>\n      <symbol id=\"cc-i-refresh\" viewBox=\"0 0 16 16\"><path d=\"M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5V6H10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-play\" viewBox=\"0 0 16 16\"><path d=\"M4.5 2.5 13 8l-8.5 5.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-stop\" viewBox=\"0 0 16 16\"><rect x=\"3.5\" y=\"3.5\" width=\"9\" height=\"9\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/></symbol>\n      <symbol id=\"cc-i-clone\" viewBox=\"0 0 16 16\"><rect x=\"5.5\" y=\"5.5\" width=\"8\" height=\"8\" rx=\"1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M10.5 5.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-import\" viewBox=\"0 0 16 16\"><path d=\"M8 2v8M5 7.5 8 10.5 11 7.5M2.5 13.5h11\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-expand\" viewBox=\"0 0 16 16\"><path d=\"M2 6V2h4M14 10v4h-4M2 2l5 5M14 14 9 9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-warn\" viewBox=\"0 0 16 16\"><path d=\"M8 2 15 14H1z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M8 6.5v3.2M8 11.4v.1\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-ext\" viewBox=\"0 0 16 16\"><path d=\"M6.5 3H3v10h10V9.5M9 2.5h4.5V7M13.5 2.5 8 8\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></symbol>\n      <symbol id=\"cc-i-empty\" viewBox=\"0 0 16 16\"><path d=\"M2 4.5h12V12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12zM2 4.5 4 2h8l2 2.5M6.5 8.5h3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-user\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"5.5\" r=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M2.5 14a5.5 5.5 0 0 1 11 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-db\" viewBox=\"0 0 16 16\"><ellipse cx=\"8\" cy=\"3.5\" rx=\"5.5\" ry=\"2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M2.5 3.5v9c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2v-9M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/></symbol>\n      <symbol id=\"cc-i-clock\" viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M8 4.5V8l2.5 1.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></symbol>\n      <symbol id=\"cc-i-split\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"2\" width=\"5.5\" height=\"12\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/><rect x=\"9\" y=\"2\" width=\"5.5\" height=\"12\" rx=\"1\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\"/></symbol>\n    </defs>\n  </svg>\n\n  <!-- Native integration: navigation lives in the dsh main sidebar; this shell owns content only. -->\n  <div class=\"main\">\n    <header class=\"topbar\">\n      <button class=\"icon-btn cc-narrow-menu\" id=\"btn-host-sidebar\" data-act=\"host-sidebar\" aria-label=\"展开主侧栏\"><svg class=\"ic\"><use href=\"#cc-i-grid\"/></svg></button>\n      <div class=\"crumbs\" id=\"crumbs\"></div>\n      <div class=\"top-search\" id=\"top-search\" role=\"button\" tabindex=\"0\" aria-label=\"搜索服务、流程、文档、Agent 与运行轮次\">\n        <svg class=\"ic\"><use href=\"#cc-i-search\"/></svg>\n        <span class=\"ts-placeholder\">搜索服务 / 工作流 / 文档 / Agent…</span><span class=\"kbd\">⌘K</span>\n      </div>\n      <div class=\"top-right\">\n        <div class=\"svc-projects mono\" id=\"svc-projects\" title=\"Workspace 按 Service 分组\">服务项目 <b>0</b></div>\n        <div class=\"refresh-state mono\" id=\"refresh-state\" aria-live=\"polite\">等待首次数据装载</div>\n        <div class=\"ev-count mono\" id=\"ev-count\" title=\"24h 事件数\">— events · 24h</div>\n        <div class=\"cc-conn-header mono\" id=\"cc-conn-header\" aria-label=\"连接状态\"><span class=\"lamp ok\" id=\"cc-conn-dot\"></span><span id=\"cc-conn-label\">conn</span></div>\n      </div>\n    </header>\n    <div id=\"view\" class=\"view\"></div>\n  </div>\n\n  <div class=\"overlay\" id=\"overlay-palette\" hidden>\n    <div class=\"palette\" id=\"palette\">\n      <div class=\"pal-input-row\"><svg class=\"ic\"><use href=\"#cc-i-search\"/></svg>\n        <input id=\"pal-input\" type=\"text\" placeholder=\"搜索服务、工作流、文档、Agent 或运行轮次\" autocomplete=\"off\" aria-label=\"命令面板搜索\"><span class=\"kbd\">Esc</span>\n      </div>\n      <div class=\"pal-list\" id=\"pal-list\"></div>\n      <div class=\"pal-foot\"><span><span class=\"kbd\">↑</span><span class=\"kbd\">↓</span> 选择</span><span><span class=\"kbd\">Enter</span> 跳转</span><span><span class=\"kbd\">Esc</span> 关闭</span></div>\n    </div>\n  </div>\n\n  <div class=\"overlay\" id=\"overlay-modal\" hidden><div id=\"modal-root\"></div></div>\n  <div id=\"drawer-root\"></div>\n  <div id=\"toast-stack\" class=\"toast-stack\"></div>\n\n  <div id=\"help-root\"></div>\n  <div class=\"cc-conn-strip\" id=\"cc-conn-strip\" hidden><span class=\"lamp warn\" id=\"cc-conn-strip-lamp\"></span><span id=\"cc-conn-strip-text\"></span></div>\n</div>\n";
@@ -49,7 +49,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   var systems = [
     { name: 'self-recursive-core', scope: 'systems/self-recursive-core', phase: 'InSync',
       generation: 9, observedGeneration: 9, agent: 'builtinRoot', runs24h: 5, driftOpen: 0,
-      pending: 0, desc: '自递归内核：Goal 驱动、文档对账、递归改进自身的控制面核心。' },
+      pending: 0, desc: '自递归内核：Goal 驱动、文档对账、递归改进自身的核心控制。' },
     { name: 'developer-system', scope: 'systems/developer-system', phase: 'Drifting',
       generation: 11, observedGeneration: 8, agent: 'dev-1', runs24h: 8, driftOpen: 2,
       pending: 1, desc: '研发系统：pull 源码 → build+test → 产物 digest → 修复循环。' },
@@ -224,20 +224,20 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   // ---------- WorkService / ConnectorOps / Provider / Ref / Role ----------
   var workservices = [
     { name: 'onedev', kind: 'WorkService', scope: 'systems/connector', status: 'Ready', endpoint: 'https://onedev.internal', desc: 'OneDev 代码与 CI 服务（git 托管 + 构建）。' },
-    { name: 'gitfs', kind: 'WorkService', scope: 'systems/connector', status: 'Ready', endpoint: 'gitfs:///srv/git', desc: 'Git 文档/代码双面存储（文档面版本化后端）。' },
+    { name: 'gitfs', kind: 'WorkService', scope: 'systems/connector', status: 'Ready', endpoint: 'gitfs:///srv/git', desc: 'Git 文档/代码双库存储（文档版本化后端）。' },
     { name: 'nas', kind: 'WorkService', scope: 'systems/storage-system', status: 'Ready', endpoint: 'nas:///mnt/builds', desc: 'NAS 本地构建产物卷。' },
     { name: 'oss', kind: 'WorkService', scope: 'systems/storage-system', status: 'Degraded', endpoint: 'oss://builds', desc: 'OSS 对象存储（产物入库 digest）。' }
   ];
 
   var connectorops = [
     { name: 'onedev-ci', kind: 'ConnectorOps', workService: 'onedev', status: 'Ready',
-      ops: ['build', 'poll-log', 'trigger-job', 'watch-queue'], desc: 'OneDev CI 面：触发构建、拉日志、盯队列。' },
+      ops: ['build', 'poll-log', 'trigger-job', 'watch-queue'], desc: 'OneDev CI：触发构建、拉日志、盯队列。' },
     { name: 'gotty-web', kind: 'ConnectorOps', workService: 'onedev', status: 'Degraded',
-      ops: ['open-terminal', 'exec'], desc: '网页终端挂载（gotty）：默认终端接入面，可选 opencode cli / claude-code / 内嵌 dsh 三种 runner。' },
+      ops: ['open-terminal', 'exec'], desc: '网页终端挂载（gotty）：默认终端接入，可选 opencode cli / claude-code / 内嵌 dsh 三种 runner。' },
     { name: 'agent-comm', kind: 'ConnectorOps', workService: null, status: 'Ready',
-      ops: ['dispatch', 'query', 'interrupt', 'inbox'], desc: '跨 Agent 通信面：dispatch / query / interrupt / inbox；上级委派=权限整包下发（token），子 agent 权限 ⊆ 父。' },
+      ops: ['dispatch', 'query', 'interrupt', 'inbox'], desc: '跨 Agent 通信：dispatch / query / interrupt / inbox；上级委派=权限整包下发（token），子 agent 权限 ⊆ 父。' },
     { name: 'oss-artifacts', kind: 'ConnectorOps', workService: 'oss', status: 'Ready',
-      ops: ['put', 'get', 'verify-digest'], desc: '产物入库面：digest 校验 + 回源。' }
+      ops: ['put', 'get', 'verify-digest'], desc: '产物入库：digest 校验 + 回源。' }
   ];
 
   var providers = [
@@ -253,7 +253,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   ];
 
   var roles = [
-    { name: 'root-all', scope: 'global', desc: 'root 全量权限面（仅 builtinRoot）。' },
+    { name: 'root-all', scope: 'global', desc: 'root 全量权限（仅 builtinRoot）。' },
     { name: 'approver', scope: 'global', desc: '审批者：可批准/驳回 ApprovalNeeded。' },
     { name: 'ci-repair', scope: 'systems/developer-system/ci', desc: 'CI 修复：onedev-ci 写 + gitfs 读写。' },
     { name: 'ci-verify', scope: 'systems/developer-system/ci', desc: 'CI 验证：只读 + 探针执行。' },
@@ -288,12 +288,12 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       updated: ago(180), fieldManager: 'root', ownerRefs: ['self-desc'],
       history: [H(21, 'root', 180, '提升自递归收敛指标'), H(20, 'builtinRoot', 2600, '初始化全局目标'), H(19, 'root', 5200, '措辞修订')],
       content:
-"apiVersion: core/v1\nkind: Goal\nmetadata:\n  name: core-goal\n  scope: global\n  ownerRefs:\n    - self-desc\nspec:\n  intent: |\n    core_system 以「一切皆文档」的方式管理 AI Agent 集群：\n    每个 Service 由 ServiceDesc 声明，由 Workflow 对账，\n    偏差进 DriftReport，收敛靠 developer-system 与 deploy-system。\n  northStars:\n    - 系统集长期自治运行，人工只处理 Escalated 与审批\n    - 任意对象可从树上一跳可达，标识符皆可点\n    - 文档面唯一写路径是 Apply（乐观锁 + DocApplied 回执）\n  slo:\n    convergenceP95Minutes: 30\n    escalatedPer24h: 2\n    docDriftOpenMax: 3\nstatus:\n  progress: on-track\n  lastReview: 2026-11-21" }),
+"apiVersion: core/v1\nkind: Goal\nmetadata:\n  name: core-goal\n  scope: global\n  ownerRefs:\n    - self-desc\nspec:\n  intent: |\n    core_system 以「一切皆文档」的方式管理 AI Agent 集群：\n    每个 Service 由 ServiceDesc 声明，由 Workflow 对账，\n    偏差进 DriftReport，收敛靠 developer-system 与 deploy-system。\n  northStars:\n    - 系统集长期自治运行，人工只处理 Escalated 与审批\n    - 任意对象可从树上一跳可达，标识符皆可点\n    - 文档唯一写路径是 Apply（乐观锁 + DocApplied 回执）\n  slo:\n    convergenceP95Minutes: 30\n    escalatedPer24h: 2\n    docDriftOpenMax: 3\nstatus:\n  progress: on-track\n  lastReview: 2026-11-21" }),
     D({ name: 'apply-rule', kind: 'Rule', scope: 'global', revision: 7, generation: 7,
       updated: ago(2400), fieldManager: 'builtinRoot', ownerRefs: ['apply-rule'],
       history: [H(7, 'builtinRoot', 2400, '明确 Status 直写豁免'), H(6, 'root', 8000, '初版：草稿缓存语义')],
       content:
-"apiVersion: core/v1\nkind: Rule\nmetadata:\n  name: apply-rule\n  scope: global\nspec:\n  statement: |\n    文档面唯一写路径是 Apply。人/LLM 的改动先进草稿缓存，\n    Apply 落库时 Revision+1 并必发 DocApplied 事件。\n    LLM 只提案，Apply 必须人点。\n  exemptions:\n    - Status 回写（fieldManager 白名单，机器直写）\n    - SessionLog / DriftReport（记录类，不经 Apply）\n  lock: document-level-optimistic\n  conflict: re-read + LLM 语义 diff，人裁兜底" }),
+"apiVersion: core/v1\nkind: Rule\nmetadata:\n  name: apply-rule\n  scope: global\nspec:\n  statement: |\n    文档唯一写路径是 Apply。人/LLM 的改动先进草稿缓存，\n    Apply 落库时 Revision+1 并必发 DocApplied 事件。\n    LLM 只提案，Apply 必须人点。\n  exemptions:\n    - Status 回写（fieldManager 白名单，机器直写）\n    - SessionLog / DriftReport（记录类，不经 Apply）\n  lock: document-level-optimistic\n  conflict: re-read + LLM 语义 diff，人裁兜底" }),
     D({ name: 'core-scheme', kind: 'Scheme', scope: 'global', revision: 14, generation: 14,
       updated: ago(420), fieldManager: 'builtinRoot', ownerRefs: [],
       history: [H(14, 'builtinRoot', 420, '注册 ConnectorOps/agent-comm 四原语'), H(13, 'builtinRoot', 3000, 'Workflow phases 增加 Paused')],
@@ -426,7 +426,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       updated: ago(2600), fieldManager: 'root', ownerRefs: ['conn-desc-sd'],
       history: [H(2, 'root', 2600, '补充 runner 说明')],
       content:
-"# connector 系统说明\n\nconnector 系统是连接层：把外部世界（git/CI/存储/终端）\n包装成 WorkService + ConnectorOps 面，供 Agent 与 Workflow 调用。\n\ngotty-web 挂载默认支持网页终端接入；\n会话 runner 可选 opencode cli / claude-code / 内嵌 dsh。" }),
+"# connector 系统说明\n\nconnector 系统是连接层：把外部世界（git/CI/存储/终端）\n包装成 WorkService + ConnectorOps，供 Agent 与 Workflow 调用。\n\ngotty-web 挂载默认支持网页终端接入；\n会话 runner 可选 opencode cli / claude-code / 内嵌 dsh。" }),
     D({ name: 'connector-runbook', kind: 'Runbook', scope: 'systems/connector', revision: 1, generation: 1,
       updated: ago(2800), fieldManager: 'builtinRoot', ownerRefs: ['builtinRoot'],
       history: [H(1, 'builtinRoot', 2800, '初版')],
@@ -471,7 +471,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     { op: 'onedev-ci.poll-log', d: '拉取构建日志尾部 200 行' },
     { op: 'onedev-ci.watch-queue', d: '注册队列 watch（backlog 阈值 10）' },
     { op: 'gitfs.pull', d: 'shallow clone depth=1 @ main' },
-    { op: 'gitfs.commit', d: '文档面落库（经 Apply，fieldManager=workflow/{wf}）' },
+    { op: 'gitfs.commit', d: '文档落库（经 Apply，fieldManager=workflow/{wf}）' },
     { op: 'oss-artifacts.put', d: '产物入库 digest=sha256:{h}' },
     { op: 'oss-artifacts.verify-digest', d: 'digest 校验通过' },
     { op: 'agent-comm.dispatch', d: '委派子任务（token 下发，权限 ⊆ 父）' },
@@ -936,7 +936,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     { field: 'id', type: 'uuid', req: true, desc: '消息 id（幂等去重键）' },
     { field: 'ts', type: 'rfc3339', req: true, desc: '发送时间' },
     { field: 'from', type: 'agentRef', req: true, desc: '发送方 agent 全名（system/instance/agent）' },
-    { field: 'to', type: 'agentRef', req: true, desc: '接收方 agent 全名；inbox 面投递' },
+    { field: 'to', type: 'agentRef', req: true, desc: '接收方 agent 全名；inbox 投递' },
     { field: 'kind', type: 'enum', req: true, desc: 'dispatch | query | interrupt | inbox | reply | ack' },
     { field: 'payload', type: 'object', req: false, desc: '任务/问题/打断语义负载（JSON）' },
     { field: 'refs', type: 'array', req: false, desc: '关联对象链（文档/事件/运行）' },
@@ -1043,7 +1043,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         ], { tokens: 3120, steps: 6 }),
         M('m-3', 'user', '先批准 prod。另外给 watcher-goal 提一条收紧阈值的提案。', 20),
         M('m-4', 'agent',
-          '已受理：\n1. ap-1 我无法替你批——Apply 必须人点，请到审批页操作；\n2. watcher-goal 阈值提案我已写入草稿（不触碰文档面），可在编辑器里查看并 Apply。', 19, [
+          '已受理：\n1. ap-1 我无法替你批——Apply 必须人点，请到审批页操作；\n2. watcher-goal 阈值提案我已写入草稿（不动正式文档），可在编辑器里查看并 Apply。', 19, [
           OP('agent-comm.dispatch', 'watch-only#76', { proposal: 'successRateMin 0.85→0.90' }, '已确认'),
           PROPOSAL('watcher-goal', 'successRateMin 0.85 → 0.90', [
             { t: '-', s: "    successRateMin: '0.85'" },
@@ -1144,7 +1144,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       messages: [
         M('m-1', 'user', 'req-118 拆完了吗？改哪些文件？', 42),
         M('m-2', 'agent',
-          '拆解完成，3 个子任务：\n1. queue 观测指标补齐（done）\n2. onedev connector 重试语义（done）\n3. 红线测试拆分并行（执行中，依赖 ap-4 的 deploy-impl 提案合入）\n\n改动文件（工作区，未 Apply 文档面）：', 41, [
+          '拆解完成，3 个子任务：\n1. queue 观测指标补齐（done）\n2. onedev connector 重试语义（done）\n3. 红线测试拆分并行（执行中，依赖 ap-4 的 deploy-impl 提案合入）\n\n改动文件（工作区，未 Apply 文档）：', 41, [
           FILES([
             { path: 'lib/connector/onedev/retry.ts', add: '+34', del: '-6', status: 'M' },
             { path: 'lib/metrics/queue.ts', add: '+58', del: '-0', status: 'A' },
@@ -1188,7 +1188,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     'builtinRoot': [
       { k: ['状态', 'status', '总览', '全局'], text: '全局快照：6 系统里 4 个 InSync；developer-system Drifting（ci 队列策略漂移，dev-delivery #43 修复中）；connector Remediating（gotty-web 挂载重建 attempt 1/3）；deploy-system/prod Escalated（prod 门禁等你批）。待审批 5 条。建议先看审批页的 ap-1。', cards: [OP('agent-comm.query', 'ci-verifier', { q: 'probe status' }, '已确认')] },
       { k: ['触发', '手动', '一轮', 'tick'], text: '已手动触发一轮对账（core-workflow #130 入队，reason: manual:root）。轮次开始后你会在运行抽屉里看到相位时间线与 action log。', cards: [OP('workflow.trigger', 'core-workflow', { round: 130, reason: 'manual' }, '已入队')] },
-      { k: ['goal', '目标', '新建'], text: '新建 Goal 走文档面：我可以在 global scope 起一份草稿（不触碰文档面、不发事件），你确认内容后点 Apply 落库。要现在起草吗？给我一句话意图即可。', cards: [] },
+      { k: ['goal', '目标', '新建'], text: '新建 Goal 走文档通道：我可以在 global scope 起一份草稿（不动正式文档、不发事件），你确认内容后点 Apply 落库。要现在起草吗？给我一句话意图即可。', cards: [] },
       { k: ['审批', '批准', 'reject', '驳回'], text: '审批必须人点（LLM 只提案）。当前待审 5 条：ap-1 prod 发布（fatal）、ap-2 ci-impl 队列参数（high）、ap-3 watcher 阈值、ap-4 staging canary、ap-5 通知模板。批准=Apply，落库必发 DocApplied。', cards: [] },
       { k: ['漂移', 'drift', '不一致'], text: '当前未解决 drift 3 条：ci-drift-042（warn，修复中）、conn-drift-017（warn，自愈中）、escalated-drift（fatal，等你批 ap-1）。全部有 DriftReport 深链可点。', cards: [] }
     ],
@@ -1219,7 +1219,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       if (hit) return { text: list[i].text, cards: list[i].cards || [] };
     }
     return {
-      text: '收到（' + agentName + '）。我的权限面是 ' + (__CC.MOCK ? '见右栏' : '') + '：ConnectorOps 挂载与 Ref 都在范围内。这句话我归纳为一条新任务，会以 SessionLog 留痕；若涉及文档面修改，我只提案进草稿，Apply 由你点。需要我先给现状摘要还是直接动手？',
+      text: '收到（' + agentName + '）。我的权限范围是 ' + (__CC.MOCK ? '见右栏' : '') + '：ConnectorOps 挂载与 Ref 都在范围内。这句话我归纳为一条新任务，会以 SessionLog 留痕；若涉及文档修改，我只提案进草稿，Apply 由你点。需要我先给现状摘要还是直接动手？',
       cards: []
     };
   }
@@ -1298,6 +1298,279 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   __CC.MOCK.TIME_RANGES = TIME_RANGES;
   __CC.MOCK.fmtMin = fmtMin;
   __CC.MOCK.hex = hex;
+})();
+
+/* console-md.js —— R-UX-4 渲染优先（core_design@R-UX-4 · console-ui.md §13.2 落地，2026-11-26 用户裁决）
+ * 最小自写 markdown 渲染器（零网络依赖、零外部库）：标题/列表/表格/代码块/链接/粗斜体/行内代码/引用/分隔线。
+ * 安全红线（XSS）：一切内容先 HTML 转义再走结构化解析——输出 HTML 的非转义通道只有行内格式
+ * 包装词形（标签名/类名/闭合结构恒为字面量常量），零原文直插；链接只接受 http(s)/agent/system/session/
+ * doc/goal/desc/report/rule 五族内置 scheme 形（相对形一律降级纯文本），零 javascript:/data: 通路。
+ * 结构化字段卡（R-UX-2 只读态映射）：yamlToCards() 把对象正文 YAML 解析为字段卡（卡片=字段名+值chip
+ * +嵌套子卡），供对象详情默认视图与系统详情「声明」卡使用；裸 YAML 转储恒为折叠次级（<details>）。
+ * 词汇纪律（R-UX-3）：本模块为展示层，用户可见文案零「面」字族工程词、零内部里程碑词形。 */
+(function () {
+  /* ---------- 基元 ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  // 链接白名单：零 javascript:/data:/vbscript: 通路（R-UX-4 XSS 红线的入口半边）
+  function safeHref(u) {
+    var s = String(u || '').trim();
+    if (/^(https?:|agent:|system:|session:|doc:|goal:|desc:|report:|rule:)/i.test(s)) return s;
+    return '';
+  }
+  /* ---------- 行内格式（输入恒为已转义文本） ---------- */
+  function inline(s) {
+    // s 已过 esc()——此处只做词形包装，不再引入未转义原文
+    var out = s
+      .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+    // 链接：[text](href)——text/href 均已转义；href 再过白名单（不过=整锚降级纯文本）
+    out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (m, text, href) {
+      var ok = safeHref(href);
+      return ok ? '<a class="md-a" data-href="' + ok + '">' + text + '</a>' : text + ' <span class="mono faint small">(' + href + ')</span>';
+    });
+    return out;
+  }
+  /* ---------- 块级解析 ---------- */
+  function renderMarkdown(src) {
+    var lines = String(src == null ? '' : src).split(/\r?\n/);
+    var out = [];
+    var i = 0;
+    var para = [];
+    var flushPara = function () {
+      if (para.length) { out.push('<p class="md-p">' + inline(esc(para.join(' '))) + '</p>'); para = []; }
+    };
+    while (i < lines.length) {
+      var line = lines[i];
+      if (/^\s*$/.test(line)) { flushPara(); i++; continue; }
+      // 围栏代码块 ```…```（内容纯转义，零行内格式）
+      if (/^\s*```/.test(line)) {
+        flushPara();
+        var buf = [];
+        i++;
+        while (i < lines.length && !/^\s*```/.test(lines[i])) { buf.push(lines[i]); i++; }
+        i++; // 收尾 ```
+        out.push('<pre class="md-pre">' + esc(buf.join('\n')) + '</pre>');
+        continue;
+      }
+      // 标题 #
+      var h = /^(#{1,6})\s+(.*)$/.exec(line);
+      if (h) {
+        flushPara();
+        var lv = Math.min(h[1].length, 6);
+        out.push('<h' + lv + ' class="md-h md-h' + lv + '">' + inline(esc(h[2])) + '</h' + lv + '>');
+        i++; continue;
+      }
+      // 分隔线
+      if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { flushPara(); out.push('<hr class="md-hr">'); i++; continue; }
+      // 引用块（连续 > 行合并）
+      if (/^\s*>\s?/.test(line)) {
+        flushPara();
+        var q = [];
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) { q.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
+        out.push('<blockquote class="md-quote">' + inline(esc(q.join(' '))) + '</blockquote>');
+        continue;
+      }
+      // 表格 |a|b| 与 |---|---|
+      if (/^\s*\|.+\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
+        flushPara();
+        var heads = line.trim().replace(/^\||\|$/g, '').split('|').map(function (x) { return x.trim(); });
+        i += 2;
+        var body = [];
+        while (i < lines.length && /^\s*\|.+\|\s*$/.test(lines[i])) {
+          body.push(lines[i].trim().replace(/^\||\|$/g, '').split('|').map(function (x) { return x.trim(); }));
+          i++;
+        }
+        var t = '<table class="md-tbl"><thead><tr>' + heads.map(function (x) { return '<th>' + inline(esc(x)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          body.map(function (row) { return '<tr>' + heads.map(function (_, ci) { return '<td>' + inline(esc(row[ci] == null ? '' : row[ci])) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+        out.push(t);
+        continue;
+      }
+      // 列表（有序/无序，支持单层嵌套两空格缩进）
+      var isList = function (l) { return /^(\s*)([-*+]|\d+[.)])\s+/.test(l); };
+      if (isList(line)) {
+        flushPara();
+        var items = [];
+        while (i < lines.length && isList(lines[i])) {
+          var m = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(lines[i]);
+          var depth = (m[1].length >= 2) ? 1 : 0;
+          items.push({ depth: depth, ord: /\d/.test(m[2]), text: m[3] });
+          i++;
+        }
+        var html = '<' + (items[0].ord ? 'ol' : 'ul') + ' class="md-list md-list-root">';
+        var stack = [{ tag: items[0].ord ? 'ol' : 'ul' }];
+        var openLi = false;
+        for (var k = 0; k < items.length; k++) {
+          var it = items[k];
+          if (openLi) { html += '</li>'; openLi = false; }
+          while (stack.length > it.depth + 1) html += '</' + stack.pop().tag + '>';
+          if (stack.length === it.depth + 1) {
+            var want = it.ord ? 'ol' : 'ul';
+            if (stack[stack.length - 1].tag !== want) { html += '</' + stack.pop().tag + '>'; html += '<' + want + ' class="md-list">'; stack.push({ tag: want }); }
+          }
+          while (stack.length < it.depth + 1) { var tg = it.ord ? 'ol' : 'ul'; html += '<' + tg + ' class="md-list">'; stack.push({ tag: tg }); }
+          html += '<li class="md-li">' + inline(esc(it.text));
+          openLi = true;
+        }
+        if (openLi) html += '</li>';
+        while (stack.length) html += '</' + stack.pop().tag + '>';
+        out.push('<div class="md-wrap">' + html + '</div>');
+        continue;
+      }
+      para.push(line.trim());
+      i++;
+    }
+    flushPara();
+    return out.join('');
+  }
+  /* ---------- 结构化字段卡（R-UX-2 只读态：scheme 控件映射的展示半边） ---------- */
+  // 值渲染：标量=chip 文本；列表=逐项 chip；映射=子卡递归。深度有界（≤4）。
+  function cardVal(v, depth) {
+    if (v == null) return '<span class="faint">—</span>';
+    if (Array.isArray(v)) {
+      if (!v.length) return '<span class="faint">（空）</span>';
+      return '<div class="md-chips">' + v.slice(0, 24).map(function (x) { return '<span class="chip mute small md-chip">' + cardVal(x, depth + 1) + '</span>'; }).join('') + (v.length > 24 ? '<span class="faint small">…共 ' + v.length + ' 项</span>' : '') + '</div>';
+    }
+    if (typeof v === 'object') {
+      if (depth >= 4) return '<span class="mono faint small">（嵌套结构见「YAML」）</span>';
+      var keys = Object.keys(v);
+      if (!keys.length) return '<span class="faint">（空）</span>';
+      return '<div class="md-subcards">' + keys.map(function (kk) {
+        return '<div class="md-subcard"><div class="md-subcard-k">' + esc(kk) + '</div><div class="md-subcard-v">' + cardVal(v[kk], depth + 1) + '</div></div>';
+      }).join('') + '</div>';
+    }
+    var s = String(v);
+    var href = safeHref(s);
+    if (/^(agent|system|session):/.test(s)) return '<span class="lk md-lk" data-href="' + esc(s) + '">' + esc(s) + '</span>';
+    if (/^(https?:)/.test(s)) return '<a class="md-a" data-href="' + esc(href) + '">' + esc(s) + '</a>';
+    return esc(s);
+  }
+  // 常用字段的人话释义（R-UX-4③：字段旁给人话；缺省=无释义行不冒充）
+  var FIELD_GLOSS = {
+    name: '名称', scope: '作用域', resourceVersion: '版本号', goalRef: '目标文档', descRef: '说明文档',
+    docs: '相关文档', externalRefs: '外部依赖', instances: '服务实例', builtinServices: '内置服务',
+    agentRefs: '对话入口（Agent）', phase: '运行状态', observedGeneration: '已应用的版本', labels: '标签',
+    mounts: '已挂载连接', connectorOps: '已挂载连接', provider: '凭据源', session: '当前会话'
+  };
+  function cardHtml(key, v, depth) {
+    var g = FIELD_GLOSS[String(key)];
+    return '<div class="md-card" data-md-card="' + esc(String(key)) + '">' +
+      '<div class="md-card-k">' + esc(String(key)) + (g ? '<span class="md-gloss">' + esc(g) + '</span>' : '') + '</div>' +
+      '<div class="md-card-v">' + cardVal(v, depth) + '</div></div>';
+  }
+  /* ---------- 最小 YAML 解析（读侧投影：2 空格缩进 + 列表/映射/标量） ---------- */
+  function scalar(s) {
+    var t = String(s).trim();
+    if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
+    if (t === 'true' || t === 'false') return t === 'true';
+    if (/^["'].*["']$/.test(t)) return t.slice(1, -1);
+    return t;
+  }
+  // 行内数组 [a, b] / ["x","y"] → string[]（读侧投影：展示用，非机读权威）
+  function inlineArray(s) {
+    var m = /^\[(.*)\]$/.exec(s.trim());
+    if (!m) return null;
+    var body = m[1].trim();
+    if (!body) return [];
+    return body.split(',').map(function (x) { return scalar(x); });
+  }
+  function parseSimpleYaml(src) {
+    var lines = String(src == null ? '' : src).split(/\r?\n/);
+    var root = {};
+    // 栈：[{ind, obj}]；数组项容器通过「父键挂 []」+ 游标机制承载
+    var stack = [{ ind: -1, obj: root }];
+    var lastKey = null;
+    for (var i = 0; i < lines.length; i++) {
+      var raw = lines[i];
+      if (!raw.trim() || /^\s*#/.test(raw.trim())) continue;
+      if (/^\s*---\s*$/.test(raw)) continue;
+      var ind = (raw.match(/^ */) || [''])[0].length;
+      var t = raw.trim();
+      var listItem = /^-\s+(.*)$/.exec(t);
+      if (listItem) {
+        while (stack.length > 1 && stack[stack.length - 1].ind >= ind) stack.pop();
+        var top = stack[stack.length - 1];
+        var body = listItem[1];
+        var kv = /^([A-Za-z0-9_.-]+):(?!\/)\s*(.*)$/.exec(body); // (?!\/)：system://… 等 URL scheme 不冒充键行
+        if (!top.arr) {
+          top.obj[lastKey] = Array.isArray(top.obj[lastKey]) ? top.obj[lastKey] : [];
+          top.arr = top.obj[lastKey];
+        }
+        if (kv && kv.index === 0 && kv[2] === '') {
+          var item = {};
+          item[kv[1]] = {};
+          top.arr.push(item);
+          stack.push({ ind: ind, obj: item, arr: null, parent: top });
+        } else if (kv && kv.index === 0) {
+          var arr2 = inlineArray(kv[2]);
+          top.arr.push(arr2 ? arr2 : scalar(kv[2]));
+        } else {
+          var arrB = inlineArray(body);
+          top.arr.push(arrB ? arrB : scalar(body));
+        }
+        continue;
+      }
+      var kv2 = /^([A-Za-z0-9_.-]+):\s*(.*)$/.exec(t);
+      if (!kv2) continue;
+      var key = kv2[1], val = kv2[2];
+      lastKey = key;
+      // 深层键：向上收缩到宿主层（父层缩进严格小于当前键缩进；列表项容器已随上一步收缩）
+      while (stack.length > 1 && stack[stack.length - 1].ind >= ind) stack.pop();
+      var top = stack[stack.length - 1];
+      if (val === '') {
+        // 看下一行缩进判容器类型（更深缩进=子映射；同/浅缩进或列表项=空数组占位）
+        var nxt = lines[i + 1];
+        var nInd = nxt && nxt.trim() ? (nxt.match(/^ */) || [''])[0].length : -1;
+        var nItem = nxt && /^-\s+/.test(nxt.trim());
+        if (nInd > ind && !nItem) { top.obj[key] = {}; stack.push({ ind: ind, obj: top.obj[key], arr: null, parent: top }); }
+        else { top.obj[key] = []; }
+      } else if (val === '[]' || val === '{}') {
+        top.obj[key] = val === '[]' ? [] : {};
+      } else {
+        // 行内数组 [a, b] → 逐项 chips；行内 map {a: b, c: d} → 子卡
+        var arr = inlineArray(val);
+        if (arr) { top.obj[key] = arr; continue; }
+        var inlineMap = /^\{(.*)\}$/.exec(val);
+        if (inlineMap) {
+          var m = {};
+          inlineMap[1].split(',').forEach(function (p) {
+            var kp = /^([^:]+):(.*)$/.exec(p.trim());
+            if (kp) m[kp[1].trim()] = scalar(kp[2]);
+          });
+          top.obj[key] = m;
+        } else {
+          top.obj[key] = scalar(val);
+        }
+      }
+    }
+    return root;
+  }
+  function yamlToCards(src) {
+    var tree = parseSimpleYaml(src);
+    var keys = Object.keys(tree).filter(function (k) { return k !== '__items'; });
+    if (!keys.length) return '';
+    return '<div class="md-cards" data-md-cards="1">' + keys.map(function (k) { return cardHtml(k, tree[k], 0); }).join('') + '</div>';
+  }
+  /* ---------- 折叠次级（裸原文恒折叠——首屏禁裸转储） ---------- */
+  function rawDisclosure(summaryText, content, mono) {
+    return '<details class="md-raw"><summary>' + esc(summaryText || '原文') + '</summary>' +
+      '<pre class="mono' + (mono === false ? '' : ' md-raw-pre') + '">' + esc(content == null ? '' : content) + '</pre></details>';
+  }
+  /* ---------- 视图切换 helper（渲染优先 · 原文/scheme 次级） ---------- */
+  function viewSwitch(id, views) {
+    // views: [{id:'render',label:'正文'},{id:'raw',label:'原文'}] → segmented 切换（dsh 原生 chip 语汇）
+    var cur = (typeof window !== 'undefined' && window.__CC && window.__CC.mdView && window.__CC.mdView[id]) || (views[0] && views[0].id);
+    return '<div class="md-switch" role="tablist">' + views.map(function (v) {
+      return '<span class="chip click small' + (cur === v.id ? ' acc' : ' mute') + '" data-act="md-view" data-view="' + esc(id) + '" data-val="' + esc(v.id) + '">' + esc(v.label) + '</span>';
+    }).join('') + '</div>';
+  }
+  var API = { esc: esc, renderMarkdown: renderMarkdown, inline: inline, yamlToCards: yamlToCards, parseSimpleYaml: parseSimpleYaml, rawDisclosure: rawDisclosure, viewSwitch: viewSwitch, cardHtml: cardHtml, safeHref: safeHref };
+  if (typeof window !== 'undefined') window.__CC = window.__CC || {};
+  if (typeof window !== 'undefined') window.__CC.md = API;
 })();
 
 // console-live.js —— E2 cored 读面真数据层（console-adoption.md §5 规则 2：渲染数据无双源——
@@ -1740,7 +2013,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     { id: 'dsh', name: '内嵌 dsh', desc: '默认 runner：宿主内原生会话（缺省 preset），身份=SessionId', enabled: true, why: '' },
     { id: 'claude-code', name: 'claude-code', desc: '经宿主现成 subagent provider 拉起（cross-agent.md §5.7）', enabled: false, why: 'provider/preset 接线=E5b 挂账（不冒充可用）' },
     { id: 'opencode', name: 'opencode cli', desc: '自写 SubagentProvider——connector 代码归 common_connector（R-ENG-3）', enabled: false, why: '自写 provider 余量（E5b 后排期）' },
-    { id: 'gotty', name: 'gotty 终端', desc: '跨机兜底终端：经 piko 暴露、独立鉴权（本机主案=dsh 内置 PTY）', enabled: false, why: '跨机场景余量（§5.7 #6：内置 PTY 全面占优）' }
+    { id: 'gotty', name: 'gotty 终端', desc: '跨机兜底终端：经 piko 暴露、独立鉴权（本机主案=dsh 内置 PTY）', enabled: false, why: '跨机场景余量（§5.7 #6：内置 PTY 优势）' }
   ];
   function runnerList() {
     return RUNNERS.map(function (r) {
@@ -1846,7 +2119,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }
     /** 新建会话（opts={cwd?, agentPreset?, sessionId?}）→ 判别联合不抛错。 */
     function create(opts) {
-      if (!ready()) return Promise.resolve({ ok: false, error: '宿主会话面缺席（ctx.sessions 未在册）' });
+      if (!ready()) return Promise.resolve({ ok: false, error: '宿主会话通道缺席（ctx.sessions 未在册）' });
       var p;
       try { p = sessions.create(opts || {}); } catch (e) { return Promise.resolve({ ok: false, error: String(e) }); }
       return Promise.resolve(p).then(
@@ -1856,7 +2129,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }
     /** 发消息真通路（§5.7 #2：session.prompt；mode=queue|steer）→ 判别联合。 */
     function prompt(sessionId, text, mode) {
-      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话面缺席（ctx.sessions 未在册）' });
+      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话通道缺席（ctx.sessions 未在册）' });
       if (!sessionId || !text || !String(text).trim()) return Promise.resolve({ ok: false, error: '空消息或空会话身份' });
       return sessions.using(sessionId, { source: SOURCE }, function (ref) {
         var s = ref.binding.session;
@@ -1874,7 +2147,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }
     /** 会话改名（探针/识别锚：console 发起的会话显式命名）。 */
     function rename(sessionId, title) {
-      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话面缺席' });
+      if (!ready() || typeof sessions.using !== 'function') return Promise.resolve({ ok: false, error: '宿主会话通道缺席' });
       return sessions.using(sessionId, { source: SOURCE }, function (ref) {
         return Promise.resolve(ref.binding.session.rename(String(title))).then(
           function (r) { return r && r.ok ? { ok: true } : { ok: false, error: String((r && r.error && (r.error.message || r.error.code)) || 'rename 被拒绝') }; },
@@ -2150,7 +2423,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var ws = faces().workspaces;
     if (!ws || typeof ws.create !== 'function') {
       state.ready = false;
-      state.error = 'dsh Workspace 面缺席';
+      state.error = 'dsh Workspace 通道缺席';
       return Promise.resolve(state);
     }
     state.busy = true;
@@ -2660,7 +2933,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       add('Workflows', w.name, (w.effective ? 'effective' : 'absent') + ' · ' + (w.runsTotal || 0) + ' runs', 'wf/' + w.name, 'i-flow');
     });
     // agents（E5 起文档面真数据；M.agents mock 行摘除——对话入口=chat/<agent>）
-    liveChatAgents().forEach(function (a) { add('Agents', a, 'Agent@文档面 · 对话入口', 'chat/' + a, 'i-bot'); });
+    liveChatAgents().forEach(function (a) { add('Agents', a, 'Agent · 对话入口', 'chat/' + a, 'i-bot'); });
     // connectors（E6 真数据：cored objects 枚举；读面未装=不列 mock——palette 诚实缩容）
     (LIVE.state.kinds.length ? LIVE.refs('WorkService') : []).forEach(function (w) { add('连接', w.name, 'WorkService · r' + w.resourceVersion, 'ws/' + w.name, 'i-plug'); });
     (LIVE.state.kinds.length ? LIVE.refs('ConnectorOps') : []).forEach(function (c) { add('连接', c.name, 'ConnectorOps · r' + c.resourceVersion, 'connector/' + c.name, 'i-plug'); });
@@ -2732,7 +3005,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   ACTIONS['open-palette'] = function () { openPalette(); };
   /* E7 收口清扫：manual tick=诚实提示（触发面=cored 写面余量——不画假回执不推 mock 事件库） */
   function manualTick() {
-    toast('手动触发=触发面余量', '写路径唯一入口=POST /v1/apply（--allow-apply）；触发执行面=cored 触发器接线（declared 余量）——不画假回执', 'warn');
+    toast('手动触发暂未接线（余量）', '写路径唯一入口=POST /v1/apply（--allow-apply）；触发执行暂未接线（余量）——不画假回执', 'warn');
   }
   ACTIONS['manual-tick'] = function () { manualTick(); };
   /* E7 收口清扫：新建 Goal=诚实提示（新建=落稿经 Apply；编辑器 new-draft 模式=declared 余量——
@@ -2963,7 +3236,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     return out;
   }
   function liveDegradedNote() {
-    return '<div class="small faint" style="padding:8px 16px">cored 读面暂不可达（' + esc(LIVE.state.err || '未就绪') +
+    return '<div class="small faint" style="padding:8px 16px">数据暂不可达（' + esc(LIVE.state.err || '未就绪') +
       '）——保留骨架，恢复后自动整装替换（连接态灯见右下）</div>';
   }
   function liveHealth() {
@@ -3115,22 +3388,22 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '；DriftReport=' + h.drifts + '；审批归档=' + h.approvals + '；24h 失败=' + h.failed + '/' + h.started + '。';
     view.innerHTML = '<div class="welcome" data-cc-screen="overview">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>总览</h1><span class="chip kind">core console</span></div>' +
-      '<div class="dh-sub">' + esc(greeting()) + ' · ' + fmtDate(new Date()) + ' · 数据源=cored 读面与 dsh 运行面</div></div>' +
+      '<div class="dh-sub">' + esc(greeting()) + ' · ' + fmtDate(new Date()) + ' · 数据实时来自系统文档库与运行状态</div></div>' +
       '<div class="dh-actions"><button type="button" class="btn primary" data-cc-primary="true" data-act="go" data-go="workflows">管理工作流</button></div></div>' +
       metrics + stageHtml +
       '<div class="sec-title">服务状态</div><div class="w-services">' + svcHtml + '</div>' +
       '<div class="sec-title">最近重要事件</div><div class="w-ev-filter">' + chips + '</div>' +
       '<div class="card"><div class="card-b cc-event-list">' + evHtml + '</div></div>' +
-      '<details class="cc-disclosure"><summary>指标口径与数据来源</summary><div class="cc-prose">' + esc(healthText) + ' 所有数字均来自读面投影；零实例与零运行保持中性，不冒充 100% 或成功。</div></details>' +
+      '<details class="cc-disclosure"><summary>指标口径与数据来源</summary><div class="cc-prose">' + esc(healthText) + ' 所有数字均来自系统文档库与运行状态投影；零实例与零运行保持中性，不冒充 100% 或成功。</div></details>' +
       '</div>';
   }
   ACTIONS['w-ev-level'] = function (el) { S.wImpLevel = el.dataset.lv; render(); };
   // 快捷动作（E2 诚实投影：写路径=Apply，未开启写面的装配不下发假回执）
   ACTIONS['manual-tick'] = function () {
-    toast('只读装配不下发手动触发', '写路径唯一入口=POST /v1/apply（--allow-apply；E3 运行管理接 Apply override 闭环）', 'warn');
+    toast('只读装配不下发手动触发', '写路径唯一入口=POST /v1/apply（--allow-apply；运行管理接 Apply override 闭环）', 'warn');
   };
   ACTIONS['new-goal'] = function () {
-    toast('新建 Goal 由文档编辑器落地（E4）', 'LLM 草稿 → 人点 Apply → Revision+1 全链路（apply.md §1/§6）', 'warn');
+    toast('新建 Goal 由文档编辑器落地', 'LLM 草稿 → 人点 Apply → Revision+1 全链路（apply.md §1/§6）', 'warn');
   };
 
   /* ================= 屏 1：总览（E7 真数据换装——mock 渲染面归零，console-adoption.md §1.14 收口清扫） =================
@@ -3170,7 +3443,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '</div>' +
         '<div class="sc-foot"><span class="faint small" style="margin-left:auto">' + sc.rows.length + ' 对象在册 →</span></div>' +
         '</div>';
-    }).join('') || '<div class="empty" style="padding:20px"><div class="e-title">零系统在册（cored 读面）</div></div>';
+    }).join('') || '<div class="empty" style="padding:20px"><div class="e-title">零系统在册</div></div>';
     // 进行中的运行（runs 面投影：triggered|running|suspended=进行中语义——终态推进不冒充）
     var runs = (LIVE.state.runs || []).filter(function (r) { return r.status === 'running' || r.status === 'triggered' || r.status === 'suspended'; }).slice(0, 8);
     var runsHtml = runs.map(function (r) {
@@ -3180,7 +3453,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<span class="mono" style="color:#7fb0f9;font-weight:700">#' + esc(String(no)) + '</span>' +
         '<div class="mr-main"><div>' + esc(wf) + '</div><div class="mr-sub mono">' + esc(r.eventId || r.involved || '') + '</div></div>' +
         '<span class="chip mute small">' + esc(r.status || '') + '</span></div>';
-    }).join('') || '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">runs 面无进行中轮次</div></div>';
+    }).join('') || '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">暂无进行中的运行轮次</div></div>';
     // 最近事件（归档窗头 8 行——/v1/events 最新优先投影）
     var evs = (LIVE.state.events || []).slice(0, 8).map(function (e) {
       var dot = e.level === 'fatal' || e.level === 'error' ? 'danger' : e.level === 'warn' ? 'warn' : 'acc';
@@ -3269,7 +3542,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树' }]);
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>系统树</h1><span class="chip kind">Global → ServiceDesc → …</span></div>' +
-      '<div class="dh-sub">文档节点与资源节点完全同构：同样的行样式 / kind 徽章 / revision / 草稿圆点。树上出现的任何标识符都可点（对象详情只读 viewer）。<span class="mono faint">数据源=cored 读面（scheme kinds + 对象枚举 + 草稿缓存）</span></div></div></div>' +
+      '<div class="dh-sub">文档节点与资源节点完全同构：同样的行样式 / kind 徽章 / revision / 草稿圆点。树上出现的任何标识符都可点（对象详情只读 viewer）。<span class="mono faint">数据源=系统文档库（类型定义 + 对象清单 + 草稿缓存）</span></div></div></div>' +
       '<div class="tree-toolbar">' +
         '<input type="search" id="tree-q" placeholder="搜索类型、名称或作用域…" style="flex:1;max-width:360px;background:var(--bg);border:1px solid var(--border-2);border-radius:7px;padding:6px 11px;color:var(--text);outline:none;font-size:12.5px">' +
         '<button class="btn sm" data-act="tree-expand">展开全部</button>' +
@@ -3289,12 +3562,12 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     TREE_KEYS = [];
     if (st.status === 'loading') {
       box.innerHTML = '<div class="tree-node">' + liveSkeletonRows(6, 10) + '</div>';
-      if (note) note.textContent = '装载 cored 读面…';
+      if (note) note.textContent = '正在装载数据…';
       return;
     }
     if (st.status === 'degraded') {
       box.innerHTML = '<div class="tree-node">' + liveSkeletonRows(3, 10) + liveDegradedNote() + '</div>';
-      if (note) note.textContent = '读面不可达（保留骨架）';
+      if (note) note.textContent = '数据暂不可达（保留骨架）';
       return;
     }
     var match = function (o) { return !ql || (o.name + ' ' + o.kind + ' ' + o.scope).toLowerCase().indexOf(ql) >= 0; };
@@ -3340,11 +3613,11 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     if (note) {
       note.textContent = ql
         ? systems.length + '/' + LIVE.refs('ServiceDesc').length + ' 系统匹配 · 命中对象 ' + totalRows
-        : LIVE.refs('ServiceDesc').length + ' 系统 · ' + totalRows + ' 对象在册 · 全部来自 cored 读面';
+        : LIVE.refs('ServiceDesc').length + ' 系统 · ' + totalRows + ' 对象在册 · 全部来自系统文档库';
     }
     if (!LIVE.refs('ServiceDesc').length && !gRows) {
       box.innerHTML = '<div class="empty" style="padding:28px"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
-        '<div class="e-title">读面无对象在册</div><div>cored 读面 200 但零对象——检查文档库挂载（--docs）</div></div>';
+        '<div class="e-title">暂无对象在册</div><div>文档库已连上但零对象——检查文档库挂载（--docs）</div></div>';
     }
   }
   ACTIONS['tree-sys-toggle'] = function (el) {
@@ -3363,13 +3636,67 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     render();
   };
   ACTIONS['tree-collapse'] = function () { S.treeOpen = {}; render(); };
-  /* ================= 屏 3：系统详情（E2：cored 读面真数据最小面，console-ui.md 屏幕 3） =================
-   * 声明/清单全部来自读面（ServiceDesc 正文 + scope 对象枚举）；六 tab 与场景面四页=E7 落地
-   * （此处只留场景面入口占位，不渲染 mock——宁可空态不可假数据，console-adoption §5 规则 2）。
-   * 「与该系统 Agent 对话」入口=agent 详情（E2 为对象 viewer；E5 换会话屏）。 */
+  /* ================= 屏 3：系统详情（§13.3 系统视角：首屏=系统卡→服务分组→入口卡；R-UX-3④）
+   * 数据全部来自 cored 读面现读（声明正文 + scope 对象枚举）；文档对象清单=「文档」tab 次级。
+   * 对象详情可查看可编辑（编辑器屏）；入口卡四张=事件/指标/文档/权限（人话，无工程词形）。 */
   function sysCrumb(sys, extra) {
     var c = [{ label: 'Welcome', go: 'welcome' }, { label: sys.name, go: 's/' + sys.name }];
     return extra ? c.concat(extra) : c;
+  }
+  /* 系统目标一句话：goalRef 对象正文现读首段/首标题（读面缺席=中性占位不冒充）。 */
+  function sysGoalLine(name) {
+    var key = 'ServiceDesc/' + name;
+    var cached = (typeof SYS_GOAL_CACHE !== 'undefined' && SYS_GOAL_CACHE[key]) || '';
+    return cached;
+  }
+  var SYS_GOAL_CACHE = {};
+  function sysGoalRefs(sd) {
+    var refs = [];
+    var content = LIVE.docContent('ServiceDesc', sd.scope, sd.name) || '';
+    if (content) {
+      var g = /goalRef:\s*(\S+)/.exec(content);
+      if (g) refs.push({ label: '系统目标', ref: g[1] });
+      var d = /descRef:\s*(\S+)/.exec(content);
+      if (d) refs.push({ label: '系统说明', ref: d[1] });
+    }
+    return refs;
+  }
+  function systemCardHtml(sd, set) {
+    var name = sd.name;
+    var sc = inScopeObjects(name);
+    var insts = sc.byKind.ServiceInstance || [];
+    var phase = null, phaseChips = [];
+    insts.forEach(function (o) {
+      var row = LIVE.state.instanceStatus[o.kind + '/' + o.scope + '/' + o.name];
+      if (row && row.phase) phaseChips.push(row.phase);
+    });
+    if (insts.length && phaseChips.length && phaseChips.every(function (p) { return p === 'InSync'; })) phase = 'InSync';
+    else if (phaseChips.some(function (p) { return p === 'Failed' || p === 'Error'; })) phase = 'Failed';
+    else if (insts.length) phase = phaseChips[0] || null;
+    var health = phase === 'InSync'
+      ? '<span class="chip ok small"><span class="lamp ok"></span>运行正常</span>'
+      : (phase === 'Failed' || phase === 'Error'
+        ? '<span class="chip danger small"><span class="lamp danger"></span>有实例异常</span>'
+        : '<span class="chip mute small"><span class="lamp off"></span>暂无运行状态</span>');
+    var goal = sysGoalLine(name);
+    var goalHtml = goal
+      ? '<div class="syscard-row"><div class="syscard-kv" style="flex:1;min-width:220px"><span class="k">这个系统做什么</span><span class="v small">' + esc(goal) + '</span></div></div>'
+      : '';
+    return '<div class="card syscard" data-syscard="1"><div class="card-h"><span class="h-title">' + esc(name) + '</span>' +
+      '<span class="chip mute small" title="系统声明（ServiceDesc）">系统声明</span>' + draftDot(set[sd.kind + '/' + sd.scope + '/' + sd.name]) + '</div>' +
+      '<div class="card-b">' +
+      '<div class="syscard-row">' +
+      '<div class="syscard-kv"><span class="k">健康度</span><span class="v">' + health + '</span></div>' +
+      '<div class="syscard-kv"><span class="k">实例数</span><span class="v">' + insts.length + '</span></div>' +
+      '<div class="syscard-kv"><span class="k">文档版本</span><span class="v">r' + esc(sd.resourceVersion) + '</span></div>' +
+      '<div class="syscard-kv"><span class="k">作用域</span><span class="v small mono">' + esc(sd.scope) + '</span></div>' +
+      '</div>' + goalHtml + '</div></div>';
+  }
+  function entCard(icon, label, sub, count, goPath, testid) {
+    return '<div class="ent-card" data-act="go" data-go="' + esc(goPath) + '" data-ent="' + esc(testid) + '" role="link" tabindex="0">' +
+      '<div class="ec-title"><svg class="ic"><use href="#cc-i-' + icon + '"/></svg>' + esc(label) +
+      (count != null ? '<span class="chip kind small" style="margin-left:auto">' + count + '</span>' : '') + '</div>' +
+      '<div class="ec-sub">' + esc(sub) + '</div></div>';
   }
   function hydrate(elId, path, paint) {
     // 异步内容注水：现渲染骨架行，读面返回后原位替换（路由已变=丢弃，不跨屏串数据）。
@@ -3382,7 +3709,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       paint(el, b);
     }).catch(function (e) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
-      el.innerHTML = '<div class="small faint" style="padding:6px 0">读面暂不可达（' + esc(String((e && e.message) || e)) + '）——恢复后重进即现读</div>';
+      el.innerHTML = '<div class="small faint" style="padding:6px 0">数据暂不可达（' + esc(String((e && e.message) || e)) + '）——恢复后重进即现读</div>';
     });
   }
   // scheme 引用词 → 路由（内容里出现的标识符全可点：硬性验收 console-adoption §5 规则 6）
@@ -3464,7 +3791,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
           if (wf && res.matched) {
             cur += ' <span class="chip click mute" data-act="go" data-go="wf/' + esc(encodeURIComponent(wf)) + '">workflow 锚 ' + esc(wf) + '（route ' + esc(res.route) + '·row' + esc(res.row) + '）→</span>';
           } else if (res.route) {
-            cur += ' <span class="chip mute small">route ' + esc(res.route) + '（执行面 executor=' + esc((res.execution && res.execution.route && res.execution.route.executor) || '') + '，非 workflow 锚）</span>';
+            cur += ' <span class="chip mute small">route ' + esc(res.route) + '（执行通道 executor=' + esc((res.execution && res.execution.route && res.execution.route.executor) || '') + '，非 workflow 锚）</span>';
           }
           el2.innerHTML = cur;
         }).catch(function () { /* 决策面缺席=链路行保持现状（不报错块） */ });
@@ -3487,13 +3814,13 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
             return '<span class="chip click ok" data-act="go" data-go="wf/' + esc(encodeURIComponent(wf)) + '/r/' + esc(no) + '">run #' + esc(no) + ' @' + esc(wf) + '（' + esc(r.status || '') + '·' + esc(r.phase || '') + '）→</span>';
           }).join(' ');
         } else {
-          el2.innerHTML = '<span class="chip mute small">无 run 投影（该事件执行面非 workflow 或未接线——诚实空态）</span>';
+          el2.innerHTML = '<span class="chip mute small">无运行轮次（该事件不是工作流产生，或尚未接线）</span>';
         }
         anchor();
       }, function () {
         if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
         var el2 = $('#ev-chain-runs');
-        if (el2) el2.innerHTML = '<span class="small faint">run 反查面暂不可达</span>';
+        if (el2) el2.innerHTML = '<span class="small faint">运行轮次暂不可查</span>';
       });
     }
   }
@@ -3502,11 +3829,11 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var name = S.params.name;
     var sd = LIVE.refs('ServiceDesc').filter(function (o) { return o.name === name; })[0];
     if (!sd) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', name) + '</div>';
       setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '404' }]);
       return;
     }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' }, { label: name }]);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + name }]);
     var set = treeDraftSet();
     var sc = inScopeObjects(name);
     var rows = function (k, depth) { return (sc.byKind[k] || []).map(function (o) { return treeObjRow(o, depth, set); }).join(''); };
@@ -3517,40 +3844,49 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       docRows = docRows.concat(sc.byKind[kd.name] || []);
     });
     docRows.sort(function (a, b) { return (a.kind + a.name) < (b.kind + b.name) ? -1 : 1; });
+    var wfCount = (sc.byKind.Workflow || []).length;
+    var connCount = (sc.byKind.ConnectorOps || []).length + (sc.byKind.Provider || []).length + (sc.byKind.WorkService || []).length;
+    var evCount = (LIVE.state.events || []).filter(function (e) { return SCN.evInScope(e, name); }).length;
     var sec = function (t, inner) {
       return '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">' + t + '</span></div><div class="card-b" style="padding:4px 8px 8px">' + (inner || '') + '</div></div>';
     };
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>' + esc(name) + '</h1><span class="chip kind">ServiceDesc</span>' +
-      draftDot(set[sd.kind + '/' + sd.scope + '/' + sd.name]) + '</div>' +
-      '<div class="dh-sub"><span class="path-mono">' + esc(sd.scope) + '</span><span class="mono">r' + sd.resourceVersion + '</span>' +
-      '<span>声明/清单全部来自 cored 读面；对象详情=只读 viewer（E4 起升编辑器）</span></div>' +
-      '<div class="dh-sub" style="margin-top:8px">场景面（E7 真数据）：' +
-      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/events">事件面 →</span> ' +
-      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/metrics">指标面 →</span> ' +
-      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/docs">文档面（tag 过滤）→</span> ' +
-      '<span class="chip click acc small" data-act="go" data-go="s/' + esc(name) + '/permissions">权限面 →</span></div>' +
-      '<div class="dh-actions" id="sys-agents"></div></div></div>' +
-      sec('声明正文（ServiceDesc，现读）', '<div id="sys-spec">' + liveSkeletonRows(1, 0) + '</div>') +
-      sec('instances（ServiceInstance）', rows('ServiceInstance', 12) || '<div class="small faint" style="padding:4px 12px">暂无实例对象在册</div>') +
-      sec('workflows（系统层对象；builtin 全局同名 override 语义见 workflow.md）', rows('Workflow', 12) || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
-      sec('资源（WorkService / ConnectorOps / Provider）',
+      systemCardHtml(sd, set) +
+      '<div class="ent-cards" data-ent-cards="1">' +
+      entCard('pulse', '事件', '这个系统发生过的动态', evCount || 0, 's/' + esc(name) + '/events', 'events') +
+      entCard('pulse', '指标', '运行数据与阈值', null, 's/' + esc(name) + '/metrics', 'metrics') +
+      entCard('doc', '文档', '系统说明与规则（按标签筛选）', docRows.length, 's/' + esc(name) + '/docs', 'docs') +
+      entCard('check', '权限', '谁能用哪些连接', connCount || 0, 's/' + esc(name) + '/permissions', 'permissions') +
+      '</div>' +
+      '<div id="sys-agents" class="dh-actions" style="margin-top:10px"></div>' +
+      sec('服务实例', rows('ServiceInstance', 12) || '<div class="small faint" style="padding:4px 12px">暂无运行实例</div>') +
+      sec('工作流', rows('Workflow', 12) || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      sec('连接与凭据源',
         rows('WorkService', 12) + rows('ConnectorOps', 12) + rows('Provider', 12) ||
         '<div class="small faint" style="padding:4px 12px">暂无</div>') +
-      sec('docs（文档与资源同规则，kind 徽章区分）',
-        docRows.map(function (o) { return treeObjRow(o, 12, set); }).join('') || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      '<div class="card" style="margin-top:12px" data-decl-card="1"><div class="card-h"><span class="h-title">系统声明</span>' +
+      '<span class="chip kind">ServiceDesc</span><div class="md-switch" id="decl-switch" style="margin-left:auto"></div></div>' +
+      '<div class="card-b" id="sys-spec">' + liveSkeletonRows(1, 0) + '</div></div>' +
+      '<details class="md-raw" style="margin-top:12px" data-docs-fold="1"><summary>文档清单（' + docRows.length + '）</summary>' +
+      '<div class="card-b" style="padding:4px 8px 8px">' +
+      (docRows.map(function (o) { return treeObjRow(o, 12, set); }).join('') || '<div class="small faint" style="padding:4px 12px">暂无</div>') +
+      '</div></details>' +
       '</div>';
     hydrate('sys-spec', 'v1/objects/ServiceDesc/' + encodeURIComponent(sd.name) + '?scope=' + encodeURIComponent(sd.scope), function (el, b) {
       var content = String(b.content || '');
-      el.innerHTML = '<pre class="mono" style="white-space:pre-wrap;font-size:12.5px;line-height:1.55;margin:0">' + esc(content) + '</pre>' +
+      var goalM = /(?:^|\n)\s*(?:summary|goal|description):\s*["']?([^"'\n]{6,120})/.exec(content);
+      if (goalM && !SYS_GOAL_CACHE['ServiceDesc/' + name]) { SYS_GOAL_CACHE['ServiceDesc/' + name] = goalM[1].trim(); }
+      el.innerHTML =
+        '<div data-decl-view="cards">' + (window.__CC.md.yamlToCards(content) || '') + '</div>' +
+        '<details class="md-raw" data-decl-view="raw"><summary>YAML</summary><pre class="mono md-raw-pre">' + esc(content) + '</pre></details>' +
         (refChips(content) ? '<div style="margin-top:8px">' + refChips(content) + '</div>' : '');
-      // 与该系统 Agent 对话入口（agentRef 来自声明正文——E2 进 agent 对象详情，E5 换会话屏）
+      // 与该系统实例对话入口（agentRef 来自声明正文——点入会话屏）
       var ag = $('#sys-agents');
       if (ag) {
         var refs = (content.match(/agent:\/\/([A-Za-z0-9-_.]+)/g) || []).map(function (x) { return x.replace('agent://', ''); });
         var uniq = refs.filter(function (v, i) { return refs.indexOf(v) === i; });
         ag.innerHTML = uniq.map(function (a) {
-          return '<button class="btn primary" data-act="go" data-go="agent/' + esc(a) + '"><svg class="ic"><use href="#cc-i-chat"/></svg>与 ' + esc(a) + ' 对话</button>';
+          return '<button class="btn primary" data-act="go" data-go="chat/' + esc(a) + '"><svg class="ic"><use href="#cc-i-chat"/></svg>与 ' + esc(a) + ' 对话</button>';
         }).join('');
       }
     });
@@ -3587,7 +3923,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       .concat(CHAT().sessionIdsOfRefs(instEntry.match(/session:\/\/[A-Za-z0-9_.:-]+/g) || []).map(function (x) { return x; }));
     var uniqRefs = agentRefs.filter(function (v, i) { return agentRefs.indexOf(v) === i; });
     var phaseRow = LIVE.state.instanceStatus['ServiceInstance/' + sysRef.scope + '/' + S.params.inst];
-    var phaseChipHtml = phaseRow && phaseRow.phase ? phaseChip(phaseRow.phase, true) : '<span class="faint small" title="ServiceInstance 对象未在册（实例条目内嵌于 ServiceDesc 声明）——相位=引擎回写面余量">n/a</span>';
+    var phaseChipHtml = phaseRow && phaseRow.phase ? phaseChip(phaseRow.phase, true) : '<span class="faint small" title="ServiceInstance 对象未在册（实例条目内嵌于 ServiceDesc 声明）——相位=引擎回写（余量）">n/a</span>';
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '系统树', go: 'tree' }, { label: S.params.name, go: 's/' + esc(S.params.name) }, { label: S.params.inst }]);
     var agentChips = uniqRefs.map(function (a) {
       var isSession = a.indexOf('session:') === 0;
@@ -3607,7 +3943,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       (refChips(instEntry) ? '<div style="margin-top:8px">' + refChips(instEntry) + '</div>' : '') + '</div></div>' +
       '<div class="card"><div class="card-h"><span class="h-title">Status conditions / metrics</span></div><div class="card-b">' +
       (phaseRow ? '<div class="kv"><span class="k">phase</span><span class="v mono">' + esc(phaseRow.phase) + '</span><span class="k">observedGeneration</span><span class="v mono">' + esc(String(phaseRow.observedGeneration != null ? phaseRow.observedGeneration : '—')) + '</span></div>'
-        : '<div class="empty" style="padding:16px"><div class="e-title">ServiceInstance 对象未在册</div><div class="small faint">conditions/metrics=引擎回写面（对象缺席=诚实空态，不画 mock）——E7 场景面细化</div></div>') +
+        : '<div class="empty" style="padding:16px"><div class="e-title">ServiceInstance 对象未在册</div><div class="small faint">conditions/metrics=引擎回写（对象缺席=诚实空态，不画 mock）</div></div>') +
       '</div></div></div></div>';
   }
 
@@ -3631,10 +3967,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     LIVE.ensure();
     var name = S.params.name;
     if (!LIVE.refByName('ServiceDesc', name)) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', name) + '</div>';
       return;
     }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '指标面' }]);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '指标' }]);
     var mets = LIVE.state.metrics || [];
     var thr = (LIVE.state.events || []).filter(function (e) { return e.type === 'MetricThreshold' && SCN.evInScope(e, name); });
     var thrHtml = thr.length ? thr.slice(0, 8).map(function (e) {
@@ -3646,17 +3982,17 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var bodyHtml;
     if (!mets.length) {
       bodyHtml = '<div class="empty" style="padding:28px"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
-        '<div class="e-title">数据面未装配（/v1/metrics 空投影=关断口径可见）</div>' +
-        '<div class="small faint">查询声明清单 / 曲线 / 阈值线的数据本体在 TSDB，不入 console（ops-log 同规则）——数据面装配=declared 余量（不冒充指标名不画 mock 曲线）</div></div>';
+        '<div class="e-title">指标数据未接入</div>' +
+        '<div class="small faint">指标数据的本体在监控库，不入控制台（同日志规则）——指标接入=余量（不冒充指标名不画 mock 曲线）</div></div>';
     } else {
       var rows = mets.map(function (m2) {
         return '<tr><td class="mono">' + esc(m2.name) + '</td><td class="mono" style="text-align:right">' + esc(String(m2.samples != null ? m2.samples : '—')) + '</td>' +
           '<td class="mono small" id="mq-' + esc(cssId(m2.name)) + '"><span class="faint">即席查询中…</span></td></tr>';
       }).join('');
-      bodyHtml = '<div class="card"><div class="card-h"><span class="h-title">指标声明清单（/v1/metrics 投影）</span><span class="h-sub">样本计数=数据面在册实数</span></div>' +
+      bodyHtml = '<div class="card"><div class="card-h"><span class="h-title">指标声明清单（/v1/metrics 投影）</span><span class="h-sub">样本计数=接入的实数</span></div>' +
         '<table class="tbl"><thead><tr><th>metric</th><th style="text-align:right">samples</th><th>即席查询（跨窗口全量 · avg/max）</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
-    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '指标面', '数据面投影实数（TSDB 本体不入 console）· 越线事件=归档行现读', '状态') +
+    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '指标', '指标投影实数（数据本体在监控库）· 越线事件=归档行现读', '状态') +
       '<div class="grid" style="grid-template-columns:1fr 340px">' + bodyHtml +
       '<div class="card" style="align-self:start"><div class="card-h"><span class="h-title">最近越线事件（MetricThreshold）</span><span class="h-sub">归档窗内 · 系统 scope 过滤</span></div><div class="mini-list">' + thrHtml + '</div></div>' +
       '</div></div>';
@@ -3723,10 +4059,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     LIVE.ensure();
     var name = S.params.name;
     if (!LIVE.refByName('ServiceDesc', name)) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', name) + '</div>';
       return;
     }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '文档面' }]);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '文档' }]);
     paintDocsScreen(view, docBaseRows(name), 's/' + encodeURIComponent(name), 'systems/' + name);
   }
   function screenDocsGlobal(view) {
@@ -3742,7 +4078,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     kinds.sort();
     var tags = docTagsUnion(baseRows);
     view.innerHTML = '<div class="view-inner">' +
-      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>文档面</h1><span class="chip kind">' + esc(scopeLabel) + '</span></div>' +
+      '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>文档</h1><span class="chip kind">' + esc(scopeLabel) + '</span></div>' +
       '<div class="dh-sub">tag chips 多选 × kind × 草稿 × 搜索 组合生效（tag=对象正文 spec.metadata.tags 现读——scheme conventions 检索元数据）· 虚拟滚动 · 共 ' + baseRows.length + ' 对象（文档与资源同规则）</div></div>' +
       '<div class="dh-actions">' + (backGo ? '<button class="btn" data-act="go" data-go="' + esc(backGo) + '">← 返回</button>' : '') + '</div></div>' +
       '<div class="filter-bar">' +
@@ -3821,10 +4157,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     LIVE.ensure();
     var name = S.params.name;
     if (!LIVE.refByName('ServiceDesc', name)) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', name) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', name) + '</div>';
       return;
     }
-    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '权限面' }]);
+    setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: name, go: 's/' + encodeURIComponent(name) }, { label: '权限' }]);
     var agents = LIVE.refs('Agent');
     var roles = LIVE.refs('Role');
     var groups = LIVE.refs('Group');
@@ -3841,7 +4177,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       return ref ? (ref.scope || '') : '';
     }
     var matrixRows = agents.map(function (a) { return a.name; });
-    var matrix = '<div class="card"><div class="card-h"><span class="h-title">权限矩阵（行=Agent 文档面，列=ConnectorOps / Provider / Ref 对象）</span>' +
+    var matrix = '<div class="card"><div class="card-h"><span class="h-title">权限矩阵（行=Agent 声明，列=ConnectorOps / Provider / Ref 对象）</span>' +
       '<span class="h-sub">格=授权来源现读（Agent 声明正文挂载行）；—=无挂载声明</span></div>' +
       '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="min-width:150px">agent</th>' +
       cols.map(function (c) { return '<th style="min-width:90px" title="' + esc(c.kind + '/' + c.scope + '/' + c.name) + '"><span class="lk mono small" data-act="go" data-go="' + esc(c.route) + '">' + esc(c.name) + '</span><div class="faint tiny">' + esc(c.kind) + '</div></th>'; }).join('') +
@@ -3853,8 +4189,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
             return '<td class="mono" style="color:' + (hit ? '#4ade80' : 'var(--text-3)') + ';text-align:center" title="' +
               esc(hit ? '授权来源：Agent/' + agentScopeOf(r) + '/' + r + ' 声明正文挂载行 ' + hit.ref : '声明正文无 ' + c.kind + ' 挂载') + '">' + (hit ? '✓' : '—') + '</td>';
           }).join('') +
-          '<td class="mono" style="color:var(--text-3);text-align:center" title="Apply 准入=subject role 面（cored admit 判定）——Agent 文档面无声明，不冒充">—</td></tr>';
-      }).join('') : '<tr><td colspan="' + (colKeys.length + 2) + '" class="small faint">Agent 对象零在册（文档面）——矩阵空态</td></tr>') +
+          '<td class="mono" style="color:var(--text-3);text-align:center" title="Apply 准入=主体角色判定（cored admit）——Agent 声明无此域，不冒充">—</td></tr>';
+      }).join('') : '<tr><td colspan="' + (colKeys.length + 2) + '" class="small faint">Agent 对象零在册——矩阵空态</td></tr>') +
       '</tbody></table></div></div>';
     // 挂载反查表（ConnectorOps × 挂载者——Agent 声明现读，双可点）
     var copRows = LIVE.refs('ConnectorOps').map(function (c) {
@@ -3867,9 +4203,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }).join('');
     var rolesHtml;
     if (!roles.length && !groups.length) {
-      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 文档面</span></div><div class="card-b">' +
+      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 角色对象</span></div><div class="card-b">' +
         '<div class="empty" style="padding:16px"><div class="e-title">Role / Group 对象零在册（docsRoot）</div>' +
-        '<div class="small faint">角色面=declared 余量（docsRoot 未建 Role/Group 对象）——矩阵行只呈现 Agent 声明面现读，不冒充 role 授权</div></div></div></div>';
+        '<div class="small faint">角色对象暂未在册（余量）——矩阵行只呈现 Agent 声明现读，不冒充角色授权</div></div></div></div>';
     } else {
       // R-6（console-adoption.md §1.20）：Role/Group 文档面在册 → 授权矩阵 spec 现读区块。
       // 数据源=live 小对象现读（console-live.js smallKinds 含 Role/Group）——声明正文现读，非内置表；
@@ -3899,7 +4235,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       roles.forEach(function (r) {
         var sp = roleSpecOf(r.scope, r.name);
         if (!sp.perms.length && !sp.on.length) {
-          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td colspan="3" class="small faint">spec 零授权条目（声明在册，零挂载零权限域——授权面同判=不产生授权）</td></tr>';
+          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td colspan="3" class="small faint">spec 零授权条目（声明在册，零挂载零权限域——不产生授权）</td></tr>';
           return;
         }
         sp.on.forEach(function (o) {
@@ -3909,7 +4245,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
               : esc(o)) + '</td><td class="mono faint small">—</td><td class="small faint">on 对象挂载（permission.md 骨架 3b——持有者可处理该对象）</td></tr>';
         });
         sp.perms.forEach(function (p) {
-          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td class="mono">' + esc(p.scope) + '</td><td class="mono small">' + esc(p.actions.join(', ')) + '</td><td class="small faint">permissions 权限域条目（写面 admit 判定源）</td></tr>';
+          grantRows += '<tr><td class="mono">' + roleLink(r.name) + '</td><td class="mono">' + esc(p.scope) + '</td><td class="mono small">' + esc(p.actions.join(', ')) + '</td><td class="small faint">permissions 权限域条目（写入判定的依据）</td></tr>';
         });
       });
       var grpRows = groups.map(function (g) {
@@ -3917,7 +4253,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         return '<tr><td class="mono"><span class="chip kind">Group</span> ' + esc(g.name) + '</td><td>' +
           (bound.length ? bound.map(roleLink).join(' ') : '<span class="faint">零绑定（组不产生授权）</span>') + '</td></tr>';
       }).join('');
-      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 文档面</span></div><table class="tbl"><thead><tr><th>kind</th><th>name</th><th>scope</th><th>rv</th></tr></thead><tbody>' +
+      rolesHtml = '<div class="card"><div class="card-h"><span class="h-title">Role / Group 角色对象</span></div><table class="tbl"><thead><tr><th>kind</th><th>name</th><th>scope</th><th>rv</th></tr></thead><tbody>' +
         roles.map(function (r) { return '<tr><td class="chip kind">Role</td><td class="mono"><span class="lk" data-act="go" data-go="role/' + esc(r.name) + '">' + esc(r.name) + '</span></td><td class="mono">' + esc(r.scope || '—') + '</td><td class="mono">r' + esc(r.resourceVersion) + '</td></tr>'; }).join('') +
         groups.map(function (g) { return '<tr><td class="chip kind">Group</td><td class="mono">' + esc(g.name) + '</td><td class="mono">' + esc(g.scope || '—') + '</td><td class="mono">r' + esc(g.resourceVersion) + '</td></tr>'; }).join('') +
         '</tbody></table></div>' +
@@ -3929,10 +4265,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<table class="tbl" style="margin-top:10px"><thead><tr><th style="min-width:140px">group</th><th>绑定 role（user→group→role，骨架 3）</th></tr></thead><tbody>' +
         (grpRows || '<tr><td colspan="2" class="small faint">Group 零在册</td></tr>') + '</tbody></table></div>';
     }
-    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '权限面', '行=Agent 文档面 · 列=ConnectorOps/Provider/Ref · 格=声明正文挂载行现读（溯源全可点）· Role/Group=文档面枚举+授权矩阵 spec 现读', 'Agent') +
+    view.innerHTML = '<div class="view-inner">' + scenarioHead({ name: name }, '权限', '行=Agent 声明 · 列=连接/凭据源/引用 · 格=声明正文挂载行现读（溯源全可点）· Role/Group=角色对象清单+授权矩阵 spec 现读', 'Agent') +
       '<div class="grid" style="grid-template-columns:1fr">' + matrix +
       '<div class="card"><div class="card-h"><span class="h-title">挂载反查（ConnectorOps × 挂载者——声明正文现读）</span></div>' +
-      '<table class="tbl"><thead><tr><th>ConnectorOps</th><th>scope</th><th>挂载者（Agent 文档面）</th></tr></thead><tbody>' +
+      '<table class="tbl"><thead><tr><th>ConnectorOps</th><th>scope</th><th>挂载者（Agent 声明）</th></tr></thead><tbody>' +
       (copRows || '<tr><td colspan="3" class="small faint">ConnectorOps 零在册</td></tr>') + '</tbody></table></div>' +
       rolesHtml + '</div></div>';
   }
@@ -3982,10 +4318,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   // bound+实现=ok chip 可点落 ConnectorOps 编辑器；bound+skeleton=骨架（实现代码未落）mute chip；
   // unbound=warn chip（缺同名 ConnectorOps 对象——缺口可见）；execution 缺席=—（面缺省不冒充）。
   function wfExecChip(ex) {
-    if (!ex || !ex.state) return '<span class="faint small" title="执行绑定面缺席（旧代/枚举失败——不冒充）">—</span>';
+    if (!ex || !ex.state) return '<span class="faint small" title="执行绑定缺席（旧代/枚举失败——不冒充）">—</span>';
     if (ex.state === 'bound') {
       var tt = '执行绑定：ConnectorOps/' + ex.connectorScope + '/' + ex.connector + (ex.skeleton
-        ? '（骨架=apply 即实现物化面；实现代码=apply-workflow agent 余量）' : '（实现已在册）');
+        ? '（骨架=apply 即落实现占位；实现代码=apply-workflow agent 余量）' : '（实现已在册）');
       return '<span class="chip click ' + (ex.skeleton ? 'mute' : 'ok') + ' small" data-act="go" data-go="connector/' +
         encodeURIComponent(ex.connector) + '" title="' + tt + '">' + (ex.skeleton ? '骨架·' : '') + esc(ex.connector) + '</span>';
     }
@@ -4010,7 +4346,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   // faint；面缺席=—。判据=「构建产物 digest ↔ 生效对象 rv ↔ execution 绑定态」三者联动一致
   // 或缺口可见（unbound/skeleton=true 即缺口词形）。
   function wfReconcileChip(rc) {
-    if (!rc || !rc.chain) return '<span class="faint small" title="生效链判别面缺席（旧代/apply_log 缺——不冒充）">—</span>';
+    if (!rc || !rc.chain) return '<span class="faint small" title="生效链判定缺席（旧代/apply_log 缺——不冒充）">—</span>';
     var head = 'digest r' + (rc.skeletonRv || 0) + ' ↔ bind r' + (rc.lastBindRv != null ? rc.lastBindRv : 0);
     if (rc.chain === 'consistent') {
       return '<span class="chip mute small mono" title="生效链一致（' + head +
@@ -4077,7 +4413,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         content = ensureOriginLabel(setYamlEnabled(content, to));
       } else {
         var sys = firstSystemScope();
-        if (!sys) { toast('override 目标面缺席', '文档库无系统 scope（ServiceDesc 缺席）——不发明 override 位置', 'warn'); return; }
+        if (!sys) { toast('override 目标缺席', '文档库无系统 scope（ServiceDesc 缺席）——不发明 override 位置', 'warn'); return; }
         scope = sys;
         content = cloneAsOverride(content, sys, to);
       }
@@ -4091,7 +4427,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         LIVE.load().then(function () { render(); });
       });
     }, function () {
-      toast('本体读取失败', '对象读面不可达——稍后重试（连接态灯见右下）', 'warn');
+      toast('本体读取失败', '对象数据暂不可达——稍后重试（连接状态见右下）', 'warn');
     });
   }
 
@@ -4112,7 +4448,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
           switchCell = '<span class="switch' + (curEnabled ? ' on' : '') + '" data-act="wf-toggle" data-wf="' + esc(w.name) +
             '" title="启用/停用 = Apply（override 语义：builtin 本体不动）"></span>';
         } else {
-          switchCell = '<span class="faint small" title="builtin 本体无文档对象——override 生成=E4 编辑器轮余量（诚实余量，不假开关）">—</span>';
+          switchCell = '<span class="faint small" title="builtin 本体无文档对象——override 生成=文档编辑器余量（诚实余量，不假开关）">—</span>';
         }
         var docsChips = (w.objects || []).map(function (o) { return wfObjectChip(w.name, o); }).join(' ') ||
           '<span class="faint small" title="声明随运行时 builtin 注册表（无文档本体）">builtin 注册表</span>';
@@ -4132,7 +4468,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       }).join('');
       inner = '<div class="card"><table class="tbl"><thead><tr><th>名称</th><th>生效 scope</th><th>启用 (=Apply)</th><th>执行绑定</th><th>生效链</th><th>当前相位</th>' +
         '<th>运行次数 总/24h</th><th>成功率</th><th>最近运行</th><th>涉及文档</th></tr></thead><tbody>' + (rowsHtml || '') + '</tbody></table></div>' +
-        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）；执行绑定=同名/spec.connector 覆写 ConnectorOps（apply 即实现骨架物化——unbound=缺口可见）；生效链=骨架 digest ↔ apply_log 绑定行 rv 对账（R-9 判别面——分裂=人写演进可见）</div>';
+        '<div class="small faint" style="margin-top:8px">计数口径=event_log 归档 ×dispatch 决议（含冷却窗内被拦阻触发——' + (st.wfAgg.scanCapped ? '扫描有界已收敛' : '全窗') + '）；启停=override 语义 Apply（builtin 本体不动）；执行绑定=同名/spec.connector 覆写 ConnectorOps（apply 即实现骨架物化——unbound=缺口可见）；生效链=骨架 digest ↔ apply_log 绑定行 rv 对账（R-9 判别——分裂=人写演进可见）</div>';
     }
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>Workflows</h1>' +
@@ -4153,7 +4489,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows', go: 'workflows' }, { label: name }]);
     if (!row) {
       view.innerHTML = '<div class="view-inner">' + (st.wfAgg
-        ? emptyBox('workflow 不在聚合面（行集=注册表∪对象∪run 锚三源并集）', name)
+        ? emptyBox('workflow 不在聚合视图（行集=注册表∪对象∪run 锚三源并集）', name)
         : '<div class="card"><div class="card-b">' + liveSkeletonRows(3) + '</div></div>' + liveDegradedNote()) + '</div>';
       return;
     }
@@ -4169,8 +4505,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<div class="dh-actions">' +
       (curEnabled !== null
         ? '<button class="btn ' + (curEnabled ? 'danger' : 'ok') + '" data-act="wf-toggle" data-wf="' + esc(row.name) + '">' + (curEnabled ? '停用' : '启用') + '</button>'
-        : '<span class="faint small" title="builtin 本体无文档对象——override 生成=E4 余量">启停余量</span>') +
-      '<button class="btn" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '" title="编辑=文档编辑器（E4 起 Apply 全链）">编辑 spec</button>' +
+        : '<span class="faint small" title="builtin 本体无文档对象——override 生成=文档编辑器余量">启停余量</span>') +
+      '<button class="btn" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '" title="编辑=文档编辑器（Apply 全链）">编辑 spec</button>' +
       '</div></div>';
     var kpi = '<div class="statbar" style="grid-template-columns:repeat(4,1fr)">' +
       '<div class="stat"><div class="st-num">' + row.runsTotal + '</div><div class="st-label">总运行（归档口径）</div></div>' +
@@ -4196,9 +4532,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     e.stopPropagation();
     var name = el.dataset.wf;
     var row = liveWfRow(name);
-    if (!row) { toast('读面未就绪', 'workflow 聚合面未装载——稍后重试', 'warn'); return; }
+    if (!row) { toast('数据未就绪', 'workflow 清单未装载——稍后重试', 'warn'); return; }
     var tt = wfToggleTarget(row);
-    if (!tt.target) { toast('无法启停（诚实余量）', 'builtin 本体无文档对象——override 生成=E4 编辑器轮余量', 'warn'); return; }
+    if (!tt.target) { toast('无法启停（诚实余量）', 'builtin 本体无文档对象——override 生成=文档编辑器余量', 'warn'); return; }
     var cur = tt.target.enabled === false ? false : true;
     var to = !cur;
     var scopeAfter = tt.isOverride ? tt.target.scope : firstSystemScope();
@@ -4206,7 +4542,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<div class="kv" style="gap:8px"><span class="k">对象</span><span class="v mono">Workflow/' + esc(scopeAfter) + '/' + esc(name) + '</span>' +
       '<span class="k">语义</span><span class="v">' + (tt.isOverride ? '更新既有 override（系统层同名覆盖——builtin 本体不动）' : '生成 override（克隆本体文档 + origin 标注 + 翻转 enabled；builtin 本体不动）') + '</span>' +
       '<span class="k">变更</span><span class="v mono">spec.enabled: ' + cur + ' → ' + to + '</span>' +
-      '<span class="k">闭环</span><span class="v">Apply 落库 Revision+1 · DocApplied 归档 · 页面重读显示新态（触发路径对 enabled 的实时 honoring=引擎余量，如实标注）</span></div>',
+      '<span class="k">闭环</span><span class="v">Apply 落库 Revision+1 · DocApplied 归档 · 页面重读显示新态（触发路径对 enabled 的实时遵循；接线=引擎余量，如实标注）</span></div>',
       '确认（Apply）', function () {
         applyWorkflowToggleLive(name, tt.target, tt.isOverride, to);
       });
@@ -4215,7 +4551,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var row = liveWfRow(el.dataset.wf);
     var tt = row ? wfToggleTarget(row) : null;
     if (tt && tt.target) { go('doc/Workflow/' + encodeURIComponent(tt.target.scope) + '/' + encodeURIComponent(el.dataset.wf)); return; }
-    toast('无文档本体（诚实空态）', '该 workflow 的声明随 builtin 注册表——spec 编辑=E4 编辑器轮余量', 'warn');
+    toast('无文档本体（诚实空态）', '该 workflow 的声明随 builtin 注册表——spec 编辑=文档编辑器余量', 'warn');
   };
 
   /* --- 运行 tab：dsh Jobs 双栏（run 列表 + 抽屉内联；follow=余量，轮次静态投影） --- */
@@ -4229,9 +4565,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<span class="faint mono small" style="margin-left:auto">' + fmtAgo(new Date(r.startedAt)) + '</span></div>' +
         '<div class="ji-sub"><span>' + esc(r.type) + '</span><span>·</span><span>' + esc(r.specSource || '—') + '</span></div></div>';
     }).join('');
-    if (!list) list = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">环内暂无该锚的 run（触发留痕=观测面，环容量 256）</div></div>';
+    if (!list) list = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">环内暂无该锚的 run（触发留痕=观测记录，环容量 256）</div></div>';
     var detail = sel ? wfRunDrawerHtml(row, sel, true) :
-      '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">无运行轮次</div><div class="e-act"><span class="faint small">手动触发=Apply 触发设置（引擎真实执行面接线余量）</span></div></div>';
+      '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">无运行轮次</div><div class="e-act"><span class="faint small">手动触发=Apply 触发设置（引擎真实执行接线余量）</span></div></div>';
     return '<div class="jobs-layout"><div class="jobs-list"><div class="card-h"><span class="h-title">运行轮次</span><span class="h-sub">' +
       runs.length + ' 轮（环内投影，新→旧）</span></div><div class="jl-scroll">' + list + '</div></div>' +
       '<div class="job-detail" id="job-detail">' + detail + '</div></div>';
@@ -4246,7 +4582,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       var cls = i < curIdx ? 'done' : (i === curIdx ? 'current' : '');
       return '<div class="ptl-item ' + cls + '"><div class="ptl-rail"><div class="ptl-node"></div>' + (i < phases.length - 1 ? '<div class="ptl-line"></div>' : '') + '</div>' +
         '<div class="ptl-main"><div class="ptl-head"><span class="ptl-phase">' + esc(p) + '</span><span class="ptl-ts">' +
-        (i === curIdx ? '当前落点' : (i < curIdx ? '已过（留痕面无进出时刻——相位进出时刻=执行面余量）' : '未至')) + '</span></div></div></div>';
+        (i === curIdx ? '当前落点' : (i < curIdx ? '已过（留痕无进出时刻——相位进出时刻=执行余量）' : '未至')) + '</span></div></div></div>';
     }).join('');
     if (!tl) tl = '<div class="small faint">相位未投影（' + esc(r.specSource) + ' 源未声明 spec.phases——零投影口径，status=' + esc(r.status) + '）</div>';
     var kv = function (k, v) { return '<span>' + esc(k) + ' <b>' + v + '</b></span>'; };
@@ -4265,9 +4601,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<span>brakes <b class="mono">' + esc(brakes.cooldown || '—') + ' / ' + esc(brakes.maxMutationsTick != null ? brakes.maxMutationsTick : '—') + '</b></span></div>' +
       '<div class="jd-body">' +
       '<div><div class="sec-title">相位时间线（FSM：声明序列 + 当前落点）</div><div class="phase-tl">' + tl + '</div></div>' +
-      '<div><div class="sec-title">action log（ConnectorOps 调用）</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：action log 随真实执行面接线落位（引擎主体余量，cored-bridge.md §2.3）——本抽屉当前承载触发面投影（留痕 kv 即该 run 的审计锚点）</div></div></div>' +
+      '<div><div class="sec-title">action log（ConnectorOps 调用）</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：action log 随真实执行接线落位（引擎主体余量，cored-bridge.md §2.3）——本抽屉当前承载触发投影（留痕 kv 即该 run 的审计锚点）</div></div></div>' +
       '<div><div class="sec-title">涉及文档（点击进对象 viewer）</div><div style="display:flex;gap:6px;flex-wrap:wrap">' + (docsChips || '<span class="faint small">留痕 involved 缺席</span>') + (objChips ? '<span class="faint small" style="align-self:center">声明对象：</span>' + objChips : '') + '</div></div>' +
-      '<div><div class="sec-title">SessionLog 全文</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：SessionLog 随 agent 会话接线落位（E5 会话屏轮）——细粒度断点续跑靠 SessionLog（workflows 规则 13 挂账）</div></div></div>' +
+      '<div><div class="sec-title">SessionLog 全文</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：SessionLog 随 agent 会话接线落位（会话屏余量）——细粒度断点续跑靠 SessionLog（workflows 规则 13 挂账）</div></div></div>' +
       '</div>';
   }
 
@@ -4311,15 +4647,15 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
           (st === 'current' ? '◉' : (st === 'passed' ? '✓' : (st === 'off-flow' ? '⤫' : '○'))) + '</span>';
       }).join(' ');
       recon = '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">骨架节点 × run 相位对账投影</span>' +
-        '<span class="h-sub">数据面=spec.flow.nodes（executionFlow）× run 现势相位——节点态着色：◉ 当前落点 · ✓ 已过 · ○ 未至 · ⤫ 不在序列</span></div>' +
+        '<span class="h-sub">数据源=spec.flow.nodes（executionFlow）× run 现势相位——节点态着色：◉ 当前落点 · ✓ 已过 · ○ 未至 · ⤫ 不在序列</span></div>' +
         '<div class="card-b"><div style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 0">' +
         (nodeChips || '<span class="faint small">骨架节点零投影（absent——缺口可见）</span>') + '</div>' +
         '<div class="small faint" style="padding:4px 0 0">对账口径：节点在骨架而 run 相位序列不含=off-flow（缺口词形可见不静默）；' +
         (lastRun ? '现势 run #' + lastRun.run + ' 相位序列=' + esc(runPhases.join(' → ') || '未投影') : '无现势 run——节点态不假画（全部不冒充）') +
         '</div></div></div>';
     } else {
-      recon = '<div class="card" style="margin-top:12px"><div class="card-b"><div class="small faint" style="padding:6px 0">骨架节点对账面缺席：execution=' +
-        esc(ex.state || '—') + '（' + (ex.state === 'unbound' ? '绑定对象缺席=unbound 缺口可见' : '绑定面缺席——不冒充') + '）——物化后骨架节点接线在此对账呈现</div></div></div>';
+      recon = '<div class="card" style="margin-top:12px"><div class="card-b"><div class="small faint" style="padding:6px 0">骨架节点对账缺席：execution=' +
+        esc(ex.state || '—') + '（' + (ex.state === 'unbound' ? '绑定对象缺席=unbound 缺口可见' : '绑定缺席——不冒充') + '）——物化后骨架节点接线在此对账呈现</div></div></div>';
     }
     return head + recon;
   }
@@ -4337,16 +4673,16 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<div class="mr-main"><div>' + esc(rec.type) + '</div><div class="mr-sub mono">' + esc(rec.involved || '—') + ' · route ' + esc(rec.route) + '</div></div>' +
         '<span class="faint mono small">' + fmtAgo(new Date(rec.receivedAt || rec.at)) + '</span></div>';
     }).join('');
-    if (!html) html = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">留痕环内暂无路由到该锚的事件（dead-letter/其他执行面不入此列）</div></div>';
+    if (!html) html = '<div class="empty"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">留痕环内暂无路由到该锚的事件（死信/其他通道不入此列）</div></div>';
     return '<div class="card"><div class="card-h"><span class="h-title">触发与消费的事件流（留痕=过去的决策投影）</span><span class="h-sub">' + recs.length + ' 条</span></div>' +
       '<div class="mini-list" style="max-height:520px;overflow-y:auto">' + html + '</div></div>';
   }
 
-  /* --- 流转 tab：run 行投影（相位+状态+时刻；相位进出时刻=执行面余量，如实标注） --- */
+  /* --- 流转 tab：run 行投影（相位+状态+时刻；相位进出时刻=执行余量，如实标注） --- */
   function wfLiveTabTransitions(row) {
     var runs = liveRunsOf(row.name);
     var container = '<div id="tr-vlist"></div>';
-    var note = '<div class="filter-bar"><span class="small muted">运行轮次（新→旧）：</span><span class="count-note">' + runs.length + ' 行（相位进出时刻随执行面接线落位——当前承载=受理/迁移落点投影）</span></div>';
+    var note = '<div class="filter-bar"><span class="small muted">运行轮次（新→旧）：</span><span class="count-note">' + runs.length + ' 行（相位进出时刻随执行接线落位——当前承载=受理/迁移落点投影）</span></div>';
     return note + container;
   }
   function paintWfTransitions(row) {
@@ -4373,7 +4709,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var tt = wfToggleTarget(row);
     var eff = tt.target;
     if (!eff) {
-      return '<div class="card"><div class="card-b">' + emptyBox('数据流声明缺席（诚实空态）', row.name + ' 无文档本体——spec.dataflow 随文档面，builtin 注册表无此声明') + '</div></div>';
+      return '<div class="card"><div class="card-b">' + emptyBox('数据流声明缺席（诚实空态）', row.name + ' 无文档本体——spec.dataflow 随文档对象，builtin 注册表无此声明') + '</div></div>';
     }
     var ins = (eff.dataflowInputs || []).map(function (x) {
       var label = x.events && x.events.length ? 'events: ' + x.events.join(', ') : (x.docs ? 'docs: ' + x.docs : '');
@@ -4409,7 +4745,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var exSkel = !!(row.execution && row.execution.state === 'bound' && row.execution.skeleton);
     if (!tt.target) {
       return '<div class="card"><div class="card-h"><span class="h-title">spec（builtin 注册表——无文档本体）</span></div>' +
-        '<div class="card-b"><div class="small faint" style="padding:4px 0">声明随运行时 builtin 注册表（相位词汇映射表同源，concepts/workflow.md §1）；override 编辑=E4 编辑器轮余量。</div>' +
+        '<div class="card-b"><div class="small faint" style="padding:4px 0">声明随运行时 builtin 注册表（相位词汇映射表同源，concepts/workflow.md §1）；override 编辑=文档编辑器余量。</div>' +
         '<div class="yaml-block">' + esc('phases: [' + (row.phases || []).join(', ') + ']\nspecSource: ' + row.specSource) + '</div>' +
         '<div class="small faint" style="padding:6px 0 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——apply 即实现骨架物化，workflow-runtime.md §11.1）</span></div>' +
         wfReconcileLine(row) +
@@ -4428,9 +4764,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         }).join(' ') + '</div>'
       : '<div class="small faint" style="padding:4px 0">骨架节点零投影（absent——缺口可见）</div>') : '';
     return '<div class="card"><div class="card-h"><span class="h-title">spec yaml（' + esc(obj.scope) + ' r' + obj.resourceVersion + ' · origin ' + esc(obj.origin) + '）</span>' +
-      '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '">编辑（→ 对象 viewer，E4 起 Apply 全链）</span></span></div>' +
+      '<span class="h-right"><span class="lk small" data-act="wf-edit-spec" data-wf="' + esc(row.name) + '">编辑（→ 对象编辑器，Apply 全链）</span></span></div>' +
       '<div class="card-b" id="wf-config-yaml"><div class="skel-row"><div class="skel" style="width:220px"></div></div></div>' +
-      '<div class="card-b" style="border-top:1px solid var(--line)"><div class="small faint" style="padding:2px 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——骨架=apply 即实现物化面，实现代码=apply-workflow agent 余量）</span></div>' +
+      '<div class="card-b" style="border-top:1px solid var(--line)"><div class="small faint" style="padding:2px 0">执行绑定：' + wfExecChip(row.execution) + ' <span class="faint">（同名/spec.connector 覆写 ConnectorOps——骨架=apply 即落实现占位，实现代码=apply-workflow agent 余量）</span></div>' +
       nodesHtml +
       '<div class="card-b" style="border-top:1px solid var(--line)">' + wfReconcileLine(row) +
       (exSkel ? wfDispatchLine() : '') + '</div></div>';
@@ -4475,9 +4811,9 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         if (sp && sp.declared) {
           spHtml = '<span class="chip acc small mono" title="spawn 接线声明（v0.57 §11.7）：approved 批准投影行→声明词形；wired=false=真实拉起 deferred（agent-session 域）——approved≠拉起，真实执行仍 observe">spawn·声明 target=' + esc(sp.target || '') + ' · wired=' + esc(String(sp.wired)) + '</span> ';
         } else if (sp) {
-          spHtml = '<span class="chip mute small mono" title="spawn 接线缺席词形（pending/rejected 行或批准投影缺席——零值键恒在=代际判别器；未批准=接线面未进入）">spawn·未声明（wired=false）</span> ';
+          spHtml = '<span class="chip mute small mono" title="spawn 接线缺席词形（pending/rejected 行或批准投影缺席——零值键恒在=代际判别器；未批准=接线未进入）">spawn·未声明（wired=false）</span> ';
         }
-        var apHtml = apState ? '<span id="wf-approval-chip" class="chip ' + apCls + ' small mono" title="ask 批准动作面（§11.5）：批准/驳回=Apply workflow:approve|reject 判定（apply_log 行集匹配原地翻转）">批准投影·' + esc(apState) + '</span> ' : '';
+        var apHtml = apState ? '<span id="wf-approval-chip" class="chip ' + apCls + ' small mono" title="ask 批准动作（§11.5）：批准/驳回=Apply workflow:approve|reject 判定（apply_log 行集匹配原地翻转）">批准投影·' + esc(apState) + '</span> ' : '';
         el.innerHTML = '<span class="chip mute small mono">apply-workflow ×' + recs.length + '</span> ' + apHtml + spHtml +
           '<span>最近 ' + esc(String(last.at || '').replace('T', ' ').slice(0, 19)) + ' · action=' + esc(last.action) +
           ' · rv=' + esc(last.rv) + ' · autoLevel=' + esc(last.autoLevel) +
@@ -4527,14 +4863,14 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         var checks = dry.ok
           ? '<div class="checklist">' +
             '<div class="check-item pass"><span class="ci-ic" style="color:var(--ok)">✓</span>Scheme 校验 + 权限准入（dry-run 零副作用）</div>' +
-            '<div class="check-item ' + (lockOk ? 'pass' : 'fail') + '"><span class="ci-ic" style="color:' + (lockOk ? 'var(--ok)' : 'var(--danger)') + '">' + (lockOk ? '✓' : '✗') + '</span>乐观锁（投影 rv r' + rec.rv + ' ↔ 面上现值' + (lockOk ? '一致' : '漂移 r' + (dry.data && dry.data.rv) + '——重进即现读') + '）</div>' +
+            '<div class="check-item ' + (lockOk ? 'pass' : 'fail') + '"><span class="ci-ic" style="color:' + (lockOk ? 'var(--ok)' : 'var(--danger)') + '">' + (lockOk ? '✓' : '✗') + '</span>乐观锁（投影 rv r' + rec.rv + ' ↔ 落库现值' + (lockOk ? '一致' : '漂移 r' + (dry.data && dry.data.rv) + '——重进即现读') + '）</div>' +
             '</div>'
           : '<div class="small" style="color:var(--danger)">预检未过（' + esc(String(dry.error || ('HTTP ' + dry.status))) + '）</div>';
         confirmModal(decision === 'approve' ? '批准派单（= Apply workflow:approve）' : '驳回派单（= Apply workflow:reject）',
           '<div class="small" style="margin-bottom:8px">对象 <b class="mono">' + esc(key) + '</b>' +
           ' · 派单 rv r' + esc(rec.rv) + ' · autoLevel=' + esc(rec.autoLevel || 'ask') +
-          '（判定串 workflow:' + esc(decision) + '——apply_log 判定行=批准投影翻转权威，§11.5 动作面；' +
-          (decision === 'approve' ? '批准→spawn 接线声明（wired 恒 false=真实拉起 deferred——红线 a，批准≠拉起零执行）' : '驳回→零声明（接线面未进入））') + '）' +
+          '（判定串 workflow:' + esc(decision) + '——apply_log 判定行=批准投影翻转权威，§11.5 动作；' +
+          (decision === 'approve' ? '批准→spawn 接线声明（wired 恒 false=真实拉起 deferred——红线 a，批准≠拉起零执行）' : '驳回→零声明（接线未进入））') + '）' +
           checks,
           decision === 'approve' ? '确认批准（Apply）' : '确认驳回（Apply）', function () {
             LIVE.apply({ kind: kind, scope: rec.scope, name: objName,
@@ -4545,7 +4881,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
                   name + ' · 批准投影翻转 ' + fm + ' · inbox 下一次装载反映（挂起行消失=回链闭环）', decision === 'approve' ? 'ok' : 'warn');
                 render(); // 呈现面 refresh（chips 原地翻转 + 动作按钮摘除；inbox 回链=挂起行投影已判过滤）
               } else if (res.status === 409) {
-                toast('乐观锁冲突（409）', '派单行 rv 已前移（r' + rec.rv + ' → 面上现值）——重进即现读', 'danger');
+                toast('乐观锁冲突（409）', '派单行 rv 已前移（r' + rec.rv + ' → 落库现值）——重进即现读', 'danger');
               } else {
                 toast('判定失败（' + (res.status == null ? '传输层' : 'HTTP ' + res.status) + '）', String(res.error || ''), 'danger');
               }
@@ -4569,7 +4905,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: 'Workflows', go: 'workflows' }, { label: name, go: 'wf/' + name }, { label: '运行 #' + no }]);
     if (!row || !r) {
       view.innerHTML = '<div class="view-inner">' + (st.wfAgg
-        ? emptyBox('运行轮次不在环内（环容量 256——旧轮次随溢出挤出，留痕=观测面非账本）', name + ' #' + no)
+        ? emptyBox('运行轮次不在环内（环容量 256——旧轮次随溢出挤出，留痕=观测记录非账本）', name + ' #' + no)
         : '<div class="card"><div class="card-b">' + liveSkeletonRows(3) + '</div></div>' + liveDegradedNote()) + '</div>';
       return;
     }
@@ -4658,7 +4994,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       // 变更（URL 手输名不冒充创建窗）。name-only 解析路由不入此窗（草稿键歧义不发明解析）。
       var dRow = (kind && scope) ? draftRowOf(kind, scope, name) : null;
       if (!dRow) {
-        view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（cored 读面 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
+        view.innerHTML = '<div class="view-inner">' + emptyBox('对象不在册（文档库 ' + st.kinds.length + ' kinds）', (kind ? kind + '/' : '') + name) + '</div>';
         return;
       }
       ref = { kind: kind, scope: scope, name: name };
@@ -4674,23 +5010,65 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     // E6：ConnectorOps kind 专属第五 tab「运行面」（连接层运行态——缺省 tab=运行面）；
     // v0.52 能力 A：全 kind 增「设计文档」页签（整屏换设计文档工作台——文件树+编辑器+diff+Apply）。
     var tabs = kind === 'ConnectorOps'
-      ? [['ops', '运行面'], ['scheme', '控件'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
+      ? [['ops', '运行状态'], ['scheme', '控件'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']]
       : [['scheme', '控件'], ['design', '设计文档'], ['llm', 'LLM 提案'], ['draft', '草稿'], ['hist', '历史'], ['meta', '元数据']];
     var tab = S.docTab[key] || (kind === 'ConnectorOps' ? 'ops' : 'llm');
+    // R-UX-4 渲染优先：默认视图=渲染正文（markdown/字段卡，read-only 呈现）；「原文」=可编辑
+    // textarea 次级切换（编辑能力与草稿通路零变更——切换态只是显隐，S.ED 工作副本不重建）。
+    var viewMode = edViewMode(key);
     view.innerHTML = '<div class="view-inner"><div class="doc-layout"><div class="doc-main">' +
       '<div class="doc-headbar"><span class="doc-path">' + esc(scope) + '/' + esc(name) + '</span>' + kindBadge(kind) +
-      '<span id="ed-draft-chip"></span></div>' +
+      '<span id="ed-draft-chip"></span>' +
+      '<div class="md-switch" style="margin-left:auto">' +
+      '<span class="chip click small' + (viewMode === 'render' ? ' acc' : ' mute') + '" data-act="ed-view" data-val="render" data-key="' + esc(key) + '">正文</span>' +
+      '<span class="chip click small' + (viewMode === 'raw' ? ' acc' : ' mute') + '" data-act="ed-view" data-val="raw" data-key="' + esc(key) + '">原文</span>' +
+      '</div></div>' +
       '<div class="doc-meta-row"><span class="chip mute small">scope</span>' +
       '<span class="chip click mute small" data-act="go" data-go="' + (scope === 'global' || scope === 'builtin' ? 'tree' : 's/' + esc(encodeURIComponent(scope))) + '">' + esc(scope) + '</span>' +
       '<span class="mono small" id="ed-rev-chip">r?</span>' +
       '<span class="chip ok small">' + esc(kind) + ' 在册</span></div>' +
-      '<div class="doc-editor-wrap"><textarea class="doc-editor" id="doc-editor" spellcheck="false" disabled></textarea></div>' +
-      '<div class="small faint">编辑即累积草稿（POST /core-console/drafts——不触文档面、不发事件）；Apply 唯一入口=右栏「草稿」tab 吸底按钮（人点为准；LLM 只在右侧提案，机制上无 Apply 权）。</div>' +
+      '<div id="ed-render-wrap" data-ed-view="render" class="doc-render-wrap"' + (viewMode === 'render' ? '' : ' hidden') + '><div class="md-prose" id="ed-render">' + liveSkeletonRows(3, 0) + '</div></div>' +
+      '<div class="doc-editor-wrap" data-ed-view="raw"' + (viewMode === 'raw' ? '' : ' hidden') + '><textarea class="doc-editor" id="doc-editor" spellcheck="false" disabled></textarea></div>' +
+      '<div class="small faint">默认展示渲染后的成品；点「原文」查看与编辑源文件。编辑即累积草稿（POST /core-console/drafts——不动正式文档、不发事件）；Apply 唯一入口=右栏「草稿」tab 吸底按钮（人点为准；LLM 只在右侧提案，机制上无 Apply 权）。</div>' +
       '</div>' +
       '<div class="doc-collab"><div class="collab-tabs">' + tabs.map(function (t) {
         return '<div class="collab-tab' + (tab === t[0] ? ' active' : '') + '" data-act="doc-tab" data-t="' + t[0] + '" id="ctab-' + t[0] + '">' + t[1] + '<span class="ct-badge" id="ctab-badge-' + t[0] + '" hidden></span></div>';
       }).join('') + '</div><div class="collab-body" id="collab-body"></div></div></div></div>';
   }
+
+  /* —— R-UX-4 视图态（编辑器屏：render=渲染默认 / raw=原文编辑） ——
+   * 态在 S.edView[key]（内存态——刷新回默认渲染视图）；切换只显隐容器，S.ED 工作副本零重建。 */
+  function edViewMode(key) { return (S.edView && S.edView[key]) || 'render'; }
+  /* 渲染正文绘制：markdown 文档类默认 markdown 渲染；对象正文（YAML spec）默认结构化字段卡；
+   * 两者都附「原文」折叠次级（首屏禁裸转储）。判据词形：isMarkdownDoc。 */
+  function isMarkdownDoc(kind, name) {
+    if (kind === 'Goal' || kind === 'Rule' || kind === 'Runbook' || kind === 'DriftReport') return true;
+    return /(^|[-_])(README|design|report|notes)([-_.]|$)/i.test(String(name || ''));
+  }
+  function paintRenderBody(kind, scope, name, content) {
+    var el = $('#ed-render');
+    if (!el) return;
+    var md = window.__CC && window.__CC.md;
+    if (!md) { el.innerHTML = '<pre class="mono md-raw-pre">' + mdEsc(content) + '</pre>'; return; }
+    if (isMarkdownDoc(kind, name)) {
+      el.innerHTML = '<div data-md-render="1">' + md.renderMarkdown(content) + '</div>' + md.rawDisclosure('原文', content);
+    } else {
+      el.innerHTML = '<div data-md-cards="1">' + (md.yamlToCards(content) || '<div class="empty" style="padding:14px"><div class="e-title">（空声明）</div></div>') + '</div>' + md.rawDisclosure('YAML', content);
+    }
+  }
+  function mdEsc(x) { return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  ACTIONS['ed-view'] = function (el) {
+    var key = el.dataset.key, val = el.dataset.val;
+    S.edView = S.edView || {};
+    S.edView[key] = val;
+    var renderWrap = $('[data-ed-view="render"]');
+    var rawWrap = document.querySelector('[data-ed-view="raw"]');
+    if (renderWrap) renderWrap.hidden = val !== 'render';
+    if (rawWrap) rawWrap.hidden = val !== 'raw';
+    document.querySelectorAll('[data-act="ed-view"]').forEach(function (c) {
+      c.className = 'chip click small' + (c.dataset.val === val ? ' acc' : ' mute');
+    });
+  };
 
   // —— 注水：面正文（乐观锁基准）+ 草稿缓存（工作副本来源）——
   function hydrateEditor(kind, scope, name) {
@@ -4748,18 +5126,20 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       var ta = $('#doc-editor');
       if (ta) ta.value = '';
       var chip = $('#ed-rev-chip');
-      if (chip) chip.textContent = '读面暂不可达（' + String((e && e.message) || e) + '）——恢复后重进即现读';
+      if (chip) chip.textContent = '数据暂不可达（' + String((e && e.message) || e) + '）——恢复后重进即现读';
     });
   }
 
   function paintEditorBody(kind, scope, name) {
     var ed = edOf(kind, scope, name);
     var ta = $('#doc-editor');
-    if (!ed || !ta) return;
+    if (!ed) return;
+    paintRenderBody(kind, scope, name, ed.working || ''); // R-UX-4：渲染正文默认视图（与 textarea 同源=ed.working）
+    if (!ta) return;
     ta.value = ed.working;
     ta.disabled = false;
     var rev = $('#ed-rev-chip');
-    if (rev) rev.textContent = ed.faceAbsent ? '面缺席（在册稿基座——Apply=创建通路）' : 'r' + ed.faceRV + '（乐观锁基准）';
+    if (rev) rev.textContent = ed.faceAbsent ? '文档缺席（在册稿基座——Apply=创建通路）' : 'r' + ed.faceRV + '（乐观锁基准）';
   }
 
   // —— 徽章/dock 的原位更新（编辑中不整屏重渲染——textarea 焦点保真）——
@@ -4791,6 +5171,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       var ed = edOf(kind, scope, name);
       if (!ed) return;
       ed.working = ta.value;
+      if (edViewMode(edKey(kind, scope, name)) === 'render') paintRenderBody(kind, scope, name, ed.working); // 渲染视图同步（双视图同源零漂移）
       var has = ed.working !== ed.base;
       if (has && !ed.entries.filter(function (e) { return e.source === 'manual'; }).length) {
         ed.entries.push({ source: 'manual', summary: '手动编辑（编辑器直改）', ts: new Date() });
@@ -4864,8 +5245,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<span class="faint mono small" style="margin-left:auto">' + esc(fmtAgo(new Date(d.updatedAt))) + '</span></div></div>';
     }).join('');
     return (cards || '<div class="empty" style="padding:22px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">暂无排队提案</div>' +
-      '<div>LLM 提案由 Agent 经草稿通道落稿（fieldManager=agent 名）；会话页提案卡深链至此（E5 接线余量）。机制上 LLM 无 Apply 权——提案止步这里。</div></div>') +
-      '<div class="small faint" style="padding:8px 2px">提案 diff 基准=文档面现值（r' + (ed ? ed.faceRV : '?') + '）；采纳后与手动编辑走同一草稿通道，Apply 仍须人点。</div>';
+      '<div>LLM 提案由 Agent 经草稿通道落稿（fieldManager=agent 名）；会话页提案卡深链至此（接线余量）。机制上 LLM 无 Apply 权——提案止步这里。</div></div>') +
+      '<div class="small faint" style="padding:8px 2px">提案 diff 基准=文档现值（r' + (ed ? ed.faceRV : '?') + '）；采纳后与手动编辑走同一草稿通道，Apply 仍须人点。</div>';
   }
 
   function hydrateProposals(kind, scope, name) {
@@ -4881,14 +5262,14 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         if (!el) return;
         var content = String(b.content || '');
         if (content === edBaseOf(kind, scope, name)) {
-          el.innerHTML = '<span class="faint small">提案与文档面一致（noop 稿）</span>';
+          el.innerHTML = '<span class="faint small">提案与文档现值一致（noop 稿）</span>';
           return;
         }
         el.innerHTML = renderDiff(diffLines(edBaseOf(kind, scope, name), content), 30);
       })
       .catch(function () {
         var el = $('#prop-diff');
-        if (el) el.innerHTML = '<span class="faint small">提案正文暂不可读（读面退化）</span>';
+        if (el) el.innerHTML = '<span class="faint small">提案正文暂不可读（数据退化）</span>';
       });
   }
   function edBaseOf(kind, scope, name) {
@@ -4929,7 +5310,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
           for (var j = i + 1; j < (b.entries || []).length; j++) {
             if (b.entries[j].result === 'ok') { prev = b.entries[j].rv; break; }
           }
-          return '<div class="rev-item"' + (clickable ? ' data-act="hist-diff" data-rv="' + h.rv + '" data-prev="' + (prev || '') + '" title="点行 diff 上一版（rev-content 读面现读）"' : '') + '>' +
+          return '<div class="rev-item"' + (clickable ? ' data-act="hist-diff" data-rv="' + h.rv + '" data-prev="' + (prev || '') + '" title="点行 diff 上一版（rev-content 现读）"' : '') + '>' +
             '<span class="rv-no">' + (h.result === 'ok' ? 'r' + h.rv : h.result) + '</span>' +
             '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
             '<span class="rv-sum">' + esc(h.result) + (h.reasonRef ? ' · ' + esc(h.reasonRef) : '') + (h.subject ? '<br><span class="mono faint">' + esc(h.subject) + '</span>' : '') + '<br><span class="mono">' + esc(fmtAgo(new Date(h.ts))) + '</span></span>' +
@@ -4937,7 +5318,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         }).join('');
         el.innerHTML = '<div id="hist-diff-box" hidden style="border:1px solid var(--border-2);border-radius:8px;margin-bottom:10px;padding:8px;background:var(--bg)"></div>' +
           (rows || '<div class="faint small" style="padding:8px 2px">归档窗内暂无应用流水（该对象尚未 Apply 过）</div>') +
-          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；ok 行可点=与上一版 diff（rev-content 读面现读 git 权威正文快照，零副作用零写路径）。</div>';
+          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；ok 行可点=与上一版 diff（rev-content 现读 git 权威正文快照，零副作用零写路径）。</div>';
       });
   }
   // 点行 diff 上一版（v0.63 rev-content 读面）：rv+prev 两快照现读 → diff 呈现（面板只开一处，
@@ -4959,16 +5340,16 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var oldP = prev ? LIVE.get(path(prev)).then(function (b) { return String(b.content || ''); }) : Promise.resolve(null);
     Promise.all([newP, oldP]).then(function (rs) {
       var cur = rs[0], old = rs[1];
-      if (cur == null) { box.innerHTML = '<span class="faint small">快照暂不可读（读面退化）</span>'; return; }
+      if (cur == null) { box.innerHTML = '<span class="faint small">快照暂不可读（数据退化）</span>'; return; }
       var head = '<div class="sec-title">r' + rv + (prev ? ' ← r' + prev : ' ← 对象起点（create，无上一版）') +
-        ' <span class="faint mono small">rev-content 读面现读（git 权威正文快照）</span></div>';
+        ' <span class="faint mono small">rev-content 现读（git 权威正文快照）</span></div>';
       box.innerHTML = head + (old == null
         ? '<div class="small faint" style="padding:4px 0">起点行=首版全文（' + cur.split('\n').length + ' 行）——无上一版可 diff，全文首览：</div>' + renderDiff(diffLines('', cur), 40)
         : (old === cur
           ? '<span class="faint small">两版快照一致（rv 反写行推进——正文零变更）</span>'
           : renderDiff(diffLines(old, cur), 60)));
     }).catch(function (e) {
-      box.innerHTML = '<span class="faint small">快照暂不可读（读面退化：' + esc(String((e && e.message) || e)) + '）</span>';
+      box.innerHTML = '<span class="faint small">快照暂不可读（数据退化：' + esc(String((e && e.message) || e)) + '）</span>';
     });
   };
 
@@ -4979,7 +5360,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var kv = function (k, v) { return '<div class="kv" style="margin-bottom:6px"><span class="k mono">' + esc(k) + '</span><span class="v mono">' + (v || '<span class="faint">—</span>') + '</span></div>'; };
     var draftState = dr
       ? '在册 · fieldManager ' + esc(dr.fieldManager) + ' · baseRV r' + dr.baseResourceVersion + ' · ' + esc(fmtAgo(new Date(dr.updatedAt)))
-      : '无（工作副本==文档面）';
+      : '无（工作副本==文档现值）';
     return '<div style="flex:1;overflow-y:auto"><div class="sec-title">对象规则（与资源同构）</div>' +
       kv('kind', esc(kind)) + kv('scope', esc(scope)) + kv('name', esc(name)) +
       kv('resourceVersion', ed ? 'r' + ed.faceRV + '（乐观锁）' : '?') +
@@ -5032,7 +5413,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         if (ta) ta.value = ed.working;
         paintEdBadges(ctx.kind, ctx.scope, ctx.name);
         renderCollabBody(ctx.kind, ctx.scope, ctx.name);
-        toast('提案已加入草稿（未落库）', '乐观锁期望值=r' + ed.baseRV + '——面上已前移则 Apply 弹窗如实判 ✗（409 稿保留）', 'ok');
+        toast('提案已加入草稿（未落库）', '乐观锁期望值=r' + ed.baseRV + '——库中版本已前移则 Apply 弹窗如实判 ✗（409 稿保留）', 'ok');
       })
       .catch(function (e) { toast('提案正文不可读', String((e && e.message) || e), 'danger'); });
   };
@@ -5049,7 +5430,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
         return !(d.kind === ctx.kind && d.scope === ctx.scope && d.name === ctx.name);
       });
-      toast('提案已丢弃', 'fieldManager: ' + fm + '（草稿缓存清空，文档面不动）', 'warn');
+      toast('提案已丢弃', 'fieldManager: ' + fm + '（草稿缓存清空，正式文档不动）', 'warn');
       renderCollabBody(ctx.kind, ctx.scope, ctx.name);
       paintEdBadges(ctx.kind, ctx.scope, ctx.name);
     }).catch(function (e) { toast('弃稿失败', String((e && e.message) || e), 'danger'); });
@@ -5076,7 +5457,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       if (ta) ta.value = ed.working;
       paintEdBadges(ctx.kind, ctx.scope, ctx.name);
       renderCollabBody(ctx.kind, ctx.scope, ctx.name);
-      toast('草稿已弃', '工作副本回到文档面 r' + ed.faceRV + '（零落库零事件）', 'warn');
+      toast('草稿已弃', '工作副本回到文档现值 r' + ed.faceRV + '（零落库零事件）', 'warn');
     }).catch(function (e) { toast('弃稿失败', String((e && e.message) || e), 'danger'); });
   };
 
@@ -5086,7 +5467,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     if (!ctx) return;
     var ed = edOf(ctx.kind, ctx.scope, ctx.name);
     if (!ed || !ed.loaded) return;
-    if (ed.working === ed.base) { toast('空草稿——无操作', '草稿与文档面无差异：不落库、不发事件、不清稿（提示即止）'); return; }
+    if (ed.working === ed.base) { toast('空草稿——无操作', '草稿与文档现值无差异：不落库、不发事件、不清稿（提示即止）'); return; }
     // 先落稿（缓存=差异唯一来源；落稿失败=中止 Apply——写路径必须走稿）
     landDraft(ctx.kind, ctx.scope, ctx.name).then(function (landed) {
       if (!landed) return;
@@ -5100,7 +5481,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<div class="checklist" id="ed-checks">' +
         '<div class="check-item" data-c="scheme"><span class="ci-ic">…</span>Scheme 校验（kind 注册∧spec 结构）</div>' +
         '<div class="check-item" data-c="perm"><span class="ci-ic">…</span>权限准入（主体=宿主注入 console-operator）</div>' +
-        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + ed.baseRV + ' ↔ 面上现值）</div></div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + ed.baseRV + ' ↔ 落库现值）</div></div>' +
         renderDiff(fullDiff, 26) +
         '<div class="small faint" id="ed-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/apply {fromDraft:true, dryRun:true}——零副作用）…</div>' +
         '</div>' +
@@ -5124,10 +5505,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         };
         if (res.ok && res.data && res.data.action === 'dry-run') {
           mark('scheme', true, 'kind 在册∧spec 结构过（cored admit ①）');
-          mark('perm', true, '主体准入过（cored admit ②——Role/Group 文档面判定）');
+          mark('perm', true, '主体准入过（cored admit ②——Role/Group 角色判定）');
           var cur = Number(res.data.rv);
           var lockOk = cur === ed.baseRV;
-          mark('lock', lockOk, lockOk ? 'r' + ed.baseRV + ' == 面上现值（可落）' : '稿基于 r' + ed.baseRV + '，面上已 r' + cur + '——落库将 409（稿保留，重读后重整）');
+          mark('lock', lockOk, lockOk ? 'r' + ed.baseRV + ' == 落库现值（可落）' : '稿基于 r' + ed.baseRV + '，库中已 r' + cur + '——落库将 409（稿保留，重读后重整）');
           var note = $('#ed-dry-note');
           if (note) note.textContent = 'dry-run 通过预检（rv 回执=r' + cur + '）——确认后真落库。';
           var go = $('#ed-apply-go');
@@ -5139,7 +5520,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
                 fieldManager: edConsoleFM(ctx.kind, ctx.scope, ctx.name), reasonRef: 'console:apply' }).then(function (r2) {
                 if (r2.ok) {
                   closeModal();
-                  toast('已落库 r' + r2.data.rv + '（' + (r2.data.action === 'noop' ? 'noop：稿与面一致，零提交' : 'Revision+1') + '）',
+                  toast('已落库 r' + r2.data.rv + '（' + (r2.data.action === 'noop' ? 'noop：稿与文档现值一致，零提交' : 'Revision+1') + '）',
                     ctx.name + ' · DocApplied 已归档 · 草稿已清（apply.md rule 6）', 'ok');
                   delete S.ED[edKey(ctx.kind, ctx.scope, ctx.name)]; // 会话态作废——重进即现读新面
                   LIVE.state.drafts = (LIVE.state.drafts || []).filter(function (d) {
@@ -5148,7 +5529,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
                   LIVE.load().then(function () { render(); });
                 } else if (r2.status === 409) {
                   closeModal();
-                  toast('乐观锁冲突（409）——稿保留', '文档面前移（' + String(r2.error || '') + '）——重读后重整草稿再落（apply.md §3 后写者语义）', 'danger');
+                  toast('乐观锁冲突（409）——稿保留', '文档现值已前移（' + String(r2.error || '') + '）——重读后重整草稿再落（apply.md §3 后写者语义）', 'danger');
                   delete S.ED[edKey(ctx.kind, ctx.scope, ctx.name)];
                   render();
                 } else {
@@ -5202,8 +5583,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<div class="doc-main"><div class="doc-headbar"><span class="doc-path mono">' +
       (sel ? esc(sel.repo) + '/' + esc(sel.path) : '设计文档') + '</span><span id="dd-sha-chip"></span><span id="dd-draft-chip"></span></div>' +
       '<div class="dd-commit-row" id="dd-commit-row"></div>' +
-      '<div class="doc-editor-wrap"><textarea class="doc-editor dd-editor" id="dd-editor" spellcheck="false" disabled placeholder="加载中（HEAD 权威正文——工作树未提交改动不进读面）…"></textarea></div>' +
-      '<div class="small faint">权威=git 仓（读面=HEAD 内容，未提交的工作树改动不进读面）；编辑即累积草稿（kind=DesignDoc 与对象草稿同一缓存）；Apply=白名单→R-PUB-1 lint→乐观锁 baseSha 三检查 → git commit（本地落盘不 push）。</div>' +
+      '<div class="doc-editor-wrap"><textarea class="doc-editor dd-editor" id="dd-editor" spellcheck="false" disabled placeholder="加载中（HEAD 权威正文——工作树未提交改动不进读侧）…"></textarea></div>' +
+      '<div class="small faint">权威=git 仓（读到的=HEAD 内容，未提交的工作树改动不进读侧）；编辑即累积草稿（kind=DesignDoc 与对象草稿同一缓存）；Apply=白名单→R-PUB-1 lint→乐观锁 baseSha 三检查 → git commit（本地落盘不 push）。</div>' +
       '</div>' +
       '<div class="doc-collab"><div class="collab-tabs">' +
       [['diff', '草稿 diff'], ['hist', '审计']].map(function (t) {
@@ -5227,7 +5608,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }, function (e) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
       var el = $('#dd-tree');
-      if (el) el.innerHTML = '<div class="small faint" style="padding:10px">设计文档面暂不可达（' + esc(String((e && e.message) || e)) + '）——未配置 --design-repo 或 cored 未就绪。</div>';
+      if (el) el.innerHTML = '<div class="small faint" style="padding:10px">设计文档暂不可达（' + esc(String((e && e.message) || e)) + '）——未配置 --design-repo 或 cored 未就绪。</div>';
     });
   }
   function paintDDTree() {
@@ -5275,7 +5656,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       var ta = $('#dd-editor');
       if (ta) ta.value = '';
       var chip = $('#dd-sha-chip');
-      if (chip) chip.textContent = '读面暂不可达（' + String((e && e.message) || e) + '）';
+      if (chip) chip.textContent = '数据暂不可达（' + String((e && e.message) || e) + '）';
       var chip2 = $('#dd-commit-row');
       if (chip2) chip2.textContent = '';
     });
@@ -5381,7 +5762,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（obj=DesignDoc/<repo>/<path>；git 权威在正文，最近提交见左栏 headbar）。</div>';
     }, function () {
       var el = $('#dd-history');
-      if (el) el.innerHTML = '<div class="small faint">史面暂不可达（/v1/design-docs/history 缺席或超时）。</div>';
+      if (el) el.innerHTML = '<div class="small faint">历史暂不可读（/v1/design-docs/history 缺席或超时）。</div>';
     });
   }
   /* --- 设计文档动作 --- */
@@ -5493,7 +5874,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
           var lintVs = (res.body && res.body.violations) || [];
           mark('gate', !gateFail, gateFail ? String(res.error || 'HTTP 403') : '—');
           mark('lint', !(st === 400 && lintVs.length), (st === 400 && lintVs.length)
-            ? lintVs.map(function (v) { return v.rule + '@L' + v.line; }).join('、') + '（违规明细见报告面）'
+            ? lintVs.map(function (v) { return v.rule + '@L' + v.line; }).join('、') + '（违规明细见验收报告）'
             : (st === 400 ? String(res.error || '') : '—'));
           mark('lock', false, '预检未过（' + (st == null ? '传输层' : 'HTTP ' + st) + '）');
           var note2 = $('#dd-dry-note');
@@ -5620,7 +6001,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     if (!aref) {
       // 文档面未注册 agent=诚实空态（不冒充 mock agent）
       var known = liveChatAgents();
-      view.innerHTML = '<div class="view-inner">' + emptyBox('agent 未注册（文档面 Agent 对象缺席）', agentName +
+      view.innerHTML = '<div class="view-inner">' + emptyBox('agent 未注册（Agent 对象缺席）', agentName +
         (known.length ? ' · 在册：' + known.join(', ') : '')) + '</div>';
       setCrumbs([{ label: 'Welcome', go: 'welcome' }]);
       return;
@@ -5653,7 +6034,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       : '';
     if (!mineHtml && !hostHtml) {
       mineHtml = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-empty"/></svg><div class="e-title">' +
-        (ad.ready() ? '宿主会话清单为空' : '宿主会话面缺席') + '</div><div class="small faint">' +
+        (ad.ready() ? '宿主会话清单为空' : '宿主会话通道缺席') + '</div><div class="small faint">' +
         (ad.ready() ? '新建一个开始对话' : 'ctx.sessions 未在册——dsh session store 数据源缺席（诚实降级）') + '</div></div>';
     }
     var owner = agentOwnerOf(agentName);
@@ -5712,7 +6093,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var refsList = (content.match(/\brefs:[\s\S]{0,120}?- ?\W*([A-Za-z0-9-_.\/]+)/) || [])[1];
     var autoLevel = specBlock('autoLevel', /autoLevel:\s*["']?([a-z]+)/);
     var right = '<div class="chat-ctx">' +
-      '<div class="ctx-sec"><div class="cx-h">权限面（Agent 文档面 · cored 现读）</div><div class="cx-b">' +
+      '<div class="ctx-sec"><div class="cx-h">权限（Agent 声明 · cored 现读）</div><div class="cx-b">' +
       '<div class="ctx-row"><span class="cr-k">ConnectorOps</span>' + opChips(opsRefs, 'connector') + '</div>' +
       '<div class="ctx-row"><span class="cr-k">Provider</span>' + (providers ? '<span class="chip click mute small" data-act="go" data-go="provider/' + esc(providers.split('/').pop()) + '">' + esc(providers) + '</span>' : '<span class="faint small">—</span>') + '</div>' +
       '<div class="ctx-row"><span class="cr-k">Ref</span>' + (refsList ? '<span class="chip mute small mono">' + esc(refsList) + '</span>' : '<span class="faint small">—</span>') + '</div>' +
@@ -5723,10 +6104,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '</div></div>' +
       '<div class="ctx-sec"><div class="cx-h">身份与归属（SessionId）</div><div class="cx-b">' +
       '<div class="ctx-row"><span class="cr-k">owner</span>' + ownerLink + '</div>' +
-      '<div class="ctx-row"><span class="cr-k">当前会话</span><span class="mono small">' + (ev.currentSessionId ? esc(ev.currentSessionId) : '—（文档面 status.currentSession 未回写）') + '</span></div>' +
+      '<div class="ctx-row"><span class="cr-k">当前会话</span><span class="mono small">' + (ev.currentSessionId ? esc(ev.currentSessionId) : '—（文档 status.currentSession 未回写）') + '</span></div>' +
       '<div class="small faint" style="margin-top:4px">身份=SessionId（cross-agent.md §5.7 #1）：console 新建会话后 Apply 回填 status.currentSession</div>' +
       '</div></div>' +
-      '<div class="ctx-sec"><div class="cx-h">详情</div><div class="cx-b"><span class="lk small" data-act="go" data-go="agent/' + esc(agentName) + '">agent 文档面（编辑器）→</span>' +
+      '<div class="ctx-sec"><div class="cx-h">详情</div><div class="cx-b"><span class="lk small" data-act="go" data-go="agent/' + esc(agentName) + '">agent 声明（编辑器）→</span>' +
       (cur ? '<span class="lk small" data-act="go" data-go="session/' + esc(cur.id) + '">session 详情（trajectory）→</span>' : '') + '</div></div>' +
       '</div>';
     view.classList.add('nopad');
@@ -5745,7 +6126,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       if (!h || h.sessionId !== sessionId) {
         if (h) { try { h.handle.release(); } catch (e) { /* 已离场 */ } }
         var handle = chatAd().hold(sessionId);
-        if (!handle) throw new Error('宿主会话面缺席（ctx.sessions 未在册）');
+        if (!handle) throw new Error('宿主会话通道缺席（ctx.sessions 未在册）');
         S.chatHold = { sessionId: sessionId, handle: handle };
         h = S.chatHold;
       }
@@ -5768,7 +6149,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       }, function (e) {
         var el = $('#chat-body');
         if (el && el.dataset.sess === sessionId) {
-          el.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">转录读面暂不可达</div><div class="small faint">' +
+          el.innerHTML = '<div class="chat-scroll"><div class="empty"><div class="e-title">会话记录暂不可读</div><div class="small faint">' +
             esc(String((e && e.message) || e)) + '——发消息通路不受影响（prompt 回执即接受证据）</div></div></div>' + chatInputBar(agentName);
           bindChatInput(agentName, sessionId);
         }
@@ -5852,7 +6233,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<button class="btn primary sm" data-act="chat-send"' + (ad.ready() ? '' : ' disabled') + '>发送</button></div>' +
       '<div class="chat-hints"><span>' + (ad.ready()
         ? kbd('Enter') + ' 发送 · ' + mode + ' 语义（cross-agent.md §5.7 #2）'
-        : '宿主会话面缺席（ctx.sessions 未在册）——发送面诚实禁用') + '</span><span style="margin-left:auto">权限见右栏</span></div></div>';
+        : '宿主会话通道缺席（ctx.sessions 未在册）——发送诚实禁用') + '</span><span style="margin-left:auto">权限见右栏</span></div></div>';
   }
   function bindChatInput(agentName, sessionId) {
     var ta = $('#chat-input');
@@ -5867,7 +6248,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     text = (text || '').trim();
     if (!text || !sessionId) return;
     var ad = chatAd();
-    if (!ad.ready()) { toast('会话面缺席', 'ctx.sessions 未在册——发送面诚实禁用', 'warn'); return; }
+    if (!ad.ready()) { toast('会话通道缺席', 'ctx.sessions 未在册——发送诚实禁用', 'warn'); return; }
     var mode = S.chatMode[agentName] || 'queue';
     S.chatBusy[sessionId] = true;
     paintTranscript(agentName, sessionId, 'chat');
@@ -5896,8 +6277,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var roster = ad.terminals ? ad.terminals(cur.id) : null;
     var rosterHtml;
     if (!roster) {
-      rosterHtml = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-term"/></svg><div class="e-title">宿主终端面缺席</div>' +
-        '<div class="small faint">ctx.webTerminals 未在册——roster 只读面诚实降级（不冒充终端）</div></div>';
+      rosterHtml = '<div class="empty" style="padding:26px"><svg class="ic"><use href="#cc-i-term"/></svg><div class="e-title">宿主终端暂不可用</div>' +
+        '<div class="small faint">ctx.webTerminals 未在册——终端清单只读诚实降级（不冒充终端）</div></div>';
     } else {
       var list = roster.get() || [];
       rosterHtml = list.length
@@ -5910,7 +6291,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }
     return head + '<div class="term-wrap"><div class="card" style="margin:12px"><div class="card-h"><span class="h-title">dsh 内置终端 roster（' + esc(cur.id.slice(0, 12)) + '…）</span></div>' +
       '<div class="card-b">' + rosterHtml +
-      '<div class="small faint" style="margin-top:10px">主案=dsh 内置 PTY（remote.terminal.*：与会话同生命周期同鉴权；交互面=宿主终端侧栏——本屏 attach 渲染=xterm 依赖余量，如实标注不冒充）。</div>' +
+      '<div class="small faint" style="margin-top:10px">主案=dsh 内置 PTY（remote.terminal.*：与会话同生命周期同鉴权；交互入口=宿主终端侧栏——本屏 attach 渲染=xterm 依赖余量，如实标注不冒充）。</div>' +
       '<div class="small faint">gotty=跨机兜底（ServiceInstance 在别的机器、或终端需独立分享给无 console 权限者时经 piko 暴露）——本机不启用（§5.7 #6）。</div>' +
       '</div></div></div>';
   }
@@ -5952,7 +6333,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     });
     $('#sess-create').addEventListener('click', function () {
       var ad = chatAd();
-      if (!ad.ready()) { toast('会话面缺席', 'ctx.sessions 未在册——创建面诚实禁用', 'warn'); return; }
+      if (!ad.ready()) { toast('会话通道缺席', 'ctx.sessions 未在册——创建诚实禁用', 'warn'); return; }
       var btn = this; btn.disabled = true;
       var createOwned = function () {
         var project = __CC.serviceProjects && __CC.serviceProjects.projectForAgent(agentName);
@@ -6000,7 +6381,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         resourceVersion: b.resourceVersion,
         content: merged.content,
         fieldManager: 'console:chat-backfill',
-        reasonRef: 'console E5: chat session create'
+        reasonRef: 'console:chat-session-create'
       }).then(function (res) {
         if (res.ok) {
           var rv = res.data && res.data.rv != null ? res.data.rv : '?';
@@ -6050,7 +6431,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var loading = LIVE.state.status !== 'ok';
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>连接</h1><span class="chip kind">WorkService · ConnectorOps · Provider</span></div>' +
-      '<div class="dh-sub">连接系统把外部世界包装成可调用的面；跨 Agent 通信走 agent-comm（dispatch / query / interrupt / inbox）。数据源=cored objects 枚举。</div></div></div>' +
+      '<div class="dh-sub">连接系统把外部能力包装成可调用的服务；跨 Agent 通信走 agent-comm（dispatch / query / interrupt / inbox）。数据源=cored objects 枚举。</div></div></div>' +
       '<div class="conn-group"><div class="sec-title">WorkServices</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('WorkService', 'ws/')) + '</div></div>' +
       '<div class="conn-group"><div class="sec-title">ConnectorOps 挂载</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('ConnectorOps', 'connector/')) + '</div></div>' +
       '<div class="conn-group"><div class="sec-title">Providers</div><div class="conncards">' + (loading ? liveSkeletonRows(2, 0) : connCards('Provider', 'provider/')) + '</div></div>' +
@@ -6062,11 +6443,11 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     { field: 'id', type: 'uuid', req: true, desc: '信封幂等键（inbox 按 id 去重）' },
     { field: 'ts', type: 'RFC3339', req: true, desc: '发出时刻' },
     { field: 'from', type: 'agent ref', req: true, desc: '发起方 agent/<name>@<scope>' },
-    { field: 'to', type: 'agent ref', req: true, desc: '目标 agent/<name>@<scope>（文档面在册且活体可解析才可投）' },
+    { field: 'to', type: 'agent ref', req: true, desc: '目标 agent/<name>@<scope>（文档在册且活体可解析才可投）' },
     { field: 'kind', type: 'enum', req: true, desc: '四原语之一：dispatch | query | interrupt | inbox' },
     { field: 'payload', type: 'object', req: true, desc: '自由对象（v0.1 不定 schema；inbox 侧容错收）' },
-    { field: 'refs', type: 'string[]', req: false, desc: '可选文档面引用（systems/<s>/path#revN）' },
-    { field: 'token', type: 'string', req: 'dispatch', desc: '权限凭据——dispatch 必带（无 token 一律拒绝）；值永不入 console 落账面' }
+    { field: 'refs', type: 'string[]', req: false, desc: '可选文档引用（systems/<s>/path#revN）' },
+    { field: 'token', type: 'string', req: 'dispatch', desc: '权限凭据——dispatch 必带（无 token 一律拒绝）；值永不入 console 落账' }
   ];
   function envelopeTableHtml() {
     return '<table class="env-table"><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody>' +
@@ -6078,7 +6459,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
   }
   /* —— agent-comm 运行面（comm 落账真数据：拓扑/消息日志/op 计数；token 打码） —— */
   function agentCommCommPanels(data) {
-    var OP_DESC = { dispatch: '委派任务（异步；token ⊆ 发起方权限面，缺 token=拒）', query: '只读问询（同步快照；§2 对齐表 query↔get/list）', interrupt: '打断/插话（cancel 落点）', inbox: '收件面拉取（error reply 落账消费；豁免活体检查）' };
+    var OP_DESC = { dispatch: '委派任务（异步；token ⊆ 发起方权限，缺 token=拒）', query: '只读问询（同步快照；§2 对齐表 query↔get/list）', interrupt: '打断/插话（cancel 落点）', inbox: '收件拉取（error reply 落账消费；豁免活体检查）' };
     var counts = data.counts || {};
     var opCards = '<div class="op-cards">' + ['dispatch', 'query', 'interrupt', 'inbox'].map(function (op) {
       var c = counts[op] || { total: 0, ok: 0 };
@@ -6159,7 +6540,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       return head +
         '<div class="op-cards" style="margin-top:12px">' + opsRow + '</div>' +
         '<div class="card" style="margin-top:12px"><div class="card-h"><span class="h-title">相关事件（involved 过滤）</span></div><div class="card-b">' + evHtml + '</div></div>' +
-        '<div class="small faint" style="margin-top:8px">非 agent-comm 挂载面：运行流水暂无独立落账面（declared 余量）——编辑器深链=本屏 tab「草稿」。</div>';
+        '<div class="small faint" style="margin-top:8px">非 agent-comm 挂载：运行流水暂无独立落账（余量）——编辑器深链=本屏 tab「草稿」。</div>';
     }
     return head + '<div id="comm-live" style="margin-top:12px">' + liveSkeletonRows(3, 0) + '</div>';
   }
@@ -6177,7 +6558,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }, function (e) {
       if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
       var el2 = $('#comm-live');
-      if (el2) el2.innerHTML = '<div class="small faint">comm 落账读面暂不可达（' + esc(String((e && e.message) || e)) + '）——宿主未装配该路由（旧插件代）或恢复后重进即现读</div>';
+      if (el2) el2.innerHTML = '<div class="small faint">通信记录暂不可读（' + esc(String((e && e.message) || e)) + '）——宿主未装配该路由（旧插件代）或恢复后重进即现读</div>';
     });
   }
 
@@ -6206,7 +6587,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<div class="dh-sub mono">' + (row ? esc(row.title) + ' · cwd: ' + esc(row.cwd || '—') : '宿主清单行缺席（roster 投影范围外）') +
       ' · agent: ' + (owner ? '<span class="lk" data-act="go" data-go="chat/' + esc(owner) + '">' + esc(owner) + '</span>' : '未归属（归属证据缺席=不冒充）') + '</div></div>' +
       '<div class="dh-actions"><button class="btn primary" data-act="chat-sess-go" data-id="' + esc(sid) + '"' + (owner ? ' data-agent="' + esc(owner) + '"' : ' disabled') + '>切回 Chat 视图 →</button></div></div>' +
-      '<div class="card"><div class="card-h"><span class="h-title">Trajectory（session 事件页读面 · 与聊天流同源不同呈现）</span></div>' +
+      '<div class="card"><div class="card-h"><span class="h-title">Trajectory（session 事件页现读 · 与聊天流同源不同呈现）</span></div>' +
       '<div class="card-b"><div id="sess-traj">' + liveSkeletonRows(3) + '</div></div></div></div>';
     // 转录注水（retain 持有+事件窗快照）：归属 agent 缺席时用空声明集（工具卡按普通卡渲染——不冒充判据）
     var declaredOps = owner ? agentDeclaredOps(owner) : [];
@@ -6230,7 +6611,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     };
     releaseChatHold();
     var handle = chatAd().hold(sid);
-    if (!handle) { $('#sess-traj').innerHTML = '<div class="small faint">宿主会话面缺席（ctx.sessions 未在册）——轨迹诚实降级</div>'; return; }
+    if (!handle) { $('#sess-traj').innerHTML = '<div class="small faint">宿主会话通道缺席（ctx.sessions 未在册）——轨迹诚实降级</div>'; return; }
     S.chatHold = { sessionId: sid, handle: handle };
     handle.ready.then(function () {
       var cur = S.chatHold;
@@ -6239,7 +6620,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       handle.subscribe(function () { paint(handle.snapshot()); });
     }, function (e) {
       var el = $('#sess-traj');
-      if (el) el.innerHTML = '<div class="small faint">转录读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
+      if (el) el.innerHTML = '<div class="small faint">会话记录暂不可读（' + esc(String((e && e.message) || e)) + '）</div>';
     });
     paint(handle.snapshot());
   }
@@ -6365,10 +6746,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     LIVE.ensure();
     var isSys = !!sysName;
     if (isSys && !LIVE.refByName('ServiceDesc', sysName)) {
-      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册（cored 读面）', sysName) + '</div>';
+      view.innerHTML = '<div class="view-inner">' + emptyBox('系统不在册', sysName) + '</div>';
       return;
     }
-    if (isSys) setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: sysName, go: 's/' + encodeURIComponent(sysName) }, { label: '事件面' }]);
+    if (isSys) setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: sysName, go: 's/' + encodeURIComponent(sysName) }, { label: '事件' }]);
     else setCrumbs([{ label: 'Welcome', go: 'welcome' }, { label: '事件流' }]);
     var win = evWindowOf(isSys ? 'sys:' + sysName : 'global');
     var base = evRowsOf(win);
@@ -6380,7 +6761,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     base.forEach(function (e) { typeCount[e.type] = (typeCount[e.type] || 0) + 1; });
     var top5 = Object.keys(typeCount).sort(function (a, b) { return typeCount[b] - typeCount[a]; }).slice(0, 5);
     var head = isSys
-      ? scenarioHead({ name: sysName }, '事件面', '归档窗真数据（involved scope 过滤）· 过滤条=全局事件流同款 · until 游标滚动加载更早页 · 行点击进事件详情', '事件')
+      ? scenarioHead({ name: sysName }, '事件', '归档窗实数（involved scope 过滤）· 过滤条=全局事件流同款 · until 游标滚动加载更早页 · 行点击进事件详情', '事件')
       : '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>事件流</h1><span class="chip kind">三泳道混排 · 归档窗 ' + base.length + ' 条</span></div>' +
         '<div class="dh-sub">Event / 状态变迁 / 数据事件 · 点任意一条跳相关对象（event→run→workflow→doc 链路）。数据源=event_log 归档投影（/v1/events limit=500 + until 游标滚动加载）。</div></div></div>';
     var sidePanel = '';
@@ -6391,10 +6772,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       sidePanel = '<div style="display:grid;gap:12px;align-self:start">' +
         '<div class="card"><div class="card-h"><span class="h-title">聚合面板</span><span class="h-sub">归档窗内实数</span></div><div class="card-b" style="display:grid;gap:10px">' +
         '<div class="kv"><span class="k">审批积压</span><span class="v mono" style="color:' + (back.total ? 'var(--warn)' : 'var(--ok)') + '"><span class="lk" data-act="go" data-go="approvals">' + back.total + '</span></span>' +
-        '<span class="small faint">' + pal.long + back.drafts + ' ∪ ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作面落点：审批屏∪编辑器/提案详情/wf 配置）</span></div>' +
+        '<span class="small faint">' + pal.long + back.drafts + ' ∪ ApprovalNeeded 归档 ' + back.archive + ' ∪ 提案 submitted ' + back.submitted + ' ∪ 派单待批 ' + back.dispatchPending + '（操作落点：审批屏∪编辑器/提案详情/wf 配置）</span></div>' +
         '<div class="kv"><span class="k">死信率</span><span class="v mono">' + dead + '%</span></div>' +
         '<div class="kv"><span class="k">workflow 成功率</span><span class="v mono">n/a</span><span class="small faint">run 终态事件未落归档（declared 余量，不冒充）</span></div>' +
-        '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据面余量</span></div>' +
+        '<div class="kv"><span class="k">token 消耗（24h）</span><span class="v mono">n/a</span><span class="small faint">数据接入余量</span></div>' +
         '<div class="kv"><span class="k">类型分布</span><span class="v small">' + (top5.length ? top5.map(function (t) { return '<span class="tag mono">' + esc(t) + '×' + typeCount[t] + '</span>'; }).join(' ') : '<span class="faint">—</span>') + '</span></div>' +
         '</div></div>' +
         '<div class="card"><div class="card-h"><span class="h-title">泳道图例</span></div><div class="card-b small faint">' +
@@ -6444,7 +6825,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
    * 批准=Apply 全流程复用（dry-run 三检查→人确认→fromDraft 落库，E4 通路零旁路）；
    * 驳回=DELETE 弃稿（零文档面动作）；批量=同 kind 多稿顺序 Apply（独立判别不中断）。
    * ApprovalNeeded 无稿=只读待审卡（批准面缺席不冒充——深链 involved 对象编辑器）。
-   * 已决账面（v0.46）：approval_log 审批判定独立账 GET /v1/approvals 现读——批准 granted
+   * 已决记录（v0.46）：approval_log 审批判定独立账 GET /v1/approvals 现读——批准 granted
    * （rv=落库版本）/驳回 rejected（弃稿零文档面动作）判定行在册，审计不再只靠 apply_log 字符串考古。 */
   function apDiffHtml(diff, maxLines) { return renderDiff(diff, maxLines || 40); }
   function approvalItemHtml(it) {
@@ -6476,7 +6857,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<div class="ap-body" id="apdiff-' + esc(cssId(it.key)) + '">' + liveSkeletonRows(2, 0) + '</div>' +
         '<div class="ap-acts"><button class="btn ok" data-act="ap-approve" data-key="' + esc(it.key) + '">批准（=Apply）</button>' +
         '<button class="btn danger" data-act="ap-reject" data-key="' + esc(it.key) + '">驳回（弃稿）</button>' +
-        '<span class="small faint" style="align-self:center">批准=dry-run 三检查→fromDraft 落库（Revision+1 · DocApplied）；驳回=弃稿（零文档面动作）</span></div></div>';
+        '<span class="small faint" style="align-self:center">批准=dry-run 三检查→fromDraft 落库（Revision+1 · DocApplied）；驳回=弃稿（零文档动作）</span></div></div>';
     }
     var e = it.event;
     return '<div class="ap-card resolved" id="apcard-' + esc(cssId(it.key)) + '">' +
@@ -6485,7 +6866,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<div class="ap-meta"><span>来源：<b class="mono">' + esc(e.source) + '</b></span><span>level：<b class="mono">' + esc(e.level) + '</b></span>' +
       '<span class="mono faint">' + esc(String(e.ts || '').replace('T', ' ').slice(0, 19)) + '</span>' +
       '<span class="lk mono small" data-act="go" data-go="' + esc(involvedRoute(e.involved)) + '">involved 对象编辑器 →</span></div>' +
-      '<div class="ap-body small faint">批准面缺席（该对象无草稿在稿）——变更未进稿不可批准（不冒充 diff）；落稿后本页即出现 diff 预览与批准动作。</div></div>';
+      '<div class="ap-body small faint">批准缺席（该对象无草稿在稿）——变更未进稿不可批准（不冒充 diff）；落稿后本页即出现 diff 预览与批准动作。</div></div>';
   }
   function involvedRoute(inv) {
     var segs = String(inv || '').split('/');
@@ -6508,7 +6889,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     view.innerHTML = '<div class="view-inner">' +
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1>审批</h1><span class="chip ' + (draftItems.length || evItems.length ? 'warn' : 'ok') + '">' +
       (draftItems.length + evItems.length) + ' 条待审</span></div>' +
-      '<div class="dh-sub">待审区=草稿缓存（DocReview 类同源——代改代审的家，apply.md §6）∪ ApprovalNeeded 归档行（已批 N 稿不出现）。批准/驳回均=人点（LLM 只提案）；diff=稿 vs 文档面现值现读；草稿行深链=编辑器屏（apply dock 在册）∪ 本屏 diff 卡双落点。</div></div>' +
+      '<div class="dh-sub">待审区=草稿缓存（DocReview 类同源——代改代审的家，apply.md §6）∪ ApprovalNeeded 归档行（已批的不出现）。批准/驳回均=人点（LLM 只提案）；diff=稿 vs 文档现值现读；草稿行深链=编辑器屏（apply dock 在册）∪ 本屏 diff 卡双落点。</div></div>' +
       '<div class="dh-actions"><button class="btn ok" data-act="ap-batch"' + (draftItems.length ? '' : ' disabled') + '>批量批准（' + draftItems.length + ' 稿）</button></div></div>' +
       draftItems.map(approvalItemHtml).join('') + evItems.map(approvalItemHtml).join('') +
       '<div id="ap-ledger" style="margin-top:24px">' + liveSkeletonRows(2, 0) + '</div>' +
@@ -6517,7 +6898,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     hydrateApprovalLedger();
     draftItems.forEach(function (it) { hydrateApprovalDiff(it.draft); });
   }
-  /* 已决账面（v0.46 审批独立账：GET /v1/approvals 现读不缓存——批准/驳回即决即见；
+  /* 已决记录（v0.46 审批独立账：GET /v1/approvals 现读不缓存——批准/驳回即决即见；
    * 驳回=弃稿零文档面动作亦落行；读面缺席=诚实降级注记，零 console error 零 4xx 调用）。 */
   function hydrateApprovalLedger() {
     var stamp = S.route + '|' + S.segs.join('/');
@@ -6527,12 +6908,12 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       if (!el) return;
       var rows = (b && b.approvals) || [];
       if (!rows.length) {
-        el.innerHTML = '<div class="small faint">已决账面暂无判定行（批准/驳回即决即见——approval_log 独立账：apply_log 承落库流水，本账承判定）。</div>';
+        el.innerHTML = '<div class="small faint">已决记录暂无判定行（批准/驳回即决即见——approval_log 独立账：apply_log 承落库流水，本账承判定）。</div>';
         return;
       }
-      el.innerHTML = '<div class="dh" style="margin-bottom:8px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">已决账面</h2>' +
+      el.innerHTML = '<div class="dh" style="margin-bottom:8px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">已决记录</h2>' +
         '<span class="chip mute small">' + rows.length + ' 行</span></div>' +
-        '<div class="dh-sub">approval_log 独立账（ops DB）：批准=granted（rv=落库版本，noop 照落）· 驳回=rejected（弃稿零文档面动作）。</div></div></div>' +
+        '<div class="dh-sub">approval_log 独立账（ops DB）：批准=granted（rv=落库版本，noop 照落）· 驳回=rejected（弃稿零文档动作）。</div></div></div>' +
         '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>时刻</th><th>判定</th><th>对象</th><th>判定主体</th><th>rv</th><th>来源</th></tr></thead><tbody>' +
         rows.map(function (r) {
           return '<tr><td class="mono small">' + esc(String(r.ts || '').replace('T', ' ').slice(0, 19)) + '</td>' +
@@ -6544,7 +6925,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         }).join('') + '</tbody></table></div>';
     }, function () {
       var el = $('#ap-ledger');
-      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">审批账面读面暂不可达（/v1/approvals 缺席或超时）——判定留痕暂只=apply_log（fieldManager=console:approve）。</div>';
+      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">审批记录暂不可读（服务无此投影或超时）——判定留痕暂只=apply_log（fieldManager=console:approve）。</div>';
     });
   }
   /* diff 注水：稿 content（GET /v1/drafts/{kind}/{name}）+ 面现值（GET /v1/objects）现读；
@@ -6561,13 +6942,13 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         var el = $('#apdiff-' + cssId(key));
         if (!el) return;
         var face = rs[0], dr = rs[1];
-        var base = face ? String(face.content || '') : '（HEAD 读面缺席）';
+        var base = face ? String(face.content || '') : '（最新版暂不可读）';
         var working = String((dr && dr.content) || '');
-        el.innerHTML = (dr ? '' : '<div class="small faint">稿正文读面缺席（超时）——重进即现读</div>') + apDiffHtml(diffLines(base, working)) +
+        el.innerHTML = (dr ? '' : '<div class="small faint">正文暂不可读（超时）——重进即恢复</div>') + apDiffHtml(diffLines(base, working)) +
           '<div class="small faint" style="margin-top:4px">基准=HEAD ' + (face ? String(face.sha || '').slice(0, 8) : '?') + '（git 权威）· 稿 ' + working.length + 'B vs HEAD ' + base.length + 'B（现读，不缓存）</div>';
       }, function (e) {
         var el = $('#apdiff-' + cssId(key));
-        if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">diff 读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
+        if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">差异暂不可读（' + esc(String((e && e.message) || e)) + '）</div>';
       });
       return;
     }
@@ -6581,11 +6962,11 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       var dr = rs[0], face = rs[1];
       var base = face ? String(face.content || '') : '（对象不在册——apply 将 404）';
       var working = String((dr && dr.content) || '');
-      el.innerHTML = (dr ? '' : '<div class="small faint">稿正文读面缺席（超时）——重进即现读</div>') + apDiffHtml(diffLines(base, working)) +
-        '<div class="small faint" style="margin-top:4px">基准=r' + (dr ? dr.baseResourceVersion : '?') + ' · 稿 ' + working.length + 'B vs 面 ' + base.length + 'B（现读，不缓存）</div>';
+      el.innerHTML = (dr ? '' : '<div class="small faint">正文暂不可读（超时）——重进即恢复</div>') + apDiffHtml(diffLines(base, working)) +
+        '<div class="small faint" style="margin-top:4px">基准=r' + (dr ? dr.baseResourceVersion : '?') + ' · 稿 ' + working.length + 'B vs 落库值 ' + base.length + 'B（现读，不缓存）</div>';
     }, function (e) {
       var el = $('#apdiff-' + cssId(key));
-      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">diff 读面暂不可达（' + esc(String((e && e.message) || e)) + '）</div>';
+      if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">差异暂不可读（' + esc(String((e && e.message) || e)) + '）</div>';
     });
   }
   /* 批准=Apply 全流程复用（dry-run 三检查→人确认→fromDraft 落库）；fieldManager=console:approve */
@@ -6596,7 +6977,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       LIVE.fetchObject(d.kind, d.scope, d.name).catch(function () { return null; }),
     ]).then(function (rs) {
       var dr = rs[0], face = rs[1];
-      if (!dr) { toast('稿正文读面缺席', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
+      if (!dr) { toast('正文暂不可读', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
       var base = face ? String(face.content || '') : '';
       var working = String(dr.content || '');
       var fullDiff = diffLines(base, working);
@@ -6609,7 +6990,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<div class="checklist" id="ap-checks">' +
         '<div class="check-item" data-c="scheme"><span class="ci-ic">…</span>Scheme 校验（kind 注册∧spec 结构）</div>' +
         '<div class="check-item" data-c="perm"><span class="ci-ic">…</span>权限准入（主体=宿主注入 console-operator）</div>' +
-        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + baseRV + ' ↔ 面上现值）</div></div>' +
+        '<div class="check-item" data-c="lock"><span class="ci-ic">…</span>乐观锁（稿基于 r' + baseRV + ' ↔ 落库现值）</div></div>' +
         renderDiff(fullDiff, 26) +
         '<div class="small faint" id="ap-dry-note" style="margin-top:6px">dry-run 预检中（POST /core-console/apply {fromDraft:true, dryRun:true}——零副作用）…</div>' +
         '</div>' +
@@ -6630,7 +7011,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
           var lockOk = cur === baseRV;
           mark('scheme', true, 'kind 在册∧spec 结构过（cored admit ①）');
           mark('perm', true, '主体准入过（cored admit ②）');
-          mark('lock', lockOk, lockOk ? 'r' + baseRV + ' == 面上现值（可落）' : '稿基于 r' + baseRV + '，面上已 r' + cur + '——落库将 409（稿保留）');
+          mark('lock', lockOk, lockOk ? 'r' + baseRV + ' == 落库现值（可落）' : '稿基于 r' + baseRV + '，库中已 r' + cur + '——落库将 409（稿保留）');
           var go = $('#ap-apply-go');
           if (go && lockOk) {
             go.disabled = false;
@@ -6661,7 +7042,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       LIVE.designDraft(d.scope, d.name).catch(function () { return null; }),
     ]).then(function (rs) {
       var face = rs[0], dr = rs[1];
-      if (!dr) { toast('稿正文读面缺席', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
+      if (!dr) { toast('正文暂不可读', '无法预检（稿缺失）——刷新重试', 'warn'); return; }
       var base = face ? String(face.content || '') : '';
       var working = String(dr.content || '');
       var baseSha = face ? String(face.sha || '') : '';
@@ -6774,7 +7155,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       return;
     }
     confirmModal('驳回（弃稿）',
-      '<div>弃稿 <b class="mono">' + esc(key) + '</b>？——零文档面动作（不发明反向写路径）；ApprovalNeeded 归档行保留（审计素材）。</div>',
+      '<div>弃稿 <b class="mono">' + esc(key) + '</b>？——零文档动作（不发明反向写路径）；ApprovalNeeded 归档行保留（审计素材）。</div>',
       '确认驳回', function () {
         __CC.live.draftDelete(it.draft.kind, it.draft.name, it.draft.scope).then(function (r) {
           if (r.ok) {
@@ -6869,7 +7250,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
 
   /* ── R-UX-2：从 LIVE.state.kinds 实时获取/派生 scheme 字段控件描述符（零硬编码） ── */
   var FIELD_LABELS = {
-    title: '标题', summary: '目标', acceptance: '验收标准', impact: '影响面',
+    title: '标题', summary: '目标', acceptance: '验收标准', impact: '影响范围',
     priority: '优先级', proposer: '提出人', status: '状态', landing: '产物落点',
     'landing.target': '产物落点', 'landing.ref': '产物引用', enabled: '启用状态',
     workservice: '所属 WorkService', workflow: '绑定 Workflow', config: '配置映射 (map)',
@@ -7111,7 +7492,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         messages: [
           {
             role: 'assistant',
-            text: '已结合当前上下文自动补充缺省项：提出人=console-operator、优先级=low、产物落点=doc（右侧字段卡可随时修改，不会重复盘问已推断项）。\n请提供【标题 (title)】（默认：无（必填）；示例：编辑器深色模式；也可一段话自由描述标题/目标/验收标准/影响面）：'
+            text: '已结合当前上下文自动补充缺省项：提出人=console-operator、优先级=low、产物落点=doc（右侧字段卡可随时修改，不会重复盘问已推断项）。\n请提供【标题 (title)】（默认：无（必填）；示例：编辑器深色模式；也可一段话自由描述标题/目标/验收标准/影响范围）：'
           }
         ],
         fields: {
@@ -7345,7 +7726,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '</div>' +
       '<div class="intake-msg-list" id="intake-messages">' + msgsHtml + '</div>' +
       '<div class="intake-input-area">' +
-      '<textarea id="intake-chat-input" class="inp" rows="2" placeholder="输入一段话自由描述需求（如：标题：…；目标：…；验收标准：1. … 2. …；影响面：…），或直接回答当前提问…"></textarea>' +
+      '<textarea id="intake-chat-input" class="inp" rows="2" placeholder="输入一段话自由描述需求（如：标题：…；目标：…；验收标准：1. … 2. …；影响范围：…），或直接回答当前提问…"></textarea>' +
       '<div class="intake-act-row">' +
       '<button class="btn primary" id="btn-intake-send" data-act="intake-send" data-kind="' + esc(kindName) + '">发送 / 抽取字段</button>' +
       (st.askingField ? '<button class="btn" id="btn-intake-skip" data-act="intake-skip" data-kind="' + esc(kindName) + '">跳过此项（使用默认/示例）</button>' : '') +
@@ -7833,7 +8214,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       }, function (e) {
         if ((S.route + '|' + S.segs.join('/')) !== stamp) return;
         view.innerHTML = '<div class="view-inner"><div class="empty" style="padding:10vh"><svg class="ic"><use href="#cc-i-empty"/></svg>' +
-          '<div class="e-title">提案读面不可达（' + esc(String((e && e.message) || e)) + '）</div>' +
+          '<div class="e-title">提案数据不可达（' + esc(String((e && e.message) || e)) + '）</div>' +
           '<div class="e-act"><button class="btn primary" data-act="go" data-go="proposals">回提案库</button></div></div></div>';
       });
   }
@@ -7851,12 +8232,12 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         : '<span class="small faint">状态=' + esc(d.status) + '（判定终态后无批准/驳回动作——状态机 proposal.md §4）</span>') + '</div></div>' +
       '<div class="settings-cards" style="grid-template-columns:1fr 1fr">' +
       '<div class="set-card"><div class="set-card-h">目标</div><div class="set-card-sub" style="white-space:pre-wrap">' + esc(d.summary || '—') + '</div></div>' +
-      '<div class="set-card"><div class="set-card-h">影响面</div><div class="set-card-sub" style="white-space:pre-wrap">' + esc(d.spec && d.spec.impact || '—（未声明）') + '</div></div>' +
+      '<div class="set-card"><div class="set-card-h">影响范围</div><div class="set-card-sub" style="white-space:pre-wrap">' + esc(d.spec && d.spec.impact || '—（未声明）') + '</div></div>' +
       '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">验收标准（' + acc.length + ' 条）</div>' +
       (acc.length ? '<div class="set-card-sub"><ul style="margin:4px 0 0 18px;padding:0">' + acc.map(function (a) { return '<li class="small" style="padding:2px 0">' + esc(a) + '</li>'; }).join('') + '</ul></div>' : '<div class="set-card-sub faint">未声明验收标准</div>') + '</div>' +
       '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">产物指针（landing）</div>' +
       '<div class="set-card-sub mono">' + esc('target=' + ((d.landing && d.landing.target) || '—') + (d.landing && d.landing.ref ? ' ref=' + d.landing.ref : '')) + '</div>' +
-      '<div class="set-card-sub faint">产物真实落盘=apply-workflow agent 真实拉起段（declared-deferred）——落盘后状态回写 landed（本轮打通到派单受理+产物指针，不冒充产物已在）。</div></div>' +
+      '<div class="set-card-sub faint">产物真实落盘=apply-workflow agent 真实拉起段（余量）——落盘后状态回写 landed（本轮打通到派单受理+产物指针，不冒充产物已在）。</div></div>' +
       '<div class="set-card" style="grid-column:1/-1"><div class="set-card-h">派单（apply-workflow）</div><div id="pd-dispatch" style="padding:6px 16px 14px">' + liveSkeletonRows(1, 0) + '</div></div>' +
       '</div>' +
       '<div class="dh" style="margin-top:18px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">对象原文</h2></div>' +
@@ -7894,10 +8275,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<span class="chip mute small">eventId=' + esc(String(r0.eventId || '').slice(0, 28)) + '…</span>' +
         (apState ? '<span class="chip ' + apCls + ' small">批准投影·' + esc(apState) + '</span>' : '') +
         spWord + '</div>' + actLine +
-        '<div class="small faint">受理 ≠ agent 会话已拉起（诚实投影——真实拉起=dsh 会话挂载，declared-deferred；spawn 声明=approved 批准投影的接线意图词形，wired 恒 false=零拉起执行器——红线 a）；载荷带提案名/目标/验收（执行体输入）。</div>';
+        '<div class="small faint">受理 ≠ agent 会话已拉起（诚实投影——真实拉起=dsh 会话挂载（余量）；spawn 声明=approved 批准投影的接线意图词形，wired 恒 false=零拉起执行器——红线 a）；载荷带提案名/目标/验收（执行体输入）。</div>';
     }, function () {
       var el = $('#pd-dispatch');
-      if (el) el.innerHTML = '<div class="small faint">派单投影读面暂不可达（/v1/agents/dispatches 缺席或超时）。</div>';
+      if (el) el.innerHTML = '<div class="small faint">派单记录暂不可读（服务无此投影或超时）。</div>';
     });
   }
   /* 批准/驳回=对象态翻转稿（submitted→approved|rejected）→ fromDraft Apply
@@ -7949,10 +8330,10 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }).join('');
     openModal('<div class="modal-h"><span class="m-title">关于本原型</span><button class="icon-btn" data-act="close-modal"><svg class="ic"><use href="#cc-i-close"/></svg></button></div>' +
       '<div class="modal-b"><div class="settings-cards">' +
-      '<div class="set-card"><div class="set-card-h">说明</div><div class="set-card-sub">core console v2（E0–E7 全收口——渲染数据全部来自 cored 读面 + ops DB）</div>' +
+      '<div class="set-card"><div class="set-card-h">说明</div><div class="set-card-sub">core console（全收口——渲染数据全部来自系统文档库 + 运行数据库）</div>' +
       '<div class="set-row"><span class="sr-label">设计文档</span><span class="sr-val mono">core_system_instance/runtime/console-ui.md</span></div>' +
       '<div class="set-row"><span class="sr-label">概念对齐</span><span class="sr-val mono">core_design/concepts/apply.md · workflow.md</span></div>' +
-      '<div class="set-row"><span class="sr-label">数据</span><span class="sr-val">cored 读面（/v1/* 只读投影 + Apply/草稿写通路）——渲染数据无双源，console 不自建持久状态</span></div></div>' +
+      '<div class="set-row"><span class="sr-label">数据</span><span class="sr-val">系统文档库（/v1/* 只读投影 + Apply/草稿写通路）——渲染数据无双源，console 不自建持久状态</span></div></div>' +
       '<div class="set-card"><div class="set-card-h">核心语义</div>' +
       '<div class="set-row"><span class="sr-label">Apply</span><span class="sr-val">编辑与发布分离：改动先进草稿，Apply 才落库（Revision+1 · DocApplied 必发）；LLM 只提案，Apply 必须人点</span></div>' +
       '<div class="set-row"><span class="sr-label">一切皆文档</span><span class="sr-val">文档与资源同规则渲染（同 kind 徽章 / revision / 草稿圆点 / 状态灯）</span></div>' +
@@ -8045,7 +8426,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       var ghost = (classes.ApprovalNeeded || 0) - items.filter(function (it) { return it.class === 'ApprovalNeeded'; }).length;
       if (ghost > 0 && pendingRows === 0) {
         shown = shown.concat([{ class: 'ApprovalNeeded', kind: 'dispatch-legacy', name: '', scope: '',
-          digest: '派单待批（批准投影挂起 ×' + ghost + '——读面行集缺席=旧代 cored 词形，计数照实）',
+          digest: '派单待批（批准投影挂起 ×' + ghost + '——投影行集缺席=旧代 cored 词形，计数照实）',
           eventId: '', at: '', link: '#/workflows' }]);
       }
     }
@@ -8067,8 +8448,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<div class="dh-actions"><button type="button" class="btn secondary" data-act="go" data-go="proposals">提交需求</button></div></div>' +
       '<div class="fbar">' + chips + '</div>' +
       '<div class="card"><div class="card-b cc-inbox-list" data-cc-inbox-list="true">' + listHtml + '</div></div>' + degraded +
-      '<div class="sec-title">watchdog 观测面</div><div class="card"><div class="card-b cc-prose" data-cc-watchdog="true">' + wdRows + '</div></div>' +
-      '<details class="cc-disclosure"><summary>接管与回链口径</summary><div class="cc-prose">完成任一操作即产事件回链（Proposal approved / DocApplied / ApprovalGranted）→ loop 自动续跑对应分支（acceptance.md §9）；无通道部署零外发——本页即唯一展示面（规则 6），条目计数不受 dedup 抑制。</div></details>' +
+      '<div class="sec-title">watchdog 观测</div><div class="card"><div class="card-b cc-prose" data-cc-watchdog="true">' + wdRows + '</div></div>' +
+      '<details class="cc-disclosure"><summary>接管与回链口径</summary><div class="cc-prose">完成任一操作即产事件回链（Proposal approved / DocApplied / ApprovalGranted）→ loop 自动续跑对应分支（acceptance.md §9）；无通道部署零外发——本页即唯一展示位置（规则 6），条目计数不受 dedup 抑制。</div></details>' +
       '</div>';
   }
   ACTIONS['ib-class'] = function (el) { S.inboxClass = (S.inboxClass === el.dataset.c ? '' : el.dataset.c); render(); };
@@ -8159,7 +8540,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     }
   }
   ACTIONS['conn-fixgate'] = function () { location.assign('/'); }; // 落点=固定钥匙门入口（key 只存部署侧，§1.5）
-  ACTIONS['conn-cycle-detail'] = function () { toast('连接态灯（§1.5）', '底座=dsh web 客户端通道活性：绿=帧新鲜（≤2×心跳周期）；琥珀=断开退避重试；红=登录面连续 3 次 401，重走固定入口即愈', ''); };
+  ACTIONS['conn-cycle-detail'] = function () { toast('连接态灯（§1.5）', '底座=dsh web 客户端通道活性：绿=帧新鲜（≤2×心跳周期）；琥珀=断开退避重试；红=登录连续 3 次 401，重走固定入口即愈', ''); };
 
   function mountConsole(rootEl) {
     ROOT = rootEl;

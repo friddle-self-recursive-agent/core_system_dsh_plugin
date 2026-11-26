@@ -116,7 +116,7 @@ test('E6 积压族扩：approvalBacklog 三源单一真相函数在册+聚合面
   assert.ok(/total: drafts \+ archive \+ submitted \+ dispatchPending/.test(appSrc), '族=源和（草稿∪归档∪提案∪派单——loop-63 分化为四源）单一真相')
   assert.ok(appSrc.includes('back.total'), '事件流聚合面板积压行消费族总数')
   assert.ok(appSrc.includes('族=草稿待审（DocReview）'), '族构成词形标注在册（四源分解可见——loop-63 分化）')
-  assert.ok(appSrc.includes('操作面落点：审批屏∪编辑器/提案详情/wf 配置'), '操作面落点词形在册（草稿双落点——loop-63）')
+  assert.ok(appSrc.includes('操作落点：审批屏∪编辑器/提案详情/wf 配置'), '操作落点词形在册（草稿双落点——loop-63；R-UX-3 人话化：操作面→操作）')
 })
 
 test('E6 链点顺延：收件箱 ApprovalNeeded 族内落点分化（dispatch 行→wf 配置 tab 批准动作面；归档行→审批屏/editor 深链）', () => {
@@ -140,7 +140,7 @@ test('E6 族源分化核验：approvalBacklog 四源分解单一真相+族构成
   assert.ok(appSrc.includes("d.approval && d.approval.state === 'pending'"), '派单批准投影 pending 源消费（v0.56/0.57 dispatches 读面）')
   assert.ok(/x\.kind === 'event'/.test(appSrc), '归档子源分化消费在册（drafts∪归档两子源分解——pendingApprovals 不再整集入族）')
   assert.ok(appSrc.includes('族=草稿待审（DocReview）'), '聚合面板族构成词形=四源分解标注（回潮即红）')
-  assert.ok(appSrc.includes('审批屏∪编辑器'), '族操作面落点词形（草稿双落点）在册')
+  assert.ok(appSrc.includes('审批屏∪编辑器'), '族操作落点词形（草稿双落点）在册')
 })
 
 test('E6 族源分化核验：backlogCount 单点——顶部常驻入口/聚合面板同一族总数（无双源漂移）', () => {
@@ -156,7 +156,7 @@ test('E6 族源分化核验：DocReview 收件箱行深链=编辑器屏∪审批
   const appSrc = readFileSync(join(PLUGIN, 'client/console-app.js'), 'utf8')
   assert.ok(appSrc.includes("审批屏（草稿行深链=编辑器屏双落点）"), 'DocReview 行 tag 词形=双落点（回潮即红）')
   assert.ok(!new RegExp('function inboxOpOf[\\s\\S]{0,1200}link\\.replace').test(appSrc), 'cored link 原值不改写（红线 2 无双源——inboxOpOf 内零 link 改写）')
-  assert.ok(appSrc.includes('已批 N 稿不出现'), '审批屏 header「已批 N 稿不出现」注记在册')
+  assert.ok(appSrc.includes('已批的不出现'), '审批屏 header「已批的不出现」注记在册（R-UX-3 人话化）')
   assert.ok(appSrc.includes('DocReview→编辑器屏（apply dock，cored link 原值）∪审批屏 diff'), '收件箱屏 dh-sub DocReview 落点词形在册')
 })
 
