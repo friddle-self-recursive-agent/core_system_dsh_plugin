@@ -36,14 +36,17 @@ const ASSET_WHITELIST: Record<string, string> = {
 }
 
 function shellHtml(): string {
+  // 资产版本参数=产物 mtime：上游公网反代（NPM）对同 URL 有缓存——重部署后 mtime 变化即击穿。
+  const dist = resolveWebDistDir()
+  const v = dist ? String(statSync(join(dist, 'console.js')).mtimeMs | 0) : '0'
   const bases = `window.__CORE_CONSOLE_BASES__={api:'/core-console/api',ws:(location.protocol==='https:'?'wss://':'ws://')+location.host+'/core-console/ws',apply:'/core-console/apply',drafts:'/core-console/drafts'};`
   return '<!doctype html>\n<html lang="zh">\n<head>\n<meta charset="utf-8">\n' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +
     '<title>Core Console v2（web 重构载体·并行验收面）</title>\n' +
-    '<link rel="stylesheet" href="' + CONSOLE_V2_ASSETS_PREFIX + '/console.css">\n' +
+    '<link rel="stylesheet" href="' + CONSOLE_V2_ASSETS_PREFIX + '/console.css?v=' + v + '">\n' +
     '<script>' + bases + '</script>\n</head>\n<body>\n' +
     '<div data-core-console></div>\n' +
-    '<script src="' + CONSOLE_V2_ASSETS_PREFIX + '/console.js"></script>\n</body>\n</html>\n'
+    '<script src="' + CONSOLE_V2_ASSETS_PREFIX + '/console.js?v=' + v + '"></script>\n</body>\n</html>\n'
 }
 
 /** 鉴权栅栏（fail-closed）：栅栏缺席=401 拒全部；在册=按宿主判定（undefined=放行）。 */
