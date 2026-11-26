@@ -16,9 +16,10 @@ import {
   CONSOLE_SESSION_HEARTBEAT_PATH,
 } from '../src/index.ts'
 import { makeErrorReply } from '../src/agent-comm.ts'
-import { mkdtempSync, existsSync, rmSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX } from '../src/config.ts'
 
 function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
   const calls: string[] = []
