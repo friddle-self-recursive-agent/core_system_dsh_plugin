@@ -3,6 +3,9 @@
 //   非白名单类型/非 root 锚=400；无命令=503 诚实降级；零 shell 拼接。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { mountWakeBridge, WAKE_SPAWN_PATH } from '../src/index.ts'
 
 function post(addr: string, body: Record<string, unknown>): Promise<{ status: number; body: any }> {
@@ -47,6 +50,42 @@ test('wake 桥：LoopRequested→固定命令拉起；已有循环=already-runni
     assert.equal(r3.status, 400)
     const r4 = await post(h.addr, { type: 'LoopRequested', agent: 'parent-agent' })
     assert.equal(r4.status, 400)
+  } finally {
+    h.stop()
+  }
+})
+
+test('wake 桥：已有循环=pending 挂起，循环退出后自动拉起（事件不丢）', async () => {
+  const calls: string[] = []
+  const spawnImpl = ((cmd: string) => {
+    calls.push(cmd)
+    return { pid: 5252, unref() {} }
+  }) as any
+  let running = true
+  const execFileImpl = ((_file: string, _args: string[], _opts: any, cb: any) => {
+    cb(running ? null : new Error('no process'), running ? '1 dsh\n' : '', '')
+  }) as any
+  const pendingFile = join(tmpdir(), `wake-pending-${Date.now()}-${Math.random().toString(36).slice(2)}.json`)
+  const h = await mountWakeBridge({}, {
+    command: '/opt/fake/loop.sh',
+    runningPattern: 'dsh --profile core-headless',
+    retryMs: 40,
+    pendingFile,
+    spawnImpl,
+    execFileImpl,
+  })
+  try {
+    const r1 = await post(h.addr, { type: 'LoopRequested', agent: 'root', eventId: 'evt-pending', dedupKey: 'd1' })
+    assert.equal(r1.status, 200)
+    assert.equal(r1.body.status, 'already-running')
+    assert.equal(r1.body.queued, true)
+    assert.equal(calls.length, 0, '循环在跑时不拉起')
+    assert.equal(existsSync(pendingFile), true, 'pending 落盘（跨重启不丢）')
+
+    running = false
+    await new Promise((r) => setTimeout(r, 240))
+    assert.equal(calls.length, 1, '循环退出后 pending 自动拉起')
+    assert.equal(existsSync(pendingFile), false, '投递成功后清 pending 文件')
   } finally {
     h.stop()
   }

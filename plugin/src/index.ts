@@ -9,7 +9,7 @@
 // 部署锚点一律经配置或环境注入，不内置真实路径（rule.md R-PUB-1/2）。
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve, sep } from 'node:path'
 import { AGENT_COMM_KINDS, CommJournal, Mailbox, executeAgentCommOp, type AgentCommDeps, type AgentCommResult } from './agent-comm.ts'
@@ -37,6 +37,10 @@ export interface Config {
   loopCommand?: string
   /** 单飞检测模式（pgrep -f；空=不检测，由部署侧 loop 命令自行保证单飞）。 */
   loopRunningPattern?: string
+  /** 已有循环时 pending 重试间隔毫秒（缺省 30000）。 */
+  loopRetryMs?: number
+  /** pending 持久化文件（空=仅内存；建议部署侧配，跨插件重启不丢事件）。 */
+  wakePendingFile?: string
   /** cored 地址发现文件（部署侧；就绪后写入基址，corectl 缺省读取；
    *  空=不写（仅 core-system 等主控制面 profile 配置——避免多 profile 互相覆盖））。 */
   coredAddrFile?: string
@@ -1175,6 +1179,10 @@ export async function mountWakeBridge(
     command?: string
     /** 单飞检测模式（pgrep -f）；空=不检测（部署侧自行保证单飞）。 */
     runningPattern?: string
+    /** pending 重试间隔毫秒（缺省 30000）；已有循环时事件挂起，循环退出后自动拉起。 */
+    retryMs?: number
+    /** pending 持久化文件（空=仅内存；跨插件重启保留未投递事件）。 */
+    pendingFile?: string
     /** node:child_process 注入面（测试用）。 */
     spawnImpl?: typeof spawn
     execFileImpl?: typeof execFile
@@ -1187,6 +1195,93 @@ export async function mountWakeBridge(
   const execFileImpl = opts.execFileImpl ?? execFile
   const command = (opts.command ?? '').trim()
   const runningPattern = (opts.runningPattern ?? '').trim()
+  const retryMs = opts.retryMs && opts.retryMs > 0 ? opts.retryMs : 30_000
+  const pendingFile = (opts.pendingFile ?? '').trim()
+
+  // pending：已有循环时事件不丢——挂起最新一条（同因合并），循环退出后自动拉起。
+  type Pending = { eventId: string; dedupKey: string; at: number }
+  let pending: Pending | null = null
+  let timer: ReturnType<typeof setInterval> | null = null
+
+  const stopTimer = () => {
+    if (timer) {
+      clearInterval(timer)
+      timer = null
+    }
+  }
+  const persistPending = () => {
+    if (!pendingFile || !pending) return
+    try {
+      mkdirSync(dirname(pendingFile), { recursive: true })
+      writeFileSync(pendingFile, JSON.stringify(pending), { mode: 0o600 })
+    } catch (e) {
+      console.error('[core-system-diag] wake pending 写入失败 %s: %s', pendingFile, String((e as Error)?.message ?? e))
+    }
+  }
+  const clearPending = (removeFile: boolean) => {
+    pending = null
+    stopTimer()
+    if (removeFile && pendingFile) {
+      try { unlinkSync(pendingFile) } catch { /* 文件不存在=已清 */ }
+    }
+  }
+  const isRunning = (): Promise<boolean> => {
+    if (!runningPattern) return Promise.resolve(false)
+    return new Promise<boolean>((resolve) => {
+      execFileImpl('pgrep', ['-f', runningPattern], { timeout: 2000 }, (err, stdout) => {
+        resolve(!err && String(stdout).trim() !== '')
+      })
+    })
+  }
+  const spawnLoop = (eventId: string): number | null => {
+    try {
+      // 命令是部署侧配置项；载荷只用于日志，绝不拼接进命令（零注入面）。
+      const child = spawnImpl(command, [], { detached: true, stdio: 'ignore', env: process.env })
+      child.unref()
+      console.error('[core-system-diag] wake 桥已拉起自循环 command=%s pid=%s event=%s', command, child.pid ?? '?', eventId)
+      return child.pid ?? null
+    } catch (e) {
+      console.error('[core-system-diag] wake 桥拉起失败 command=%s event=%s: %s', command, eventId, String((e as Error)?.message ?? e))
+      return null
+    }
+  }
+  const attemptPending = async () => {
+    if (!pending) return
+    if (await isRunning()) return
+    if (spawnLoop(pending.eventId) !== null) {
+      console.error('[core-system-diag] wake 桥 pending 投递成功 event=%s', pending.eventId)
+      clearPending(true)
+    }
+  }
+  const queuePending = (body: Record<string, unknown>) => {
+    const eventId = String(body.eventId ?? '')
+    const dedupKey = String(body.dedupKey ?? '')
+    if (pending && pending.eventId === eventId) return
+    pending = { eventId, dedupKey, at: Date.now() }
+    persistPending()
+    console.error('[core-system-diag] wake 桥 pending（已有循环，待其退出后拉起）event=%s retryMs=%d', eventId, retryMs)
+    if (!timer) {
+      timer = setInterval(() => { void attemptPending() }, retryMs)
+      timer.unref?.()
+    }
+  }
+  // 跨插件重启恢复 pending：重启期间事件不丢（文件 0600）。
+  if (pendingFile && command) {
+    try {
+      if (existsSync(pendingFile)) {
+        const raw = JSON.parse(readFileSync(pendingFile, 'utf8')) as Partial<Pending>
+        if (raw && typeof raw.eventId === 'string' && raw.eventId) {
+          pending = { eventId: raw.eventId, dedupKey: String(raw.dedupKey ?? ''), at: Number(raw.at ?? Date.now()) }
+          timer = setInterval(() => { void attemptPending() }, retryMs)
+          timer.unref?.()
+          console.error('[core-system-diag] wake 桥恢复 pending event=%s（循环退出后自动拉起）', pending.eventId)
+          void attemptPending()
+        }
+      }
+    } catch (e) {
+      console.error('[core-system-diag] wake pending 恢复失败 %s: %s', pendingFile, String((e as Error)?.message ?? e))
+    }
+  }
 
   const server = httpMod.createServer((req, res) => {
     const url = String(req.url ?? '/').split('?')[0]
@@ -1224,27 +1319,18 @@ export async function mountWakeBridge(
         reply(503, { error: 'loop 命令未配置（config.loopCommand / CORE_SYSTEM_LOOP_CMD）' })
         return
       }
-      if (runningPattern) {
-        const running = await new Promise<boolean>((resolve) => {
-          execFileImpl('pgrep', ['-f', runningPattern], { timeout: 2000 }, (err, stdout) => {
-            resolve(!err && String(stdout).trim() !== '')
-          })
-        })
-        if (running) {
-          console.error('[core-system-diag] wake 桥 already-running pattern=%s event=%s', runningPattern, String(body.eventId ?? ''))
-          reply(200, { ok: true, status: 'already-running', pattern: runningPattern })
-          return
-        }
+      if (await isRunning()) {
+        queuePending(body)
+        reply(200, { ok: true, status: 'already-running', queued: true, retryMs, pattern: runningPattern })
+        return
       }
-      try {
-        // 命令是部署侧配置项；载荷只用于日志，绝不拼接进命令（零注入面）。
-        const child = spawnImpl(command, [], { detached: true, stdio: 'ignore', env: process.env })
-        child.unref()
-        console.error('[core-system-diag] wake 桥已拉起自循环 command=%s pid=%s event=%s', command, child.pid ?? '?', String(body.eventId ?? ''))
-        reply(202, { ok: true, status: 'spawned', pid: child.pid ?? null })
-      } catch (e) {
-        reply(502, { error: `loop 命令拉起失败: ${String((e as Error)?.message ?? e)}` })
+      const pid = spawnLoop(String(body.eventId ?? ''))
+      if (pid === null) {
+        reply(502, { error: 'loop 命令拉起失败（详见宿主日志；事件已受理，下一事件可重试）' })
+        return
       }
+      clearPending(true) // 新循环已起：旧 pending 的意图被满足，清掉防重复
+      reply(202, { ok: true, status: 'spawned', pid })
     })
   })
   const listenHost = (opts.addr ?? '127.0.0.1:0').split(':')[0] || '127.0.0.1'
@@ -1257,7 +1343,7 @@ export async function mountWakeBridge(
   const address = server.address()
   const bound = typeof address === 'object' && address !== null ? `${address.address}:${address.port}` : String(opts.addr ?? '')
   console.error('[core-system-diag] wake 桥 listener=%s（CORE_SYSTEM_WAKE_ADDR 回填——cored LoopRequested 路由）', bound)
-  return { addr: bound, stop: () => { server.close() } }
+  return { addr: bound, stop: () => { stopTimer(); server.close() } }
 }
 
 /** 宿主侧装配（软出现：web profile 才有 webServer/connection；headless 宿主零影响）。
@@ -1447,6 +1533,8 @@ export default async function apply(ctx: any, config: Config = {}) {
       addr: process.env.CORE_SYSTEM_WAKE_ADDR || undefined,
       command: config.loopCommand || process.env.CORE_SYSTEM_LOOP_CMD || '',
       runningPattern: config.loopRunningPattern || process.env.CORE_SYSTEM_LOOP_RUNNING_PATTERN || '',
+      retryMs: config.loopRetryMs ?? (Number(process.env.CORE_SYSTEM_LOOP_RETRY_MS || 0) || undefined),
+      pendingFile: config.wakePendingFile || process.env.CORE_SYSTEM_WAKE_PENDING_FILE || '',
     })
     if (wake) process.env.CORE_SYSTEM_WAKE_ADDR = wake.addr
   } catch (e) {
