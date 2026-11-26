@@ -2460,6 +2460,25 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     if (d < 86400) return Math.round(d / 3600) + 'h 前';
     return Math.round(d / 86400) + 'd 前';
   }
+
+  /* ---------- 运行形态徽（console-ui.md §16.1 E——「事件对账 run」vs「loop 会话型任务」区分） ----------
+   * 判据=wake 记录字段族机械对账：workflow run 行（runs 面/触发留痕）恒无 dedupKey 键（触发面
+   * 只有 cli-next-* 形 dedupKey 的 LoopRequested 唤醒才带），以此键有无做代际判别——零字段假造。
+   * 显示词形恒标「会话型任务（无 workflow run）」——loop 与 run 的关系显式，不让用户把 run #1 误当 loop。 */
+  function wakeRunWord(w) { return (w && w.dedupKey != null && String(w.dedupKey) !== '') ? 'loop 会话型任务' : '事件对账 run'; }
+
+  /* ---------- 环绕循环卡（console-ui.md §16.1 C/E——workflow 详情页页头复用零自建状态） ----------
+   * loopCard 的参数化形态：与报告首屏同一 LoopRequested 判据/相对时长/停滞计数，三差异——
+   * ① 不渲染主行动按钮（页头已有 workflow 自身动作，报告版按钮只属报告）；② 变体标注
+   * 「最近 loop 唤醒（该 workflow 声明≠loop 运行）」——不让用户把 wf 详情页当成 loop 卡片；
+   * ③ attrs 由调用方传（data-wf-loop 页头锚 / data-report-loop 报告锚），测试与 UI 拍同锚。 */
+  function loopCardFor(wakesBody, sessionsBody, opts) {
+    var o = opts || {};
+    var html = loopCard(wakesBody, sessionsBody, o);
+    var attr = o.attr || 'data-report-loop';
+    return html.replace('data-report-loop=', attr + '=').replace('会话型任务（无 workflow run）',
+      '会话型任务（无 workflow run）· loop 唤醒≠该 workflow run');
+  }
   function loopCard(wakesBody, sessionsBody, opts) {
     var o = opts || {};
     var nowMs = o.now || Date.now();
@@ -2576,6 +2595,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     evidenceRoute: evidenceRoute, attentionCard: attentionCard, factsHtml: factsHtml,
     degradedBanner: degradedBanner, generatedByLabel: generatedByLabel, windowLabel: windowLabel,
     reportFooter: reportFooter, clearPanel: clearPanel, loopCard: loopCard, relAge: relAge,
+    loopCardFor: loopCardFor, wakeRunWord: wakeRunWord,
     setTasksLoader: setTasksLoader, setTaskLoader: setTaskLoader, setAttentionLoader: setAttentionLoader,
     ensureTasks: ensureTasks, refreshTasks: refreshTasks,
     ensureTask: ensureTask, ensureAttention: ensureAttention, refreshAttention: refreshAttention,
@@ -5840,6 +5860,21 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     go('chat/' + encodeURIComponent(agent));
   };
 
+  /* --- 环绕循环卡（console-ui.md §16.1 C/E——workflow 页头标注 loop 与 run 的关系，零自建状态） ---
+   * wake 行字段族机械对账：带 cli-next-* 形 dedupKey 的 LoopRequested=loop 会话型任务（非 run）；
+   * runs 锚行恒无该键=事件对账 run。有 loop 唤醒≠该 workflow 有 run——显式标注不误导（E 词形）。 */
+  function wfLoopCard(row) {
+    var TK = __CC.tasks;
+    var wakes = LIVE.state.wakes;
+    var sess = LIVE.state.sessions;
+    if (!wakes || !sess) return '';
+    var loops = (Array.isArray(wakes.wakes) ? wakes.wakes : []).filter(function (w) {
+      return w && String(w.type || '') === 'LoopRequested';
+    });
+    if (!loops.length) return ''; // 无循环记录=页头零占位（报告首屏才承载空闲/点火指引）
+    return TK.loopCardFor(wakes, sess, { attr: 'data-wf-loop', agent: objChatAgent() });
+  }
+
   var WF_TABS = [
     { id: 'runs', label: '运行' }, { id: 'flow', label: '流程图' }, { id: 'events', label: '事件' },
     { id: 'transitions', label: '流转' }, { id: 'dataflow', label: '数据流' }, { id: 'config', label: '配置' }
@@ -5886,7 +5921,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     else if (tab === 'transitions') body = wfLiveTabTransitions(row);
     else if (tab === 'dataflow') body = wfLiveTabDataflow(row);
     else body = wfLiveTabConfig(row);
-    view.innerHTML = '<div class="view-inner">' + head + kpi + tabs + body + '</div>';
+    view.innerHTML = '<div class="view-inner">' + head + wfLoopCard(row) + kpi + tabs + body + '</div>';
     if (tab === 'transitions') paintWfTransitions(row);
     if (tab === 'config') hydrateWfConfig(row);
   }
@@ -5953,7 +5988,14 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var docsChips = involvedDocChip(r.involved);
     var objChips = (row.objects || []).map(function (o) { return wfObjectChip(row.name, o); }).join(' ');
     var back = '<span class="lk small" data-act="go" data-go="wf/' + esc(row.name) + '/r/' + r.run + '">在独立页打开 →</span>';
-    return '<div class="jd-head"><span class="jd-title mono">#' + r.run + ' · ' + esc(row.name) + '</span>' + runStatusChip(r.status, r.phase) +
+    // §16.1 E：run 型徽——runs 锚行恒无 dedupKey 键=事件对账 run（loop 唤醒才带 cli-next-* 形键）；
+    // 唤醒记录在册时随行「loop 会话型任务（无 workflow run）」关系词形，不让用户把 run 误当 loop。
+    var TK = __CC.tasks;
+    var hasLoop = !!(LIVE.state.wakes && Array.isArray(LIVE.state.wakes.wakes) &&
+      LIVE.state.wakes.wakes.some(function (w) { return w && String(w.type || '') === 'LoopRequested'; }));
+    var runKindChip = '<span class="chip mute tiny" data-wf-run-kind="reconcile" title="runs 环内行（无 LoopRequested 唤醒键）=触发对账 run，非 loop 会话">事件对账 run</span>' +
+      (hasLoop ? '<span class="chip mute tiny" data-wf-run-kind="loop-relation">loop=' + esc(TK.wakeRunWord({ dedupKey: 'cli-loop' })) + '（非本 run）</span>' : '');
+    return '<div class="jd-head"><span class="jd-title mono">#' + r.run + ' · ' + esc(row.name) + '</span>' + runKindChip + runStatusChip(r.status, r.phase) +
       '<span style="margin-left:auto"></span>' + (inline ? back : '<span class="lk small" data-act="go" data-go="wf/' + esc(row.name) + '">← 返回运行管理</span>') + '</div>' +
       '<div class="jd-kvrow">' +
       kv('specSource', esc(r.specSource || '—')) + kv('status', esc(r.status)) +
@@ -5966,8 +6008,20 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<div><div class="sec-title">相位时间线（FSM：声明序列 + 当前落点）</div><div class="phase-tl">' + tl + '</div></div>' +
       '<div><div class="sec-title">action log（ConnectorOps 调用）</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：action log 随真实执行接线落位（引擎主体余量，cored-bridge.md §2.3）——本抽屉当前承载触发投影（留痕 kv 即该 run 的审计锚点）</div></div></div>' +
       '<div><div class="sec-title">涉及文档（点击进对象 viewer）</div><div style="display:flex;gap:6px;flex-wrap:wrap">' + (docsChips || '<span class="faint small">留痕 involved 缺席</span>') + (objChips ? '<span class="faint small" style="align-self:center">声明对象：</span>' + objChips : '') + '</div></div>' +
-      '<div><div class="sec-title">SessionLog 全文</div><div class="logbox"><div class="small faint" style="padding:10px 14px">诚实空态：SessionLog 随 agent 会话接线落位（会话屏余量）——细粒度断点续跑靠 SessionLog（workflows 规则 13 挂账）</div></div></div>' +
+      '<div><div class="sec-title">SessionLog 全文</div><div class="logbox">' + sessLogSlotHtml() + '</div></div>' +
       '</div>';
+  }
+  /* §16.1 E：运行抽屉 SessionLog 空态不再摆死胡同——活跃会话在册=真实会话深链（v1/sessions 活性
+   * 面 sessionId 单段锚）；缺席=原因+下一步（不假画全文）。链=既有 #/session/:id 路由（D 同款）。 */
+  function sessLogSlotHtml() {
+    var rows = (LIVE.state.sessions && Array.isArray(LIVE.state.sessions.sessions)) ? LIVE.state.sessions.sessions : [];
+    var links = rows.filter(function (s) { return s && s.sessionId; }).slice(0, 3).map(function (s) {
+      var word = String(s.state || '');
+      return '<span class="lk mono small" data-act="go" data-go="' + esc(__CC.tasks.sessionRoute(s.sessionId)) + '">' +
+        esc(String(s.sessionId).slice(0, 22)) + '…' + (word ? '（' + esc(word) + '）' : '') + '</span>';
+    }).join(' · ');
+    if (links) return '<div style="padding:10px 14px"><div class="small faint" style="margin-bottom:4px">run 全文暂未接线（引擎主体余量）——当前活跃会话：</div><div>' + links + '</div></div>';
+    return '<div class="small faint" style="padding:10px 14px">诚实空态：SessionLog 随 agent 会话接线落位（会话屏余量）——当前活性面无活跃会话在册（无深链可给，不假画）；细粒度断点续跑靠 SessionLog（workflows 规则 13 挂账）</div>';
   }
 
   /* --- 流程图 tab：骨架节点 × run 相位对账投影（v0.55 R-9 流程图骨架节点升格——零新写面）：
@@ -8244,6 +8298,31 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
    * 已决记录（v0.46）：approval_log 审批判定独立账 GET /v1/approvals 现读——批准 granted
    * （rv=落库版本）/驳回 rejected（弃稿零文档面动作）判定行在册，审计不再只靠 apply_log 字符串考古。 */
   function apDiffHtml(diff, maxLines) { return renderDiff(diff, maxLines || 40); }
+  /* §16.1 F：待审项来源标注（console-ui.md §16.1 F——不再孤立的审批）：有字段证据才显示
+   * （零字段=零词形，不猜）；kind=Proposal 带 priority/proposer（who+how-urgent）；
+   * fieldManager 非 console 前缀=agent/LLM 稿来源；两者都缺席=返回 ''（草稿行保持既有形态）。 */
+  function approvalSourceLine(d) {
+    var chips = [];
+    if (d && d.kind === 'Proposal') {
+      if (d.priority) chips.push('<span class="chip ' + (d.priority === 'high' || d.priority === 'critical' ? 'warn' : 'mute') + ' tiny" data-ap-source="priority">优先级 ' + esc(d.priority) + '</span>');
+      if (d.proposer) chips.push('<span class="chip mute tiny" data-ap-source="proposer">提出人 ' + esc(d.proposer) + '</span>');
+      if (d.scope && d.name) chips.push('<span class="lk tiny" data-act="go" data-go="proposal/' + esc(encodeURIComponent(d.scope)) + '/' + esc(encodeURIComponent(d.name)) + '" data-ap-source="detail">提案详情 →</span>');
+    }
+    if (d && d.fieldManager && !isConsoleFM(d.fieldManager)) {
+      chips.push('<span class="chip mute tiny" data-ap-source="fm">来源 ' + esc(d.fieldManager) + '</span>');
+    }
+    return chips.length ? '<div class="ap-src" data-ap-src="1" style="margin-top:4px">' + chips.join(' ') + '</div>' : '';
+  }
+  /* §16.1 F：待审项与已决记录背景深链（Proposal/Task/Workflow 三类真实详情页，零猜零造假）。 */
+  function approvalBgLink(obj) {
+    var segs = String(obj || '').split('/');
+    if (segs.length < 3) return '';
+    var k = segs[0], sc = segs[1], nm = segs.slice(2).join('/');
+    if (k === 'Proposal') return '<span class="lk small" data-act="go" data-go="proposal/' + esc(encodeURIComponent(sc)) + '/' + esc(encodeURIComponent(nm)) + '" data-ap-bg="proposal">提案详情 →</span>';
+    if (k === 'Task') return '<span class="lk small" data-act="go" data-go="' + esc(__CC.tasks.taskRoute(sc + '/' + nm)) + '" data-ap-bg="task">任务详情 →</span>';
+    if (k === 'Workflow') return '<span class="lk small" data-act="go" data-go="wf/' + esc(encodeURIComponent(nm)) + '" data-ap-bg="workflow">工作流详情 →</span>';
+    return '';
+  }
   function approvalItemHtml(it) {
     if (it.kind === 'draft') {
       var d = it.draft;
@@ -8254,6 +8333,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         return '<div class="ap-card" id="apcard-' + esc(cssId(it.key)) + '">' +
           '<div class="ap-head"><span class="ap-title mono">DesignDoc/' + esc(d.scope) + '/' + esc(d.name) + '</span>' +
           '<span class="chip warn small">待审</span><span class="chip mute small">设计文档稿</span></div>' +
+          approvalSourceLine(d) +
           '<div class="ap-meta"><span>仓：<b class="mono">' + esc(d.scope || '—') + '</b></span>' +
           '<span>fieldManager：<b class="mono">' + esc(d.fieldManager) + '</b></span>' +
           '<span class="mono faint">' + esc(String(d.updatedAt || '').replace('T', ' ').slice(0, 19)) + '</span>' +
@@ -8266,6 +8346,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       return '<div class="ap-card" id="apcard-' + esc(cssId(it.key)) + '">' +
         '<div class="ap-head"><span class="ap-title mono">' + esc(d.kind) + '/' + esc(d.name) + '</span>' +
         '<span class="chip warn small">待审</span><span class="chip mute small">' + esc(src) + '</span></div>' +
+        approvalSourceLine(d) +
         '<div class="ap-meta"><span>scope：<b class="mono">' + esc(d.scope || '—') + '</b></span>' +
         '<span>fieldManager：<b class="mono">' + esc(d.fieldManager) + '</b></span>' +
         '<span class="mono faint">' + esc(String(d.updatedAt || '').replace('T', ' ').slice(0, 19)) + '</span>' +
@@ -8281,7 +8362,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<span class="chip warn small">待审（人审档）</span><span class="chip danger small small">无稿</span></div>' +
       '<div class="ap-meta"><span>来源：<b class="mono">' + esc(e.source) + '</b></span><span>level：<b class="mono">' + esc(e.level) + '</b></span>' +
       '<span class="mono faint">' + esc(String(e.ts || '').replace('T', ' ').slice(0, 19)) + '</span>' +
-      '<span class="lk mono small" data-act="go" data-go="' + esc(involvedRoute(e.involved)) + '">involved 对象编辑器 →</span></div>' +
+      '<span class="lk mono small" data-act="go" data-go="' + esc(involvedRoute(e.involved)) + '">对象编辑器 →</span>' + approvalBgLink(e.involved) + '</div>' +
       '<div class="ap-body small faint">批准缺席（该对象无草稿在稿）——变更未进稿不可批准（不冒充 diff）；落稿后本页即出现 diff 预览与批准动作。</div></div>';
   }
   function involvedRoute(inv) {
@@ -8329,20 +8410,43 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       }
       el.innerHTML = '<div class="dh" style="margin-bottom:8px"><div class="dh-main"><div class="dh-title"><h2 style="font-size:16px;margin:0">已决记录</h2>' +
         '<span class="chip mute small">' + rows.length + ' 行</span></div>' +
-        '<div class="dh-sub">approval_log 独立账（ops DB）：批准=granted（rv=落库版本，noop 照落）· 驳回=rejected（弃稿零文档动作）。</div></div></div>' +
-        '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>时刻</th><th>判定</th><th>对象</th><th>判定主体</th><th>rv</th><th>来源</th></tr></thead><tbody>' +
+        '<div class="dh-sub">approval_log 独立账（ops DB）：批准=granted（rv=落库版本，noop 照落）· 驳回=rejected（弃稿零文档动作）· 判定人对冲突点的取舍标注见「备注」列（对照摘要=辅助判定，取舍留账——proposal.md §4.6）。</div></div></div>' +
+        '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>时刻</th><th>判定</th><th>对象</th><th>判定主体</th><th>rv</th><th>来源</th><th>备注</th></tr></thead><tbody>' +
         rows.map(function (r) {
           return '<tr><td class="mono small">' + esc(String(r.ts || '').replace('T', ' ').slice(0, 19)) + '</td>' +
             '<td><span class="chip ' + (r.decision === 'granted' ? 'ok' : 'danger') + ' small">' + esc(r.decision || '') + '</span></td>' +
             '<td class="mono small"><span class="lk" data-act="go" data-go="' + esc(involvedRoute(r.obj)) + '">' + esc(r.obj || '') + '</span></td>' +
             '<td class="mono small">' + esc(r.judgedBy || 'anonymous') + '</td>' +
             '<td class="mono small">' + (r.rv ? 'r' + r.rv : '—') + '</td>' +
-            '<td class="mono small faint">' + esc(r.fieldManager || '') + '</td></tr>';
+            '<td class="mono small faint">' + esc(r.fieldManager || '') + '</td>' +
+            '<td class="small faint">' + esc(approvalLogNote(r)) + (approvalBgLink(r.obj) ? ' · ' + approvalBgLink(r.obj) : '') + '</td></tr>';
         }).join('') + '</tbody></table></div>';
     }, function () {
       var el = $('#ap-ledger');
       if (el && (S.route + '|' + S.segs.join('/')) === stamp) el.innerHTML = '<div class="small faint">审批记录暂不可读（服务无此投影或超时）——判定留痕暂只=apply_log（fieldManager=console:approve）。</div>';
     });
+  }
+  /* §16.1 F：已决记录备注列（审批不再孤立——判定与动作回链）。
+   * 词形=账面既有字段（fieldManager/reasonRef）纯翻译，零新读零假账：判定动作行（workflow:
+   * approve|reject 前缀）标注派单判定回链；console:approve|reject 标注提案判定；doc 深链=involved
+   * 对象；冲突取舍=proposal.md §4.6——approval_log 只在册判定主体留痕，无独立取舍文本列（不在册
+   * =如实标注「未在册」，不冒充已记录取舍内容）。 */
+  function approvalLogNote(r) {
+    var fm = String((r && r.fieldManager) || '');
+    var rr = String((r && r.reasonRef) || '');
+    var obj = String((r && r.obj) || '');
+    if (/^workflow:(approve|reject):/.test(fm + '|' + rr)) return '派单判定（' + (fm.indexOf('approve') >= 0 || rr.indexOf('approve') >= 0 ? '批准' : '驳回') + '）——动作回链 wf 详情配置 tab';
+    if (fm === 'console:approve' || fm === 'console:reject') {
+      var verb = fm === 'console:approve' ? '批准' : '驳回';
+      return obj.indexOf('Proposal/') === 0
+        ? '提案判定（' + verb + '）——提案详情可回链'
+        : '审批落库（' + verb + '）——对象详情可回链';
+    }
+    if (fm === 'console:propose') return '提案提交（submitted 入册）';
+    if (/^console:editor/.test(fm)) return '编辑器 Apply（人工改稿落库）';
+    if (fm === 'console:chat-backfill') return '会话回填（agent.yaml currentSession 翻新）';
+    if (/^console:/.test(fm)) return 'console 动作（' + fm.replace(/^console:/, '') + '）';
+    return '冲突取舍文本未在册（对照摘要=辅助判定不落本账——proposal.md §4.6）';
   }
   /* diff 注水：稿 content（GET /v1/drafts/{kind}/{name}）+ 面现值（GET /v1/objects）现读；
    * kind=DesignDoc 分支（v0.52 能力 A）：设计文档稿 diff=HEAD 正文 vs 稿（designDoc+designDraft 现读）。 */
@@ -8651,7 +8755,13 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '  proposer: ' + propScalar(f.proposer || 'console-operator') + '\n' +
       '  status: ' + (f.status || 'submitted') + '\n' +
       '  landing: {target: ' + landingTarget + '}\n';
-    var known = { name: 1, scope: 1, title: 1, summary: 1, acceptance: 1, impact: 1, priority: 1, proposer: 1, status: 1, landing: 1, 'landing.target': 1, 'landing.ref': 1 };
+    // 对照卡余量①（proposal.md §4.6 派工含文档更新）：随行清单随稿下发——批准派单载荷即带
+    // 文档更新起点；空=零行（缺省义务不变，docsUpdate 缺省 true 语义不被此键改写）。
+    var docsUpdate = Array.isArray(f.docsUpdate) ? f.docsUpdate.filter(Boolean) : [];
+    if (docsUpdate.length) {
+      yaml += '  docsUpdate:\n' + docsUpdate.map(function (r) { return '    - ' + propScalar(r); }).join('\n') + '\n';
+    }
+    var known = { name: 1, scope: 1, title: 1, summary: 1, acceptance: 1, impact: 1, priority: 1, proposer: 1, status: 1, landing: 1, 'landing.target': 1, 'landing.ref': 1, docsUpdate: 1 };
     Object.keys(f).sort().forEach(function (k) {
       if (!known[k] && f[k] != null && String(f[k]).trim() !== '') {
         yaml += '  ' + k + ': ' + propScalar(f[k]) + '\n';
@@ -9006,11 +9116,30 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     var cx = window.__CC && window.__CC.ctx && window.__CC.ctx.cachedOf(st.kind, st.scope, st.name || propSlug(st.fields.title));
     return cx ? window.__CC.ctx.card(cx) : '';
   }
+  /* 提交字段重建单点（原 precheckFields 命名——loop-80 起定义体在提交卡直排重建时误删，
+   * 残留两处调用悬空=引用缺陷；loop-81 即修单点化）：会话字段卡 st.fields 为单一真相，
+   * 验收=数组或换行文本归一为字符串；name/scope/status/landing 缺省与 propYaml 期望同形。 */
+  function intakeFieldsOf(st) {
+    st = st || {};
+    var fl = st.fields || {};
+    return {
+      name: fl.name || st.name || '',
+      scope: fl.scope || st.scope || 'global',
+      title: fl.title != null ? String(fl.title) : '',
+      summary: fl.summary != null ? String(fl.summary) : '',
+      acceptance: Array.isArray(fl.acceptance) ? fl.acceptance.join('\n') : String(fl.acceptance || ''),
+      impact: fl.impact != null ? String(fl.impact) : '',
+      priority: fl.priority || 'normal',
+      'landing.target': fl['landing.target'] || fl.landing || 'doc',
+      proposer: fl.proposer || st.proposer || 'console-operator',
+      status: fl.status || 'submitted'
+    };
+  }
   /* 提交节点随行对照：check() 结果写入会话缓存（kind 键复用）+ 消息行（含降级可见）。
    * precheck 兜底：重建字段（与 prop-submit 同口径）——供降级重试等无预览通路复用同一摘要。 */
   function ctxRunCheck(st, yaml) {
     if (!window.__CC || !window.__CC.ctx || !window.__CC.ctx.check) return Promise.resolve(null);
-    if (!yaml) yaml = propYaml(precheckFields(st));
+    if (!yaml) yaml = propYaml(intakeFieldsOf(st));
     return window.__CC.ctx.check(st.kind || 'Proposal', st.scope, st.name || propSlug(st.fields.title), yaml)
       .then(function (r) {
         var cx = r && r.cx;
@@ -9615,15 +9744,32 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       intakeCard + '<div class="sec-title">提案库</div>' + rows + '</div>';
     bindIntakeEvents('Proposal');
   }
-  /* 对照卡补充项一键随行（§4.6：supplements 清单=派工文档更新起点）。 */
+  /* 对照卡补充项一键随行（§4.6：supplements 清单=派工文档更新起点）。
+   * 余量①接线（proposal.md §4.6 派工含文档更新）：清单进提交面字段 docsUpdate——
+   * propYaml 产键（存储格式自由文本）→ 批准判定链翻转 status 时原稿携带 → 派单载荷随行
+   * （执行体=文档更新起点）；预览在册时预览 yaml 同步补行（人可见），toast 明示落点。 */
   ACTIONS['ctx-supplement-add'] = function (el) {
     var ref = el.dataset.ref || '';
     if (!ref || !window.__CC || !window.__CC.ctx) return;
     window.__CC.ctx.taken[ref] = { hash: el.dataset.hash || '', base: el.dataset.base || '', at: Date.now() };
+    var takenList = Object.keys(window.__CC.ctx.taken);
+    var st = intakeStateOf('Proposal');
+    if (st && st.preview && st.preview.yaml) {
+      var p = st.preview.yaml;
+      if (p.indexOf('docsUpdate:') < 0) {
+        var lm = /\n(\s*)landing:[^\n]*\n?$/.exec(p);
+        if (lm) {
+          var ind = lm[1];
+          var block = takenList.map(function (r) { return ind + '  - ' + r; }).join('\n');
+          st.preview.yaml = p.replace(/\n(\s*)landing:[^\n]*\n?$/, '\n' + ind + 'landing:' +
+            (/landing:([^\n]*)$/.exec(p)[1]) + '\n' + ind + 'docsUpdate:\n' + block + '\n');
+        }
+      }
+    }
     el.textContent = '✓ 已加入随行清单';
     el.disabled = true;
     el.classList.add('ok');
-    toast('已加入随行清单', ref + '——批准派工后作为文档更新起点随载荷下发', 'ok');
+    toast('已加入随行清单', ref + ' · 批准后随派单载荷下发（docsUpdate——文档更新起点，proposal.md §4.6）', 'ok');
   };
   /* 降级卡「重试对照」（免刷新整页）：同键同摘要语义——预览在册用预览 yaml，否则按会话字段重建；
    * 重试中可再点（幂等——失败态不缓存，每次 check 本就现读）；成功/再降级都重绘对照卡（新态可见）。 */
@@ -9647,11 +9793,16 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     });
   };
   ACTIONS['prop-submit'] = function () {
-    var f = precheckFields(intakeStateOf('Proposal'));
+    var f = intakeFieldsOf(intakeStateOf('Proposal'));
     f.name = (f.name || propSlug(f.title) || '').trim();
     if (!/^[a-z0-9][a-z0-9-]*$/.test(f.name)) { toast('名称不合法', 'slug 形态 [a-z0-9-]（标题留空自动生成）', 'warn'); return; }
     if (!f.title.trim() || !f.summary.trim()) { toast('标题/目标必填', '需求先说清做什么', 'warn'); return; }
     if (!f.acceptance.split('\n').some(function (s) { return s.trim(); })) { toast('验收标准至少一条', '可验证条目=Verify 相位的复测依据', 'warn'); return; }
+    // 对照卡余量①：提交面把「已加入随行清单」的补充文档单出为 docsUpdate 键（非通用字段通路——
+    // 摘要重建的杂散字段仍走降级表单原词形）；批准后随派单载荷下发（proposal.md §4.6）。
+    if (window.__CC && window.__CC.ctx && window.__CC.ctx.taken) {
+      f.docsUpdate = Object.keys(window.__CC.ctx.taken);
+    }
     var yaml = propYaml(f);
     // 提交节点随行对照（§4.6：提交面同产同卡；会话缓存后详情屏同屏携带；降级可见不阻断）。
     var stCtx = intakeStateOf('Proposal');

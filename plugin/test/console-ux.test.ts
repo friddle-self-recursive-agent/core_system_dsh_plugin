@@ -550,3 +550,68 @@ test('L80-03 接线与回归锚：trace/context-find loader + sqlite doc-history
   assert.ok(SRC.includes('TK.loopCard') && SRC.includes('data-report-loop='), '关注报告当前循环卡接线在册')
   assert.ok(SRC.includes('.ob-trace-row') && SRC.includes('.ob-rel-row') && SRC.includes('.report-loop') && SRC.includes('.doc-hist-sec'), 'L80 新增样式块入 bundle')
 })
+
+test('L81-01 环绕循环卡+run 型徽（loopCardFor/wakeRunWord——console-ui.md §16.1 C/E）纯函数直测', () => {
+  const window: any = {}
+  new Function('window', readFileSync(join(CLIENT, 'console-tasks.js'), 'utf8'))(window)
+  const tk = window.__CC.tasks
+  const now = Date.parse('2026-11-26T08:00:00Z')
+  // ① wakeRunWord：dedupKey 有无=loop/事件对账 run 代际判别（runs 锚行恒无该键）
+  assert.equal(tk.wakeRunWord({ dedupKey: 'cli-next-1' }), 'loop 会话型任务')
+  assert.equal(tk.wakeRunWord({}), '事件对账 run')
+  assert.equal(tk.wakeRunWord(null), '事件对账 run')
+  // ② loopCardFor：attr 重写锚（data-wf-loop）+ 关系词形（loop 唤醒≠该 workflow run）
+  const active = tk.loopCardFor(
+    { wakes: [{ type: 'LoopRequested', wake: 2, dedupKey: 'cli-next-99', at: '2026-11-26T07:45:00Z', status: 'accepted', route: 'root-agent', eventId: 'evt-new' }] },
+    { sessions: [] }, { now, attr: 'data-wf-loop', agent: 'core-headless' })
+  assert.ok(active.includes('data-wf-loop="active"'), '锚=页头 data-wf-loop（报告版 data-report-loop 不串）')
+  assert.ok(active.includes('loop 唤醒≠该 workflow run'), '§16.1 E 关系词形显式标注')
+  assert.ok(active.includes('会话型任务（无 workflow run）'), '会话型任务词形保留')
+  // ③ 报告版 loopCard 本体词形零污染（不带关系后缀）
+  const report = tk.loopCard({ wakes: [{ type: 'LoopRequested', wake: 1, dedupKey: 'cli-x', at: '2026-11-26T07:45:00Z', status: 'accepted' }] }, { sessions: [] }, { now })
+  assert.ok(report.includes('data-report-loop=') && !report.includes('loop 唤醒≠该 workflow run'), '报告版词形零回潮污染')
+})
+
+test('L81-02 审批页来源标注与已决账备注列+对照卡余量②（approvalSourceLine/approvalLogNote——console-ui.md §16.1 F）', () => {
+  // ① approvalSourceLine：Proposal 稿=优先级/提出人/详情深链；agent 稿=fieldManager 来源；console 稿=零词形
+  const APP = readFileSync(join(CLIENT, 'console-app.js'), 'utf8')
+  assert.ok(APP.includes('function approvalSourceLine') && APP.includes('data-ap-source="proposer"') && APP.includes('data-ap-source="detail"'), '来源标注词形在册（提交人/优先级/提案详情深链）')
+  assert.ok(APP.includes("approvalSourceLine(d) +"), '草稿卡头部接入来源行（两卡同款）')
+  assert.ok(!APP.includes("approvalSourceLine(e)"), 'ApprovalNeeded 无稿行不注入来源（零字段不猜）')
+  // ② approvalLogNote + approvalBgLink：账面字段纯翻译，区分 Proposal/非 Proposal，背景深链覆盖 Proposal/Task/Workflow
+  assert.ok(APP.includes('function approvalBgLink') && APP.includes('data-ap-bg="proposal"') && APP.includes('data-ap-bg="task"') && APP.includes('data-ap-bg="workflow"'), '待审项与已决记录背景深链（Proposal/Task/Workflow）在册')
+  assert.ok(APP.includes('function approvalLogNote') && APP.includes('冲突取舍文本未在册') && APP.includes('审批落库（'), '备注列+取舍未在册词形+非 Proposal 审批落库区分在册')
+  assert.ok(APP.includes("备注</th>"), '已决表新增备注列在册')
+  assert.ok(APP.includes('proposal.md §4.6'), '取舍标注注明对照摘要=辅助判定出处')
+})
+
+test('L81-03 对照卡余量① supplements→派单载荷（propYaml docsUpdate 键——proposal.md §4.6）', () => {
+  const APP = readFileSync(join(CLIENT, 'console-app.js'), 'utf8')
+  const window: any = { __CC: { MOCK: {} } }
+  // ① propYaml 直测：docsUpdate 列表=随稿下发键；空=零行不冒充
+  new Function('window', readFileSync(join(CLIENT, 'console-ctx.js'), 'utf8'))(window)
+  const ctx = window.__CC.ctx
+  // propYaml 在 bundle 闭包内——经 dist 直测不可达，用形态锚+ctx.taken 接线锚双保险
+  assert.ok(APP.includes('f.docsUpdate = Object.keys(window.__CC.ctx.taken)'), '提交面随行清单单出 docsUpdate 键在册')
+  assert.ok(APP.includes("'  docsUpdate:\\n'"), 'propYaml 产 docsUpdate 列表行在册')
+  assert.ok(APP.includes("docsUpdate: 1"), 'known 白名单收录 docsUpdate（不走杂散字段通路）')
+  // ② ctx-supplement-add：一键随行+toast 明示批准后随载荷下发
+  assert.ok(APP.includes("已加入随行清单', ref + ' · 批准后随派单载荷下发"), 'toast 落点词形在册')
+  // ③ ctx.taken 接线（ctx 模块在册——随行清单单一真相）
+  assert.ok(typeof ctx.taken === 'object' && typeof ctx.check === 'function', 'ctx 对照模块 taken 清单在册')
+})
+
+test('L81-05 提交字段重建单点回归（intakeFieldsOf——loop-80 悬空引用缺陷即修，回潮即红）', () => {
+  const APP = readFileSync(join(CLIENT, 'console-app.js'), 'utf8')
+  assert.ok(!APP.includes('precheckFields('), 'precheckFields 悬空调用零残留（回潮即红）')
+  assert.ok(APP.includes('function intakeFieldsOf') && APP.includes('intakeFieldsOf(intakeStateOf('), '提交字段重建单点在册（prop-submit + ctxRunCheck 两调用点）')
+  assert.ok(APP.includes("acceptance: Array.isArray(fl.acceptance) ? fl.acceptance.join('\\n') : String(fl.acceptance || '')"), '验收数组/文本归一在册（propYaml split 口径同形）')
+})
+
+test('L81-04 运行抽屉 SessionLog 空态会话深链+接线锚（console-ui.md §16.1 E——回潮即红）', () => {
+  const APP = readFileSync(join(CLIENT, 'console-app.js'), 'utf8')
+  assert.ok(APP.includes('function sessLogSlotHtml') && APP.includes('data-act="go" data-go'), 'SessionLog 空态活跃会话深链在册')
+  assert.ok(APP.includes('run 全文暂未接线'), '空态原因+下一步词形（不摆死胡同）')
+  assert.ok(APP.includes('wfLoopCard') && APP.includes("attr: 'data-wf-loop'"), 'workflow 页头环绕循环卡接线在册')
+  assert.ok(APP.includes('data-wf-run-kind="reconcile"'), 'run 型徽（事件对账 run）在册')
+})

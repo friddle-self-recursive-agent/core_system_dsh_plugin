@@ -275,6 +275,25 @@
     if (d < 86400) return Math.round(d / 3600) + 'h 前';
     return Math.round(d / 86400) + 'd 前';
   }
+
+  /* ---------- 运行形态徽（console-ui.md §16.1 E——「事件对账 run」vs「loop 会话型任务」区分） ----------
+   * 判据=wake 记录字段族机械对账：workflow run 行（runs 面/触发留痕）恒无 dedupKey 键（触发面
+   * 只有 cli-next-* 形 dedupKey 的 LoopRequested 唤醒才带），以此键有无做代际判别——零字段假造。
+   * 显示词形恒标「会话型任务（无 workflow run）」——loop 与 run 的关系显式，不让用户把 run #1 误当 loop。 */
+  function wakeRunWord(w) { return (w && w.dedupKey != null && String(w.dedupKey) !== '') ? 'loop 会话型任务' : '事件对账 run'; }
+
+  /* ---------- 环绕循环卡（console-ui.md §16.1 C/E——workflow 详情页页头复用零自建状态） ----------
+   * loopCard 的参数化形态：与报告首屏同一 LoopRequested 判据/相对时长/停滞计数，三差异——
+   * ① 不渲染主行动按钮（页头已有 workflow 自身动作，报告版按钮只属报告）；② 变体标注
+   * 「最近 loop 唤醒（该 workflow 声明≠loop 运行）」——不让用户把 wf 详情页当成 loop 卡片；
+   * ③ attrs 由调用方传（data-wf-loop 页头锚 / data-report-loop 报告锚），测试与 UI 拍同锚。 */
+  function loopCardFor(wakesBody, sessionsBody, opts) {
+    var o = opts || {};
+    var html = loopCard(wakesBody, sessionsBody, o);
+    var attr = o.attr || 'data-report-loop';
+    return html.replace('data-report-loop=', attr + '=').replace('会话型任务（无 workflow run）',
+      '会话型任务（无 workflow run）· loop 唤醒≠该 workflow run');
+  }
   function loopCard(wakesBody, sessionsBody, opts) {
     var o = opts || {};
     var nowMs = o.now || Date.now();
@@ -391,6 +410,7 @@
     evidenceRoute: evidenceRoute, attentionCard: attentionCard, factsHtml: factsHtml,
     degradedBanner: degradedBanner, generatedByLabel: generatedByLabel, windowLabel: windowLabel,
     reportFooter: reportFooter, clearPanel: clearPanel, loopCard: loopCard, relAge: relAge,
+    loopCardFor: loopCardFor, wakeRunWord: wakeRunWord,
     setTasksLoader: setTasksLoader, setTaskLoader: setTaskLoader, setAttentionLoader: setAttentionLoader,
     ensureTasks: ensureTasks, refreshTasks: refreshTasks,
     ensureTask: ensureTask, ensureAttention: ensureAttention, refreshAttention: refreshAttention,
