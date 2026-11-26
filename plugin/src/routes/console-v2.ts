@@ -47,7 +47,7 @@ function shellHtml(): string {
     '<link rel="stylesheet" href="' + CONSOLE_V2_ASSETS_PREFIX + '/console.css?v=' + v + '">\n' +
     '<script>' + bases + '</script>\n</head>\n<body>\n' +
     '<div data-core-console></div>\n' +
-    '<script src="/core-console/chatfaces.js"></script>\n' +
+    '<script src="/core-console/chatfaces.js?v=' + v + '"></script>\n' +
     '<script src="' + CONSOLE_V2_ASSETS_PREFIX + '/console.js?v=' + v + '"></script>\n</body>\n</html>\n'
 }
 
