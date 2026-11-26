@@ -9,6 +9,10 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(fileURLToPath(import.meta.url))
 const PKG_ID = 'dsh-plugin-core-system'
+// ⚠️ 过渡期保留：client/ 巨石（console-* 全家桶）为前端迁移期的保底载体——
+// 前端权威面已迁往 core_system_workservice 的 web/（另一 worktree 开发，合入其 main 后
+// 本仓更新 submodule 指针），web/dist 接管后本 parts 列表与 client/ 目录整体删除。
+// R-ENG-7（源文件 ≤800 行）对过渡期巨石暂以 .max-file-lines-allowlist 豁免（lint 脚本读取）。
 const parts = ['console-shell.js', 'console-data.js', 'console-md.js', 'console-ctx.js', 'console-obj.js', 'console-tasks.js', 'console-live.js', 'console-scenario.js', 'console-chat.js', 'console-projects.js', 'console-app.js', 'conn-monitor.js', 'entry.js']
 const css = readFileSync(join(root, 'client/console.css'), 'utf8')
 

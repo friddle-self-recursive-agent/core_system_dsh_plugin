@@ -1,0 +1,5 @@
+# .max-file-lines-allowlist —— R-ENG-7（源文件 ≤800 行）过渡期豁免清单（一行一个路径，# 注释）。
+# ⚠️ 过渡期豁免：client/ 前端巨石待 core_system_workservice 的 web/ 前端（web/dist）接管后，
+# 随 plugin/client/ 目录与本文件一并删除——届时本清单应为空文件或移除。
+plugin/client/console-app.js
+plugin/client/console-data.js
