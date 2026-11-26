@@ -110,12 +110,15 @@ export function mountConsoleV2(
   reject: (req: { headers: unknown }) => 401 | 403 | undefined,
 ): Array<() => void> {
   const dist = resolveWebDistDir()
+  console.error(`[core-system-diag] console-v2 mount dist=${dist ?? 'null'} root=${repoRoot()}`)
   if (!dist) return [] // 产物缺席=软出现零 v2 面（不炸宿主；日志面由调用方 stderr 提示）
   const entries = readdirSync(dist)
   const haveAll = ['console.js', 'console.css'].every((f) => entries.includes(f))
   if (!haveAll) return []
-  return [
+  const out = [
     webServer.register({ kind: 'exact', path: CONSOLE_V2_PREFIX, handler: createConsoleV2ShellHandler({ reject }) }),
     webServer.register({ kind: 'prefix', path: CONSOLE_V2_ASSETS_PREFIX, handler: createConsoleV2AssetHandler({ reject }) }),
   ]
+  console.error(`[core-system-diag] console-v2 registered=${out.length}`)
+  return out
 }
