@@ -11,16 +11,33 @@ export interface ChatFacesDeps {
   prompt: ((req: { sessionId: string; requestId: string; mode: 'queue' | 'steer'; content: { type: 'text'; text: string }[] }) => Promise<unknown>) | null
 }
 
-const CLIENT_JS = `/* chatfaces.js —— 控制台对话通路页面端（window.__CC.chatFaces.send → /core-console/chat-send）。 */
+const CLIENT_JS = `/* chatfaces.js —— 控制台对话通路页面端（window.__CC.chatFaces → 自有对话面数据面）。
+ * send=queue 落投；sessions/transcript/state/create=宿主转录桥四读写面。 */
 (function () {
   var f = (window.__CC = window.__CC || {}).chatFaces = (window.__CC.chatFaces || {});
+  function call(path, opts) {
+    return fetch(path, Object.assign({ credentials: 'same-origin' }, opts || {}))
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, data: j }; }); });
+  }
   f.send = function (sessionId, text) {
-    return fetch('/core-console/chat-send', {
+    return call('/core-console/chat-send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
       body: JSON.stringify({ sessionId: String(sessionId || ''), text: String(text || '') }),
-    }).then(function (r) { return r.json().then(function (j) { return { status: r.status, data: j }; }); });
+    });
+  };
+  f.sessions = function () { return call('/core-console/chat-sessions'); };
+  f.transcript = function (sessionId, max, beforeSeq) {
+    var q = '?sessionId=' + encodeURIComponent(String(sessionId || ''));
+    if (max) q += '&max=' + Number(max);
+    if (beforeSeq) q += '&beforeSeq=' + Number(beforeSeq);
+    return call('/core-console/chat-transcript' + q);
+  };
+  f.state = function (sessionId) {
+    return call('/core-console/chat-state?sessionId=' + encodeURIComponent(String(sessionId || '')));
+  };
+  f.create = function () {
+    return call('/core-console/chat-create', { method: 'POST' });
   };
   f.available = true;
 })();
