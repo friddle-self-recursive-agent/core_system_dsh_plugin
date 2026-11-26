@@ -2,3 +2,8 @@
 friddle_decision.md
 node_modules/
 .DS_Store
+
+# 临时/验证文件（R-ENG-8）：一律 tmp/，永不入库
+tmp/
+/*.jpeg
+/*.png
