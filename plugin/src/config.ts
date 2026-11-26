@@ -85,6 +85,9 @@ export const CONSOLE_WS_PATH = '/core-console/ws'
 // assets 用非嵌套兄弟前缀——避免 exact(/v2) 与 prefix(/v2/assets) 同树嵌套的宿主路由匹配歧义
 // （CT116 活体实证：嵌套形态壳页在册而 assets 404）。
 export const CONSOLE_V2_PREFIX = '/core-console/v2'
+// 控制台对话通路（bridge chatfaces——send=sessionController.prompt queue）
+export const CONSOLE_CHAT_SEND_PATH = '/core-console/chat-send'
+export const CONSOLE_CHATFACES_CLIENT_PATH = '/core-console/chatfaces.js'
 // 无尾斜杠——宿主 prefix 匹配语义= url===path || url.startsWith(path+'/')，尾斜杠致双斜杠永不匹配
 // （CT116 活体实证：registered=2 而子路径 404）。
 export const CONSOLE_V2_ASSETS_PREFIX = '/core-console/assets'

@@ -140,7 +140,7 @@ test('ws 代理 fail-closed：403 透传、cored 未就绪=503（升级握手未
   const upstream = await upstreamServer()
   const host = await hostServer(route)
   mountConsoleRoutes({
-    inject(_deps, apply) {
+    inject(deps: string[], apply: (sub: any) => void | (() => void)) {
       const sub: Record<string, unknown> = { webServer, connection: { requestRejection: () => 403 } }
       apply(sub)
     },
@@ -158,7 +158,7 @@ test('ws 代理 fail-closed：403 透传、cored 未就绪=503（升级握手未
   const { webServer: ws2, route: route2 } = fakeWebServer(true)
   const host2 = await hostServer(route2)
   mountConsoleRoutes({
-    inject(_deps, apply) {
+    inject(deps: string[], apply: (sub: any) => void | (() => void)) {
       const sub: Record<string, unknown> = { webServer: ws2, connection: { requestRejection: () => undefined } }
       apply(sub)
     },
@@ -176,7 +176,7 @@ test('ws 代理透传：上游 101 回传 + 双向 echo 往返（帧内容宿主
   const upstream = await upstreamServer()
   const host = await hostServer(route)
   mountConsoleRoutes({
-    inject(_deps, apply) {
+    inject(deps: string[], apply: (sub: any) => void | (() => void)) {
       const sub: Record<string, unknown> = { webServer, connection: { requestRejection: () => undefined } }
       apply(sub)
     },
@@ -196,7 +196,7 @@ test('ws 代理装配面：registerUpgrade 缺席宿主零 WS 面（不炸宿主
   const { webServer, registered, route } = fakeWebServer(false)
   let disposed = false
   mountConsoleRoutes({
-    inject(_deps, apply) {
+    inject(deps: string[], apply: (sub: any) => void | (() => void)) {
       const sub: Record<string, unknown> = { webServer, connection: { requestRejection: () => undefined } }
       const d = apply(sub) as () => void
       disposed = typeof d === 'function'
@@ -210,9 +210,10 @@ test('ws 代理装配面：registerUpgrade 缺席宿主零 WS 面（不炸宿主
   // 在册 disposer：注销后 ws 路由离场
   const { webServer: ws3, route: route3 } = fakeWebServer(true)
   mountConsoleRoutes({
-    inject(_deps, apply) {
+    inject(deps: string[], apply: (sub: any) => void | (() => void)) {
       const sub: Record<string, unknown> = { webServer: ws3, connection: { requestRejection: () => undefined } }
-      ;(apply(sub) as () => void)()
+      const d2 = apply(sub)
+      if (typeof d2 === 'function') d2()
     },
   }, { url: 'http://127.0.0.1:9/' })
   assert.equal(route3(), null, '退场 disposer 注销 ws 路由（随 effect 清理）')

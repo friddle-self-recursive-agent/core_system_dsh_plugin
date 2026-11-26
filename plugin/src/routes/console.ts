@@ -16,6 +16,8 @@ import {
 } from './console-write.ts'
 import { createConsoleWsUpgradeHandler } from './wsproxy.ts'
 import { mountConsoleV2 } from './console-v2.ts'
+import { createChatFacesClientHandler, createChatSendHandler, type ChatFacesDeps } from '../bridges/chatfaces.ts'
+import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH } from '../config.ts'
 import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -169,6 +171,15 @@ export function createConsoleApiHandler(opts: {
 export function mountConsoleRoutes(ctx: {
   inject?(deps: string[], apply: (sub: any) => void | (() => void)): unknown
 }, bridge: { url: string }, applySubject: ApplySubject = DEFAULT_APPLY_SUBJECT, comm?: CommState, serviceProjectsRoot?: string): void {  if (typeof ctx.inject !== 'function') return // 防御面：无 inject 能力的宿主（测试假体/极简壳）零影响
+  // 对话通路 prompt 面（chat-send 后端——sessionController.queue；selfheal 桥同款软出现）
+  const chatDeps: ChatFacesDeps = { prompt: null }
+  ctx.inject(['sessionController'], (sub: any) => {
+    const sc = Reflect.get(sub, 'sessionController')
+    if (sc && typeof sc.prompt === 'function') {
+      chatDeps.prompt = (req) => sc.prompt(req, AbortSignal.timeout(10_000))
+      console.error('[core-system-diag] chatfaces prompt 面已接（sessionController 就绪）')
+    }
+  })
   ctx.inject(['webServer', 'connection'], (sub: any) => {
     const webServer = Reflect.get(sub, 'webServer') as WebServerLike | undefined
     const connection = Reflect.get(sub, 'connection') as ConnectionLike | undefined
@@ -214,6 +225,15 @@ export function mountConsoleRoutes(ctx: {
     ]
     // 实时流 WS 升级代理（/core-console/ws → cored /v1/stream）：registerUpgrade 能力缺席的
     // 宿主（测试假体/旧版 dsh）=软出现零 WS 面；退场 disposer 与 HTTP 路由同队列清理。
+    // 对话通路两路由（send 面已接 prompt 才可用；client.js 恒可用）
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_CHAT_SEND_PATH,
+      handler: createChatSendHandler({ deps: chatDeps, reject }),
+    }))
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_CHATFACES_CLIENT_PATH,
+      handler: createChatFacesClientHandler({ reject }),
+    }))
     const wsUnregister = mountConsoleWsUpgrade(webServer, { bridge, reject })
     if (wsUnregister) unregisters.push(wsUnregister)
     // web/ 新前端并行载体面（产物缺席=软出现零 v2 面——不炸宿主）。

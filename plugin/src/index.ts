@@ -30,6 +30,7 @@ export {
   CONSOLE_WS_PATH, CONSOLE_WS_UPSTREAM_PATH, SELFHEAL_BOUNCE_PATH, SELFHEAL_HEARTBEAT_PHASE,
   DEFAULT_HEAL_WORD, DEFAULT_DRAFT_FIELD_MANAGER, DEFAULT_APPLY_SUBJECT,
   WAKE_SPAWN_PATH, TASK_SPAWN_PATH,
+  CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH,
 } from './config.ts'
 export type { ApplySubject, FetchLike, HttpReqLike, HttpResLike, WebServerLike, ConnectionLike } from './http.ts'
 export { sendJson, readRequestBody } from './http.ts'
@@ -54,6 +55,7 @@ export type { SelfHealBridgeHandle } from './bridges/selfheal.ts'
 export { mountSelfHealBridge } from './bridges/selfheal.ts'
 export type { WakeBridgeHandle } from './bridges/wake.ts'
 export { mountWakeBridge } from './bridges/wake.ts'
+export { createChatFacesClientHandler, createChatSendHandler } from './bridges/chatfaces.ts'
 export type { TaskSpawnBridgeHandle } from './bridges/task-spawn.ts'
 export { mountTaskSpawnBridge } from './bridges/task-spawn.ts'
 

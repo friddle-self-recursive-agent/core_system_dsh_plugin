@@ -19,7 +19,7 @@ import { makeErrorReply } from '../src/agent-comm.ts'
 import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX } from '../src/config.ts'
+import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH } from '../src/config.ts'
 
 function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
   const calls: string[] = []
@@ -104,12 +104,14 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
   let disposed = 0
   mountConsoleRoutes({
     inject(_deps, apply) {
+      // 两条 inject（sessionController 对话面 + webServer 路由面）逐条驱动——与宿主注入语义一致
       const sub: Record<string, unknown> = {
         webServer: { register: (route: { kind: string; path: string }) => { registered.push(route); return () => { disposed++ } } },
         connection: { requestRejection: () => undefined },
+        sessionController: { prompt: async () => ({}) },
       }
       const d = apply(sub)
-      assert.equal(typeof d, 'function', '注册 disposer 应随插件退场返回')
+      if (_deps[0] === 'webServer') assert.equal(typeof d, 'function', '路由面注册 disposer 应随插件退场返回')
     },
   }, { url: 'http://127.0.0.1:9/' })
   assert.deepEqual(registered.map((r) => [r.kind, r.path]), [
@@ -120,6 +122,8 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['prefix', CONSOLE_INTAKE_PATH],
     ['exact', CONSOLE_SESSION_HEARTBEAT_PATH],
     ['exact', CONSOLE_SERVICE_PROJECTS_PATH],
+    ['exact', CONSOLE_CHAT_SEND_PATH],
+    ['exact', CONSOLE_CHATFACES_CLIENT_PATH],
     ['exact', CONSOLE_V2_PREFIX],
     ['prefix', CONSOLE_V2_ASSETS_PREFIX],
   ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ web v2 载体面（exact+prefix，产物在册）成套注册')
