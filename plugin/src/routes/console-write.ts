@@ -445,3 +445,42 @@ export function createSessionHeartbeatHandler(opts: {
     res.end(text)
   }
 }
+
+/** 事件注入通路（点火族——浏览器 LoopRequested → cored /v1/events；宿主注入主体与 apply 同族）。
+ * 只放行白名单类型（LoopRequested）——防浏览器变通用事件发射器。 */
+export function createEventPubHandler(opts: {
+  bridge: { url: string }
+  reject?: (req: { headers: unknown }) => 401 | 403 | undefined
+  fetchImpl?: FetchLike
+  subject: ApplySubject
+}) {
+  const fetchImpl = opts.fetchImpl ?? fetch
+  const ALLOWED = new Set(['LoopRequested'])
+  return async function eventPubHandler(req: HttpReqLike, res: HttpResLike): Promise<void> {
+    if (!opts.reject) { res.statusCode = 401; res.end(); return }
+    const rejection = opts.reject({ headers: req.headers })
+    if (rejection !== undefined) { res.statusCode = rejection; res.end(); return }
+    if ((req.method ?? 'POST') !== 'POST') { res.statusCode = 405; res.setHeader('allow', 'POST'); res.end(); return }
+    let body: Record<string, unknown>
+    try { body = JSON.parse((await readRequestBody(req)) || '{}') as Record<string, unknown> } catch {
+      res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end('{"error":"载荷不可解析"}'); return
+    }
+    const type = String(body.type ?? '')
+    const dedupKey = String(body.dedupKey ?? '')
+    if (!ALLOWED.has(type)) { res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: '类型不在白名单（LoopRequested）' })); return }
+    if (!opts.bridge.url) { res.statusCode = 503; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: 'cored 未就绪' })); return }
+    try {
+      const up = await fetchImpl(opts.bridge.url.replace(/\/+$/, '') + '/v1/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Core-Subject': JSON.stringify(opts.subject) },
+        body: JSON.stringify({ type, dedupKey, involved: 'ServiceDesc/core/core_system', data: { origin: 'console-ui' } }),
+      })
+      const text = await up.text()
+      res.statusCode = up.status
+      res.setHeader('content-type', 'application/json; charset=utf-8')
+      res.end(text)
+    } catch (e) {
+      res.statusCode = 502; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: 'cored 不可达: ' + String((e as Error)?.message ?? e) }))
+    }
+  }
+}

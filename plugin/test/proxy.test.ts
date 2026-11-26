@@ -19,7 +19,7 @@ import { makeErrorReply } from '../src/agent-comm.ts'
 import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH } from '../src/config.ts'
+import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH } from '../src/config.ts'
 
 function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
   const calls: string[] = []
@@ -124,6 +124,7 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_SERVICE_PROJECTS_PATH],
     ['exact', CONSOLE_CHAT_SEND_PATH],
     ['exact', CONSOLE_CHATFACES_CLIENT_PATH],
+    ['exact', CONSOLE_EVENT_PUB_PATH],
     ['exact', CONSOLE_V2_PREFIX],
     ['prefix', CONSOLE_V2_ASSETS_PREFIX],
   ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ web v2 载体面（exact+prefix，产物在册）成套注册')

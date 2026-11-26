@@ -87,6 +87,7 @@ export const CONSOLE_WS_PATH = '/core-console/ws'
 export const CONSOLE_V2_PREFIX = '/core-console/v2'
 // 控制台对话通路（bridge chatfaces——send=sessionController.prompt queue）
 export const CONSOLE_CHAT_SEND_PATH = '/core-console/chat-send'
+export const CONSOLE_EVENT_PUB_PATH = '/core-console/event-pub'
 export const CONSOLE_CHATFACES_CLIENT_PATH = '/core-console/chatfaces.js'
 // 无尾斜杠——宿主 prefix 匹配语义= url===path || url.startsWith(path+'/')，尾斜杠致双斜杠永不匹配
 // （CT116 活体实证：registered=2 而子路径 404）。

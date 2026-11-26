@@ -12,12 +12,12 @@ import type { CommState } from '../tools/agent-comm.ts'
 import { createCommHandler } from './comm-read.ts'
 import {
   createApplyHandler, createDraftsHandler, createDesignDocsHandler,
-  createIntakeHandler, createSessionHeartbeatHandler,
+  createIntakeHandler, createSessionHeartbeatHandler, createEventPubHandler,
 } from './console-write.ts'
 import { createConsoleWsUpgradeHandler } from './wsproxy.ts'
 import { mountConsoleV2 } from './console-v2.ts'
 import { createChatFacesClientHandler, createChatSendHandler, type ChatFacesDeps } from '../bridges/chatfaces.ts'
-import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH } from '../config.ts'
+import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH } from '../config.ts'
 import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -233,6 +233,10 @@ export function mountConsoleRoutes(ctx: {
     unregisters.push(webServer.register({
       kind: 'exact', path: CONSOLE_CHATFACES_CLIENT_PATH,
       handler: createChatFacesClientHandler({ reject }),
+    }))
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_EVENT_PUB_PATH,
+      handler: createEventPubHandler({ bridge, reject, subject: applySubject }),
     }))
     const wsUnregister = mountConsoleWsUpgrade(webServer, { bridge, reject })
     if (wsUnregister) unregisters.push(wsUnregister)

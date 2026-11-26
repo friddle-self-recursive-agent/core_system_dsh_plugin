@@ -30,7 +30,7 @@ export {
   CONSOLE_WS_PATH, CONSOLE_WS_UPSTREAM_PATH, SELFHEAL_BOUNCE_PATH, SELFHEAL_HEARTBEAT_PHASE,
   DEFAULT_HEAL_WORD, DEFAULT_DRAFT_FIELD_MANAGER, DEFAULT_APPLY_SUBJECT,
   WAKE_SPAWN_PATH, TASK_SPAWN_PATH,
-  CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH,
+  CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
 } from './config.ts'
 export type { ApplySubject, FetchLike, HttpReqLike, HttpResLike, WebServerLike, ConnectionLike } from './http.ts'
 export { sendJson, readRequestBody } from './http.ts'
@@ -47,6 +47,7 @@ export {
   createIntakeHandler, createSessionHeartbeatHandler,
 } from './routes/console-write.ts'
 export { createCommHandler } from './routes/comm-read.ts'
+export { createEventPubHandler } from './routes/console-write.ts'
 export type { CommState } from './tools/agent-comm.ts'
 export { createCommState, AGENT_COMM_TOOL_NAMES, mountAgentCommTools } from './tools/agent-comm.ts'
 // 协议判别集（AGENT_COMM_KINDS 四 op 名=工具名裸用；E5a 客户端判别器引用声明集——bundle 静态面锚点）。
