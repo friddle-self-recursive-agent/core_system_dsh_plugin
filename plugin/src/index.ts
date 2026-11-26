@@ -9,9 +9,9 @@
 // 部署锚点一律经配置或环境注入，不内置真实路径（rule.md R-PUB-1/2）。
 import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join, resolve, sep } from 'node:path'
+import { dirname, join, resolve, sep } from 'node:path'
 import { AGENT_COMM_KINDS, CommJournal, Mailbox, executeAgentCommOp, type AgentCommDeps, type AgentCommResult } from './agent-comm.ts'
 
 export interface Config {
@@ -37,6 +37,9 @@ export interface Config {
   loopCommand?: string
   /** 单飞检测模式（pgrep -f；空=不检测，由部署侧 loop 命令自行保证单飞）。 */
   loopRunningPattern?: string
+  /** cored 地址发现文件（部署侧；就绪后写入基址，corectl 缺省读取；
+   *  空=不写（仅 core-system 等主控制面 profile 配置——避免多 profile 互相覆盖））。 */
+  coredAddrFile?: string
 }
 
 /** 对象引用（/v1/objects list 投影，瘦身载荷无正文；契约 cored-bridge.md §2）。 */
@@ -1397,6 +1400,17 @@ async function probeScheme(base: string, bridge: CoreSystemBridge): Promise<void
   } catch {} // 查询失败不阻断宿主启动；结果如实留在 bridge（kinds=null 即未通）
 }
 
+/** 写 cored 地址发现文件（R-UX-8；部署侧配置路径，0600；失败不阻断宿主——CLI 仍可显式 --server）。 */
+function writeCoredAddr(file: string | undefined, url: string): void {
+  if (!file || !url) return
+  try {
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, url.replace(/\/+$/, '') + '\n', { mode: 0o600 })
+  } catch (e) {
+    console.error('[core-system-diag] cored 地址文件写入失败 %s: %s', file, String((e as Error)?.message ?? e))
+  }
+}
+
 export default async function apply(ctx: any, config: Config = {}) {
   // agent-comm 运行时落账状态（一次激活一份：mailbox=v0.1 既有 + journal=E6 comm 流水）——
   // 工具面写、读路由读（GET /core-console/comm），同仓同进程。
@@ -1440,6 +1454,7 @@ export default async function apply(ctx: any, config: Config = {}) {
     const bridge = makeBridge()
     bridgeRef = bridge
     bridge.url = config.coredUrl
+    writeCoredAddr(config.coredAddrFile, bridge.url)
     ctx.provide('coreSystem', bridge)
     mountConsoleRoutes(ctx, bridge, config.applySubject, comm, config.serviceProjectsRoot)
     mountAgentCommTools(ctx, bridge, comm)
@@ -1500,6 +1515,7 @@ export default async function apply(ctx: any, config: Config = {}) {
     return
   }
   bridge.url = `http://${ready.addr}`
+  writeCoredAddr(config.coredAddrFile, bridge.url)
   ctx.logger.info('core-system: cored 就绪 %s（scheme_version=%s kinds=%d）', bridge.url, ready.schemeVersion, ready.kinds)
 
   await probeScheme(bridge.url, bridge)
