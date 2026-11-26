@@ -134,7 +134,9 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_V2_PREFIX],
     ['exact', CONSOLE_V2_PREFIX + '/'],
     ['prefix', CONSOLE_V2_ASSETS_PREFIX],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由+chat-stop（sessions/transcript/state/create/stop）+ web v2 载体面（exact+prefix，产物在册）成套注册')
+    ['exact', '/core-console'],
+    ['exact', '/core-console/'],
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由+chat-stop（sessions/transcript/state/create/stop）+ web v2 载体面（exact+prefix，产物在册）+ F-01 入口转正（exact×2 公开壳）成套注册')
   assert.equal(disposed, 0)
   delete process.env.CORE_CONSOLE_WEB_DIST
 

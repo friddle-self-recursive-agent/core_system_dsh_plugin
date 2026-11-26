@@ -11,6 +11,9 @@ import { fileURLToPath } from 'node:url'
 import { sendJson, type HttpReqLike, type HttpResLike } from '../http.ts'
 import { CONSOLE_V2_ASSETS_PREFIX, CONSOLE_V2_PREFIX } from '../config.ts'
 
+// 测试面兼容重导出（test/console-v2.test.ts 自本模块取词——常量真源=config.ts）。
+export { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX }
+
 /** 插件仓根（src/routes/ → ../../../ = 仓根；submodule core_system 在仓根非 package 目录）。 */
 export function repoRoot(): string {
   return resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..')
@@ -58,10 +61,14 @@ function gateStatus(req: HttpReqLike, reject?: (req: { headers: unknown }) => 40
   return r === undefined ? null : r
 }
 
-/** 壳页 handler：GET /core-console/v2。 */
+/** 产物处理器工厂（opts.reject 在册=fail-closed 栅栏；opts 公开词形=omit opts.reject 键——
+ * 以 in 判别区分「未声明栅栏（公开）」与「显式声明但缺席（fail-closed 401）」）。
+ * F-01（loop-87）：公开词形只用于静态壳页（/core-console 主入口——无数据面）；
+ * 数据/写面（api/apply/drafts/ws）恒传真栅栏，缺席=401 词形不变。 */
 export function createConsoleV2ShellHandler(opts: { reject?: (req: { headers: unknown }) => 401 | 403 | undefined }) {
+  const open = !('reject' in opts)
   return function consoleV2ShellHandler(req: HttpReqLike, res: HttpResLike): void {
-    const denied = gateStatus(req, opts.reject)
+    const denied = open ? null : gateStatus(req, opts.reject)
     if (denied !== null) { res.statusCode = denied; res.end(); return }
     if ((req.method ?? 'GET') !== 'GET') {
       res.statusCode = 405
@@ -109,7 +116,11 @@ export function createConsoleV2AssetHandler(opts: { reject?: (req: { headers: un
   }
 }
 
-/** 装配（在 mountConsoleRoutes 内与既有路由同队列注册+清理）。 */
+/** 装配（在 mountConsoleRoutes 内与既有路由同队列注册+清理）。
+ * F-01 入口转正（2026-11-26 34 屏扫描 P0-1）：/core-console 与 /core-console/ 注册为同壳
+ * 200（壳页=静态只读 HTML 面无数据泄漏面，公开词形对齐任务验收「/core-console/ 与
+ * /core-console/v2 均 200」）；/core-console/assets/* 同族放行（同白名单同产物面）。
+ * 数据/写面（/core-console/api|apply|drafts|ws）鉴权面零改动。 */
 export function mountConsoleV2(
   webServer: { register(route: { kind: string; path: string; handler: (req: HttpReqLike, res: HttpResLike) => void }): () => void },
   reject: (req: { headers: unknown }) => 401 | 403 | undefined,
@@ -126,6 +137,10 @@ export function mountConsoleV2(
     // /core-console/v2/ 落到 404——显式注册 exact 斜杠词形=同壳 200）。
     webServer.register({ kind: 'exact', path: CONSOLE_V2_PREFIX + '/', handler: createConsoleV2ShellHandler({ reject }) }),
     webServer.register({ kind: 'prefix', path: CONSOLE_V2_ASSETS_PREFIX, handler: createConsoleV2AssetHandler({ reject }) }),
+    // F-01 入口转正：无版本主入口同壳公开 200（34 屏扫描 P0-1——/core-console/ 直开 404 修复；
+    // 公开词形=不声明 reject 键——静态壳页无数据泄漏面；数据/写面栅栏零改动）。
+    webServer.register({ kind: 'exact', path: '/core-console', handler: createConsoleV2ShellHandler({}) }),
+    webServer.register({ kind: 'exact', path: '/core-console/', handler: createConsoleV2ShellHandler({}) }),
   ]
   console.error(`[core-system-diag] console-v2 registered=${out.length}`)
   return out
