@@ -666,9 +666,10 @@ test('L82-02 接线锚：流程图任务关联卡+会话页 wake 卡槽+审批�
   assert.ok(APP.includes('sessWakeCard(LIVE.state.wakes'), 'wake 卡注水接线在册')
   assert.ok(APP.includes('非断言本会话由其触发'), '非断言词形在册（session+tasks 双侧）')
   assert.ok(APP.includes('S.sessWakeHooked'), 'onChange 挂钩单次守卫在册（防链式累积）')
-  // ③ 审批行：关联任务摘要槽（data-ap-task-rel）+不可读降级+零关联词形
-  assert.ok(APP.includes('data-ap-task-rel="1"'), '审批行任务摘要锚在册')
-  assert.ok(APP.includes('任务清单暂不可读——关联任务摘要不显示'), '清单不可读降级词形在册')
+  // ③ 审批行：关联任务摘要槽（aprel-* 容器恒在；data-ap-task-rel 三态锚=0 零关联/unreadable 不可读/命中数）
+  assert.ok(APP.includes("data-ap-task-rel=\"0\""), '零关联诚实词形带态锚在册')
+  assert.ok(APP.includes('data-ap-task-rel="unreadable"'), '清单不可读降级词形带态锚在册')
+  assert.ok(APP.includes('data-ap-task-rel="\' + hits.length + \'"'), '命中态锚在册')
   assert.ok(APP.includes('无在册任务关联（写集声明未触及'), '零关联诚实词形在册')
   // ④ 拼接序与 bundle：新词形入 dist
   assert.ok(SRC.includes('wfTaskRelHtml') && SRC.includes('sessWakeCard') && SRC.includes('data-ap-task-rel'), '新词形入 bundle（dist 重建在册）')

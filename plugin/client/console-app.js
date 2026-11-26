@@ -4861,7 +4861,7 @@
     TK.ensureTasks().then(function (list) {
       var slot = $('#aprel-' + cssId(it.key));
       if (!slot) return;
-      if (list == null) { slot.innerHTML = '<span class="faint small">任务清单暂不可读——关联任务摘要不显示（零编造）</span>'; return; }
+      if (list == null) { slot.innerHTML = '<span class="faint small" data-ap-task-rel="unreadable">任务清单暂不可读——关联任务摘要不显示（零编造）</span>'; return; }
       var inv = String(e.involved || '');
       var segs = inv.split('/');
       var isTaskObj = segs[0] === 'Task';
@@ -4872,7 +4872,7 @@
         return TK.taskMatchesWf(t, segs.length >= 3 && segs[0] === 'Workflow' ? segs[segs.length - 1] : '§none§');
       });
       if (!hits.length) {
-        slot.innerHTML = '<span class="faint small">无在册任务关联（写集声明未触及' + esc(isTaskObj ? '本任务' : '本对象') + '）——零关联不编造</span>';
+        slot.innerHTML = '<span class="faint small" data-ap-task-rel="0">无在册任务关联（写集声明未触及' + esc(isTaskObj ? '本任务' : '本对象') + '）——零关联不编造</span>';
         return;
       }
       var activeN = hits.filter(function (t) {
@@ -4884,7 +4884,7 @@
         return '<span class="chip mute tiny click" data-act="go" data-go="' + esc(TK.taskRoute(id)) + '">' +
           esc(TK.taskTitle(t)) + ' · ' + TK.phaseChip(t) + '</span>';
       }).join(' ');
-      slot.innerHTML = '<span class="small" data-ap-task-rel="1">关联任务 ' + hits.length + '（活跃 ' + activeN + '）：</span>' + rows;
+      slot.innerHTML = '<span class="small" data-ap-task-rel="' + hits.length + '">关联任务 ' + hits.length + '（活跃 ' + activeN + '）：</span>' + rows;
     });
     return '<div class="ap-card resolved" id="apcard-' + esc(cssId(it.key)) + '">' +
       '<div class="ap-head"><span class="ap-title mono">' + esc(e.involved) + '</span>' +
