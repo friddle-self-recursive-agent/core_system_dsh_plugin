@@ -81,6 +81,9 @@ export const CONSOLE_SESSION_HEARTBEAT_PATH = '/core-console/session-heartbeat'
  *  cored <bridge.url>/v1/stream（事件/trace 活体流）。宿主零旁路：鉴权在栅栏，
  *  流帧内容不经宿主解析（纯 pipe）。 */
 export const CONSOLE_WS_PATH = '/core-console/ws'
+// web/ 新前端并行载体面（G-02 载体切换第一段——产物=workservice submodule web/dist）
+export const CONSOLE_V2_PREFIX = '/core-console/v2'
+export const CONSOLE_V2_ASSETS_PREFIX = '/core-console/v2/assets/'
 
 /** cored 实时流上游路径（WS 代理透传目标；bridge.url + 本路径）。 */
 export const CONSOLE_WS_UPSTREAM_PATH = '/v1/stream'

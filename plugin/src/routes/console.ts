@@ -15,6 +15,7 @@ import {
   createIntakeHandler, createSessionHeartbeatHandler,
 } from './console-write.ts'
 import { createConsoleWsUpgradeHandler } from './wsproxy.ts'
+import { mountConsoleV2 } from './console-v2.ts'
 import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -215,6 +216,8 @@ export function mountConsoleRoutes(ctx: {
     // 宿主（测试假体/旧版 dsh）=软出现零 WS 面；退场 disposer 与 HTTP 路由同队列清理。
     const wsUnregister = mountConsoleWsUpgrade(webServer, { bridge, reject })
     if (wsUnregister) unregisters.push(wsUnregister)
+    // web/ 新前端并行载体面（产物缺席=软出现零 v2 面——不炸宿主）。
+    unregisters.push(...mountConsoleV2(webServer, reject))
     return () => unregisters.forEach((u) => u())
   })
 }
