@@ -85,7 +85,9 @@ export const CONSOLE_WS_PATH = '/core-console/ws'
 // assets 用非嵌套兄弟前缀——避免 exact(/v2) 与 prefix(/v2/assets) 同树嵌套的宿主路由匹配歧义
 // （CT116 活体实证：嵌套形态壳页在册而 assets 404）。
 export const CONSOLE_V2_PREFIX = '/core-console/v2'
-export const CONSOLE_V2_ASSETS_PREFIX = '/core-console/assets/'
+// 无尾斜杠——宿主 prefix 匹配语义= url===path || url.startsWith(path+'/')，尾斜杠致双斜杠永不匹配
+// （CT116 活体实证：registered=2 而子路径 404）。
+export const CONSOLE_V2_ASSETS_PREFIX = '/core-console/assets'
 
 /** cored 实时流上游路径（WS 代理透传目标；bridge.url + 本路径）。 */
 export const CONSOLE_WS_UPSTREAM_PATH = '/v1/stream'

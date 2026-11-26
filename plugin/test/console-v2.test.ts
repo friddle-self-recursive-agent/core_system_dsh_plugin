@@ -53,14 +53,14 @@ test('assets 白名单：js/css 200+ctype；其他名与遍历词形 404', () =>
   process.env.CORE_CONSOLE_WEB_DIST = makeDist()
   const handler = createConsoleV2AssetHandler({ reject: () => undefined })
   for (const [name, ctype] of [['console.js', 'application/javascript'], ['console.css', 'text/css']] as const) {
-    const { req, res } = fakeReqRes(CONSOLE_V2_ASSETS_PREFIX + name)
+    const { req, res } = fakeReqRes(CONSOLE_V2_ASSETS_PREFIX + '/' + name)
     handler(req, res)
     assert.equal(res.statusCode, 200, name)
     assert.match(String((res.headers as Record<string, string>)['content-type']), new RegExp('^' + ctype))
     assert.match(res.body, /\/\* /)
   }
   for (const bad of ['evil.js', 'console.js.map', '%2e%2e%2fconsole.js', 'console.js/extra']) {
-    const { req, res } = fakeReqRes(CONSOLE_V2_ASSETS_PREFIX + bad)
+    const { req, res } = fakeReqRes(CONSOLE_V2_ASSETS_PREFIX + '/' + bad)
     handler(req, res)
     assert.equal(res.statusCode, 404, bad)
   }
@@ -74,7 +74,7 @@ test('鉴权 fail-closed：栅栏缺席=401；被拒=403 透传；非 GET=405', 
   const { req: r2, res: s2 } = fakeReqRes(CONSOLE_V2_PREFIX)
   createConsoleV2ShellHandler({ reject: () => 401 })(r2, s2)
   assert.equal(s2.statusCode, 401)
-  const { req: r2b, res: s2b } = fakeReqRes(CONSOLE_V2_ASSETS_PREFIX + 'console.js')
+  const { req: r2b, res: s2b } = fakeReqRes(CONSOLE_V2_ASSETS_PREFIX + '/console.js')
   createConsoleV2AssetHandler({ reject: () => 403 })(r2b, s2b)
   assert.equal(s2b.statusCode, 403)
   const { req: r3, res: s3 } = fakeReqRes(CONSOLE_V2_PREFIX, 'POST')
