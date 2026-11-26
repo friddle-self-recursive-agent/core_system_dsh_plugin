@@ -694,3 +694,20 @@
   border-radius: 9px; padding: 8px 12px; margin: 8px 0;
   color: var(--text-2); font-size: 12.5px;
 }
+.ob-sub {
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.ob-trace-grp { margin-top: 6px; }
+.ob-trace-grp:first-child { margin-top: 0; }
+.ob-trace-h { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.ob-trace-row, .ob-rel-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 2px 0; font-size: 12px;
+}
+.report-loop { margin: 8px 0 10px; }
+.report-loop .card-b { padding: 10px 14px; }
+.report-loop-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.report-loop-acts { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.report-loop-sub { margin-top: 4px; line-height: 1.5; }
+.doc-hist-sec { margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--border); }

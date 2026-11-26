@@ -467,3 +467,86 @@ test('L79-02 R-UX-6 接线在册：三路由/侧栏入口/loader 注入/会话�
     build.indexOf("'console-tasks.js'") < build.indexOf("'console-live.js'"),
     'console-tasks.js 入 bundle 拼接序（console-obj 后 console-live 前）')
 })
+
+test('L80-01 工作台 v0.65 上下文/trace 读面与补标+revSourceLabel 纯函数机械直测（R-UX-7 + R-DOC-9）', async () => {
+  const window: any = {}
+  new Function('window', readFileSync(join(CLIENT, 'console-obj.js'), 'utf8'))(window)
+  const obj = window.__CC.obj
+  // ① traceRouteOf：三段/多段 scope 精确路由；非三段不编假路由
+  assert.equal(obj.traceRouteOf('ServiceDesc/self-recursive-core/desc'), 'obj/ServiceDesc/self-recursive-core/desc')
+  assert.equal(obj.traceRouteOf('Rule/a/b/r1'), 'obj/Rule/a%2Fb/r1', '多段 scope 单次编码保留')
+  assert.equal(obj.traceRouteOf('bad-only-one'), '', '非三段=空串（不编假路由）')
+  // ② tracePanel：降级 / 未入索引 / 空态 / 三向聚合含 stale 告警与未解析标注
+  assert.ok(obj.tracePanel(null).includes('data-obj-trace-degraded="1"'), 'trace 失败=降级显式')
+  assert.ok(obj.tracePanel({ missing: true }).includes('data-obj-trace-missing="1"'), '404=未入索引诚实标注')
+  assert.ok(obj.tracePanel({ implements: null, implemented_by: null, verified_by: null }).includes('data-obj-trace-empty="1"'), '全空=无上下游追踪声明')
+  const trHtml = obj.tracePanel({
+    implements: [{ doc: 'ServiceDesc/self-recursive-core/core', sections: ['§3'], designRev: '4', stale: true, resolved: true }],
+    implemented_by: [{ doc: 'Task/self-recursive-core/impl-1', stale: false, resolved: true }],
+    verified_by: [{ doc: 'ghost/missing', stale: false, resolved: false }]
+  })
+  assert.ok(trHtml.includes('data-obj-trace="1"'), '非空 trace 挂载锚在册')
+  assert.ok(trHtml.includes('data-trace-stale="1"') && trHtml.includes('待对齐'), 'stale=true 显式告警徽')
+  assert.ok(trHtml.includes('data-go="obj/ServiceDesc/self-recursive-core/core"'), '可解析对端=可点工作台深链')
+  assert.ok(trHtml.includes('对齐 r4') && trHtml.includes('§3'), '对齐版次与章节锚点透传')
+  assert.ok(trHtml.includes('未解析') && !trHtml.includes('data-go="obj/ghost'), '未解析对端标注未解析且不编路由')
+  // ③ relatedPanel：过滤自身+按相关性呈现 Top5+降级/空态
+  assert.ok(obj.relatedPanel(null, 'Agent/global/a').includes('data-obj-related-degraded="1"'))
+  assert.ok(obj.relatedPanel([{ kind: 'Agent', scope: 'global', name: 'a', score: 90, why: 'self' }], 'Agent/global/a').includes('data-obj-related-empty="1"'), '剔除自身后空=诚实空态')
+  const relHtml = obj.relatedPanel([
+    { kind: 'Agent', scope: 'global', name: 'a', score: 99, why: 'self-only-marker' },
+    { kind: 'ServiceDesc', scope: 'self-recursive-core', name: 'core', score: 42.5, why: '标题/关键词重合' }
+  ], 'Agent/global/a')
+  assert.ok(relHtml.includes('data-obj-related="1"') && relHtml.includes('42.5') && relHtml.includes('data-go="obj/ServiceDesc/self-recursive-core/core"'), '相关对象含得分/原因/工作台深链')
+  assert.ok(!relHtml.includes('self-only-marker'), '自身条目已剔除')
+  // ④ ctxPanel 组合：会话装配 + trace + related 同片不互伤
+  const ctxHtml = obj.ctxPanel(obj.ctxSummary(null), { implements: [], implemented_by: [], verified_by: [] }, [], 'Agent/global/a')
+  assert.ok(ctxHtml.includes('data-obj-ctx="none"') && ctxHtml.includes('data-obj-trace-empty="1"') && ctxHtml.includes('data-obj-related-empty="1"'))
+  // ⑤ tagPanel 补标入口（§14.5）：有编辑权限才显示「补标」进编辑器（走既有 Apply 通路）
+  assert.ok(obj.tagPanel([], { editRoute: 'doc/Task/s/t1' }).includes('data-obj-tag-edit="1"') && obj.tagPanel([], { editRoute: 'doc/Task/s/t1' }).includes('补标'))
+  assert.ok(!obj.tagPanel([]).includes('data-obj-tag-edit="1"'), '无权限/未传 editRoute 不画补标按钮')
+  // ⑥ revSourceLabel 双后端分立标注
+  assert.equal(obj.revSourceLabel('sqlite-doc-history'), 'sqlite 逐次正文账')
+  assert.equal(obj.revSourceLabel('git'), 'git 正文快照')
+  // ⑦ trace/find loader 降级不抛错
+  obj.setTraceLoader(() => Promise.reject(new Error('down')))
+  assert.equal(await obj.ensureTrace('Agent', 'global', 'a'), null, 'trace loader 异常=null 降级')
+  obj.setContextFindLoader(() => Promise.resolve({ hits: [{ kind: 'Agent', scope: 'global', name: 'b', score: 10 }] }))
+  const hits = await obj.ensureRelated('a', [])
+  assert.equal(hits.length, 1)
+})
+
+test('L80-02 关注报告当前循环卡（loopCard——console-ui.md §16.1 C）四态纯函数直测', () => {
+  const window: any = {}
+  new Function('window', readFileSync(join(CLIENT, 'console-tasks.js'), 'utf8'))(window)
+  const tk = window.__CC.tasks
+  const now = Date.parse('2026-11-26T08:00:00Z')
+  // ① 双空=降级显式
+  assert.ok(tk.loopCard(null, null, { now }).includes('data-report-loop="degraded"'), '唤醒与会话均不可达=降级')
+  // ② 无 LoopRequested=空闲态 + corectl loop CLI 指引 + 显式会话型任务关系
+  const idle = tk.loopCard({ wakes: [{ type: 'SessionStalled', at: '2026-11-26T07:50:00Z' }] }, { sessions: [] }, { now })
+  assert.ok(idle.includes('data-report-loop="idle"') && idle.includes('当前无进行中循环') && idle.includes('corectl loop') && idle.includes('会话型任务（无 workflow run）'))
+  // ③ 近 1h 内 LoopRequested=active，挑最新一条并带对话/任务/事件深链+停滞会话计数
+  const active = tk.loopCard({
+    wakes: [
+      { type: 'LoopRequested', wake: 1, dedupKey: 'old-1', at: '2026-11-26T05:00:00Z', status: 'accepted', route: 'root-agent', eventId: 'evt-old' },
+      { type: 'LoopRequested', wake: 2, dedupKey: 'cli-next-99', at: '2026-11-26T07:45:00Z', status: 'accepted', route: 'root-agent', eventId: 'evt-new' }
+    ]
+  }, { sessions: [{ sessionId: 's1', state: 'escalated' }] }, { now, agent: 'core-headless' })
+  assert.ok(active.includes('data-report-loop="active"') && active.includes('cli-next-99') && active.includes('15m 前'), '命中最新 LoopRequested 且计算相对时长')
+  assert.ok(active.includes('data-go="chat/core-headless"') && active.includes('data-go="tasks"') && active.includes('data-go="event/evt-new"'), '三深链可点')
+  assert.ok(active.includes('停滞/升级 1') && active.includes('会话型任务（无 workflow run）'), '会话监控摘要+loop 与 workflow 关系显式')
+  // ④ 超 1h=recorded（历史唤醒，不假装正在跑）
+  const rec = tk.loopCard({ wakes: [{ type: 'LoopRequested', wake: 1, dedupKey: 'cli-old', at: '2026-11-26T01:00:00Z', status: 'accepted' }] }, { sessions: [] }, { now })
+  assert.ok(rec.includes('data-report-loop="recorded"') && rec.includes('历史唤醒'))
+})
+
+test('L80-03 接线与回归锚：trace/context-find loader + sqlite doc-history + rev-content rv=1 修复 + loopCard（回潮即红）', () => {
+  assert.ok(SRC.includes('__CC.obj.setTraceLoader') && SRC.includes('__CC.obj.setContextFindLoader'), '工作台 trace/context-find loader 注入在册')
+  assert.ok(SRC.includes("LIVE.get('v1/trace/'") && SRC.includes("LIVE.get('v1/context/find?'"), 'v0.65 上下文与 trace 读路由接线在册')
+  assert.ok(SRC.includes("'v1/doc-history/'") && SRC.includes('data-doc-history="1"'), '编辑器历史 tab 接入 /v1/doc-history 与逐次快照区块')
+  assert.ok(!SRC.includes('rv === 1 ? Promise.resolve(null)'), 'hist-diff 不再误跳过 rv=1（sqlite 首版快照可达）')
+  assert.ok(SRC.includes('data-rev-source=') && SRC.includes('revSourceLabel'), 'rev-content diff 按真实 source 区分 sqlite-doc-history 与 git')
+  assert.ok(SRC.includes('TK.loopCard') && SRC.includes('data-report-loop='), '关注报告当前循环卡接线在册')
+  assert.ok(SRC.includes('.ob-trace-row') && SRC.includes('.ob-rel-row') && SRC.includes('.report-loop') && SRC.includes('.doc-hist-sec'), 'L80 新增样式块入 bundle')
+})

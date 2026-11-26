@@ -263,6 +263,72 @@
       }).join('') + '</div></details>';
   }
 
+  /* ---------- 当前循环卡（console-ui.md §16.1 C——报告首屏循环状态，零前端自建状态） ----------
+   * 数据来源=GET /v1/agents/wakes（LoopRequested 唤醒记录）+ GET /v1/sessions（会话活性）；
+   * 显式标注 loop 与 workflow run 的关系（当前=会话型任务，无 workflow run——不误导用户）。 */
+  function relAge(ts, nowMs) {
+    var t = Date.parse(String(ts || ''));
+    if (isNaN(t)) return '';
+    var d = Math.max(0, Math.round(((nowMs || Date.now()) - t) / 1000));
+    if (d < 60) return d + 's 前';
+    if (d < 3600) return Math.round(d / 60) + 'm 前';
+    if (d < 86400) return Math.round(d / 3600) + 'h 前';
+    return Math.round(d / 86400) + 'd 前';
+  }
+  function loopCard(wakesBody, sessionsBody, opts) {
+    var o = opts || {};
+    var nowMs = o.now || Date.now();
+    var agent = String(o.agent || 'core-headless');
+    if (wakesBody == null && sessionsBody == null) {
+      return '<div class="card report-loop" data-report-loop="degraded"><div class="card-b">' +
+        '<div class="report-loop-top"><span class="chip mute tiny">当前循环</span>' +
+        '<span class="small faint">唤醒与会话状态暂不可达（不冒充无循环）。</span></div></div></div>';
+    }
+    var wakes = (wakesBody && Array.isArray(wakesBody.wakes)) ? wakesBody.wakes : [];
+    var loops = wakes.filter(function (w) { return w && String(w.type || '') === 'LoopRequested'; });
+    loops.sort(function (a, b) {
+      var dt = (Date.parse(String(b.at || '')) || 0) - (Date.parse(String(a.at || '')) || 0);
+      return dt || (Number(b.wake || 0) - Number(a.wake || 0));
+    });
+    var latest = loops[0] || null;
+    var sessions = (sessionsBody && Array.isArray(sessionsBody.sessions)) ? sessionsBody.sessions : [];
+    var stalledN = sessions.filter(function (s) {
+      var st = String((s && s.state) || '');
+      return st === 'suspected-stall' || st === 'escalated';
+    }).length;
+    var sessNote = sessions.length
+      ? ' · 监控会话 ' + sessions.length + ' 个' + (stalledN ? '（含停滞/升级 ' + stalledN + '）' : '')
+      : '';
+    if (!latest) {
+      return '<div class="card report-loop" data-report-loop="idle"><div class="card-b">' +
+        '<div class="report-loop-top"><span class="chip mute tiny">当前无进行中循环</span>' +
+        '<span class="chip mute tiny">会话型任务（无 workflow run）</span>' +
+        '<span class="small faint">本周期暂无 LoopRequested 唤醒记录' + esc(sessNote) + '</span></div>' +
+        '<div class="report-loop-sub small faint">用 CLI 点火下一轮：<code class="mono">corectl loop</code></div></div></div>';
+    }
+    var ts = Date.parse(String(latest.at || ''));
+    var recent = !isNaN(ts) && (nowMs - ts) <= 3600000;
+    var stateAttr = recent ? 'active' : 'recorded';
+    var badge = recent ? '<span class="chip acc tiny">最近循环</span>' : '<span class="chip mute tiny">历史唤醒</span>';
+    var age = relAge(latest.at, nowMs);
+    var evBtn = latest.eventId
+      ? '<button class="btn sm" data-act="go" data-go="event/' + encodeURIComponent(String(latest.eventId)) + '">触发事件</button>'
+      : '';
+    return '<div class="card report-loop" data-report-loop="' + stateAttr + '"><div class="card-b">' +
+      '<div class="report-loop-top">' + badge +
+      '<span class="mono small">' + esc(String(latest.dedupKey || ('wake #' + (latest.wake || '')))) + '</span>' +
+      (age ? '<span class="chip mute tiny">' + esc(age) + '</span>' : '') +
+      '<span class="chip mute tiny">会话型任务（无 workflow run）</span>' +
+      '<span class="report-loop-acts">' +
+      '<button class="btn sm primary" data-act="go" data-go="chat/' + encodeURIComponent(agent) + '">看完整对话</button>' +
+      '<button class="btn sm" data-act="go" data-go="tasks">任务中心</button>' + evBtn +
+      '</span></div>' +
+      '<div class="report-loop-sub small faint">最近 LoopRequested 唤醒 #' + esc(String(latest.wake || '—')) +
+      ' · 路由 ' + esc(String(latest.route || latest.agent || 'root-agent')) +
+      ' · 状态 ' + esc(String(latest.status || '—')) +
+      ' · 累计唤醒 ' + esc(String(loops.length)) + ' 次' + esc(sessNote) + '</div></div></div>';
+  }
+
   /* ---------- loader 注入（同 console-obj 范式——宿主挂 fetch 通路，模块零直接网络依赖） ----------
    * tasks 清单缓存 15s（对齐 live 轻刷新窗）；attention 缓存 60s（服务端另有缓存与限频）；
    * 单任务详情恒现读（对象正文同口径）；失败=落 null 不缓存失败态（下一拍自动重读）。 */
@@ -324,7 +390,7 @@
     sessionChips: sessionChips, sevView: sevView, sevRank: sevRank, sortAttention: sortAttention,
     evidenceRoute: evidenceRoute, attentionCard: attentionCard, factsHtml: factsHtml,
     degradedBanner: degradedBanner, generatedByLabel: generatedByLabel, windowLabel: windowLabel,
-    reportFooter: reportFooter, clearPanel: clearPanel,
+    reportFooter: reportFooter, clearPanel: clearPanel, loopCard: loopCard, relAge: relAge,
     setTasksLoader: setTasksLoader, setTaskLoader: setTaskLoader, setAttentionLoader: setAttentionLoader,
     ensureTasks: ensureTasks, refreshTasks: refreshTasks,
     ensureTask: ensureTask, ensureAttention: ensureAttention, refreshAttention: refreshAttention,

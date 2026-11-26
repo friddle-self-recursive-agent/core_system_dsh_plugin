@@ -2051,15 +2051,25 @@
     var sess = ref.kind === 'Session'
       ? ((LIVE.state.sessions && LIVE.state.sessions.sessions || []).filter(function (s) { return s.sessionId === ref.name || s.involved === ref.involved; })[0] || null)
       : null;
-    Promise.all([OBJ ? OBJ.ensureRules() : Promise.resolve(null), OBJ ? OBJ.ensureTagTypes() : Promise.resolve(null)]).then(function (r) {
+    var scopeNorm = ref.scope || 'global';
+    var selfKey = ref.kind + '/' + scopeNorm + '/' + ref.name;
+    Promise.all([
+      OBJ ? OBJ.ensureRules() : Promise.resolve(null),
+      OBJ ? OBJ.ensureTagTypes() : Promise.resolve(null),
+      OBJ && OBJ.ensureTrace ? OBJ.ensureTrace(ref.kind, scopeNorm, ref.name) : Promise.resolve(undefined),
+      OBJ && OBJ.ensureRelated ? OBJ.ensureRelated(ref.name, tags) : Promise.resolve(undefined)
+    ]).then(function (r) {
       if (S.route !== 'obj') return;
-      var rules = r[0], vocab = r[1];
+      var rules = r[0], vocab = r[1], trace = r[2], related = r[3];
       var rs = OBJ ? OBJ.rulesFor({ kind: ref.kind, scope: ref.scope, name: ref.name, content: content, tags: tags }, rules) : { hits: [], degraded: true, reason: '工作台模块未装载。', scanned: 0 };
       var groups = OBJ ? OBJ.tagGroups(tags, vocab) : [];
       var hasSpec = !!(kindReg && kindReg.spec && Object.keys(kindReg.spec).length);
       var regYaml = hasSpec && OBJ.kindRegYaml ? OBJ.kindRegYaml(kindReg) : '';
       var sum = OBJ ? OBJ.ctxSummary(sess ? { sessionId: sess.sessionId, tagSig: sess.tagSig || '', chunks: [] } : null) : { state: 'none', text: '本会话未装配。' };
-      paintObjBody(view, ref, { kindReg: kindReg, regYaml: regYaml, hasSpec: hasSpec, tags: tags, groups: groups, rules: rs, sum: sum, content: content });
+      var editRoute = (kindReg && kindReg.storage)
+        ? ('doc/' + encodeURIComponent(ref.kind) + '/' + encodeURIComponent(scopeNorm) + '/' + encodeURIComponent(ref.name))
+        : '';
+      paintObjBody(view, ref, { kindReg: kindReg, regYaml: regYaml, hasSpec: hasSpec, tags: tags, groups: groups, rules: rs, sum: sum, trace: trace, related: related, selfKey: selfKey, editRoute: editRoute, content: content });
     });
   }
   function objPanel(title, body, anchor) {
@@ -2075,7 +2085,7 @@
     if (ref.kind === 'Task') ops.push({ label: '任务详情', act: 'go', data: { go: 'task/' + encodeURIComponent((ref.scope || 'global') + '/' + ref.name) } });
     if (ref.kind === 'Session') ops.push({ label: '会话详情', act: 'go', data: { go: 'session/' + encodeURIComponent(ref.name) } });
     if (ref.kind === 'Event' || ref.kind === 'Notification') ops.push({ label: '事件流', act: 'go', data: { go: 'events' } });
-    if (kindReg && !kindReg.builtin) ops.push({ label: '编辑草稿', act: 'go', data: { go: 'doc/' + encodeURIComponent(ref.kind) + '/' + encodeURIComponent(ref.scope || 'global') + '/' + encodeURIComponent(ref.name) } });
+    if (kindReg && kindReg.storage) ops.push({ label: '编辑草稿', act: 'go', data: { go: 'doc/' + encodeURIComponent(ref.kind) + '/' + encodeURIComponent(ref.scope || 'global') + '/' + encodeURIComponent(ref.name) } });
     return ops;
   }
   function paintObjBody(view, ref, d) {
@@ -2113,9 +2123,9 @@
       (phase ? '<span class="chip ' + (phase === 'InSync' ? 'ok' : 'warn') + ' tiny">' + esc(phase) + '</span>' : '') + '</div>' +
       '<div class="dh-sub small faint">对象工作台——六片（标签/适用规则/上下文/操作/内容/scheme）同一套；数据全部来自 scheme 与现读，标识符全可点。</div></div></div>';
     /* 六片主体（§14.5：缺片显式「无」） */
-    var main = objPanel('标签', OBJ.tagPanel(d.groups), 'tags') +
+    var main = objPanel('标签', OBJ.tagPanel(d.groups, { editRoute: d.editRoute }), 'tags') +
       objPanel('适用规则', OBJ.rulePanel(d.rules), 'rules') +
-      objPanel('上下文', OBJ.ctxPanel(d.sum), 'ctx') +
+      objPanel('上下文', OBJ.ctxPanel(d.sum, d.trace, d.related, d.selfKey), 'ctx') +
       objPanel('操作', OBJ.opsPanel(objOpsFor(ref, d.kindReg)) || '<span class="faint small">当前权限下无可用操作。</span>', 'ops') +
       objPanel('内容', OBJ.contentPanel(ref.kind, ref.name, d.content, isMarkdownDoc(ref.kind, ref.name)) || (md && d.content ? '<div data-obj-cards="1">' + (md.yamlToCards(d.content) || '') + '</div>' + md.rawDisclosure('YAML', d.content) : ''), 'content') +
       (d.hasSpec ? objPanel('scheme（' + esc(ref.kind) + ' 声明结构）', OBJ.schemePanel({ spec: { struct: '1' } }, d.regYaml, []), 'scheme') : '');
@@ -2276,9 +2286,11 @@
       (b.asOf ? '<span class="chip mute tiny">截至 ' + esc(String(b.asOf)) + '</span>' : '') + '</div>' +
       '<div class="dh-sub">一眼看到：状态、异常、值得关注的提案——每条带证据与去处；报告旁常驻对话（可就地开聊）。</div></div>' +
       '<div class="dh-actions"><button class="btn sm" data-act="report-refresh" data-report-refresh="1">刷新</button></div></div>';
+    var agent = objChatAgent();
+    var loopHtml = TK.loopCard ? TK.loopCard(LIVE.state.wakes, LIVE.state.sessions, { agent: agent }) : '';
     var main;
     if (body === null) {
-      main = '<div class="card"><div class="card-b" data-report-degraded-load="1"><div class="empty"><svg class="ic"><use href="#cc-i-warn"/></svg>' +
+      main = loopHtml + '<div class="card"><div class="card-b" data-report-degraded-load="1"><div class="empty"><svg class="ic"><use href="#cc-i-warn"/></svg>' +
         '<div class="e-title">报告暂不可达</div><div>报告通道未就绪或生成暂缓——不展示过期报告冒充现势；点「刷新」或稍后自动恢复。</div>' +
         '<div class="e-act"><button class="btn primary sm" data-act="report-refresh">重试读取</button></div></div></div></div>';
     } else {
@@ -2290,9 +2302,8 @@
         ? items.map(TK.attentionCard).join('')
         : '<div class="card"><div class="card-b" data-report-att-none="1"><div class="empty"><svg class="ic"><use href="#cc-i-check"/></svg>' +
           '<div class="e-title">本窗口无待关注项</div><div>检查范围内的在册事实未见异常与待决项。</div></div></div></div>';
-      main = banner + facts + summary + cards + TK.clearPanel(b.clear || []) + TK.reportFooter(b);
+      main = banner + loopHtml + facts + summary + cards + TK.clearPanel(b.clear || []) + TK.reportFooter(b);
     }
-    var agent = objChatAgent();
     var sess = (LIVE.state.sessions && LIVE.state.sessions.sessions || []);
     var rail = '<div class="report-chat"><div class="card"><div class="card-h" style="padding:8px 16px 0"><span class="small muted">对话（常驻）</span></div>' +
       '<div class="card-b" style="padding:8px 16px 12px" data-report-chat="1">' +
@@ -3130,33 +3141,66 @@
       '<button class="btn primary lg block" data-act="doc-apply" id="apply-dock-btn" ' + (has ? '' : 'disabled') + '>Apply（' + (has ? hunksOf(diffLines(ed.base, ed.working)) + ' 处变更' : '无变更') + '）</button></div>';
   }
 
-  // 历史 tab：apply_log 投影（rev 流水的权威=审计账；git 权威在正文）。
-  // 点行 diff 上一版（v0.63 rev-content 读面）：ok 行可点 → GET /v1/rev-content 取该 rv 快照
-  // 与上一版 rv 快照 diff（两读面现读零缓存零副作用；noop/审计行不可点=快照域无行）。读面退化
-  // 如实降级（不冒充）；读面缺席（503）=整面不可用说明。首行=对象起点（无上一版，如实标注）。
+  // 历史 tab：apply_log 审计流水 + sqlite doc_history 逐次正文翻页账（双轨分工：ops-log.md §2 + R-DOC-7 规则 4）。
+  // 点行 diff 上一版（rev-content 读面）：ok 行及 doc_history 行均可点 → GET /v1/rev-content 取该 rv 与上一版快照 diff；
+  // 双后端分立标注 source（sqlite-doc-history vs git，不冒充同源）；rv=1 起点行同样现读（不再误跳过）。
   function hydrateHistory(kind, scope, name) {
-    hydrate('ed-history', 'v1/history/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + (scope ? '?scope=' + encodeURIComponent(scope) : ''),
-      function (el, b) {
-        var rows = (b.entries || []).map(function (h, i) {
-          var cls = h.result === 'ok' ? 'ok' : (h.result === 'denied' || h.result === 'conflict') ? 'danger' : 'mute';
-          var clickable = h.result === 'ok';
-          var prev = null; // 下一行集内首个 ok 行=上一版（投影 rv 降序——noop/审计行不产 rv）
-          for (var j = i + 1; j < (b.entries || []).length; j++) {
-            if (b.entries[j].result === 'ok') { prev = b.entries[j].rv; break; }
-          }
-          return '<div class="rev-item"' + (clickable ? ' data-act="hist-diff" data-rv="' + h.rv + '" data-prev="' + (prev || '') + '" title="点行 diff 上一版（rev-content 现读）"' : '') + '>' +
-            '<span class="rv-no">' + (h.result === 'ok' ? 'r' + h.rv : h.result) + '</span>' +
-            '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
-            '<span class="rv-sum">' + esc(h.result) + (h.reasonRef ? ' · ' + esc(h.reasonRef) : '') + (h.subject ? '<br><span class="mono faint">' + esc(h.subject) + '</span>' : '') + '<br><span class="mono">' + esc(fmtAgo(new Date(h.ts))) + '</span></span>' +
-            '<span class="chip ' + cls + ' small">' + esc(h.result) + (clickable ? (prev ? ' · diff r' + prev : ' · 起点') : '') + '</span></div>';
-        }).join('');
-        el.innerHTML = '<div id="hist-diff-box" hidden style="border:1px solid var(--border-2);border-radius:8px;margin-bottom:10px;padding:8px;background:var(--bg)"></div>' +
-          (rows || '<div class="faint small" style="padding:8px 2px">归档窗内暂无应用流水（该对象尚未 Apply 过）</div>') +
-          '<div class="small faint" style="margin-top:8px">数据源=ops DB apply_log（一次 Apply 判定的流水：ok/noop/conflict/denied 全在账）；ok 行可点=与上一版 diff（rev-content 现读 git 权威正文快照，零副作用零写路径）。</div>';
-      });
+    var q = scope ? '?scope=' + encodeURIComponent(scope) : '';
+    var histUrl = 'v1/history/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + q;
+    var docHistUrl = 'v1/doc-history/' + encodeURIComponent(kind) + '/' + encodeURIComponent(name) + q;
+    var el = $('#ed-history');
+    if (!el) return;
+    el.innerHTML = '<div class="faint small">读取中…</div>';
+    Promise.all([
+      LIVE.get(histUrl),
+      LIVE.get(docHistUrl).catch(function () { return null; })
+    ]).then(function (rs) {
+      var boxEl = $('#ed-history');
+      if (!boxEl) return;
+      var b = rs[0] || {};
+      var dh = rs[1];
+      var entries = b.entries || [];
+      var dhRows = (dh && Array.isArray(dh.history)) ? dh.history : [];
+      var dhMap = {};
+      dhRows.forEach(function (h) { dhMap[h.rev] = h; });
+      var rows = entries.map(function (h, i) {
+        var cls = h.result === 'ok' ? 'ok' : (h.result === 'denied' || h.result === 'conflict') ? 'danger' : 'mute';
+        var clickable = h.result === 'ok' && Number(h.rv) > 0;
+        var prev = null; // 下一行集内首个 ok 行=上一版（投影 rv 降序——noop/审计行不产 rv）
+        for (var j = i + 1; j < entries.length; j++) {
+          if (entries[j].result === 'ok' && Number(entries[j].rv) > 0) { prev = entries[j].rv; break; }
+        }
+        var snapTag = dhMap[h.rv] ? ' · 快照 ' + dhMap[h.rv].bytes + 'B' : '';
+        return '<div class="rev-item"' + (clickable ? ' data-act="hist-diff" data-rv="' + h.rv + '" data-prev="' + (prev || '') + '" title="点行 diff 上一版（rev-content 现读）"' : '') + '>' +
+          '<span class="rv-no">' + (h.result === 'ok' ? 'r' + h.rv : h.result) + '</span>' +
+          '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
+          '<span class="rv-sum">' + esc(h.result) + (h.reasonRef ? ' · ' + esc(h.reasonRef) : '') + esc(snapTag) + (h.subject ? '<br><span class="mono faint">' + esc(h.subject) + '</span>' : '') + '<br><span class="mono">' + esc(fmtAgo(new Date(h.ts))) + '</span></span>' +
+          '<span class="chip ' + cls + ' small">' + esc(h.result) + (clickable ? (prev ? ' · diff r' + prev : ' · 起点') : '') + '</span></div>';
+      }).join('');
+      var dhHtml = '';
+      if (dhRows.length) {
+        dhHtml = '<div class="doc-hist-sec" data-doc-history="1"><div class="sec-title" style="margin-top:10px">逐次正文快照账（doc_history · ' + dhRows.length + ' 版）</div>' +
+          dhRows.map(function (h, i) {
+            var prev = (i + 1 < dhRows.length) ? dhRows[i + 1].rev : '';
+            return '<div class="rev-item" data-act="hist-diff" data-rv="' + h.rev + '" data-prev="' + prev + '" data-doc-hist-row="1" title="点行 diff 上一版快照">' +
+              '<span class="rv-no">r' + h.rev + '</span>' +
+              '<span class="rv-author mono">' + esc(h.fieldManager || '—') + '</span>' +
+              '<span class="rv-sum">' + esc(String(h.bytes || 0)) + ' B<br><span class="mono">' + esc(h.at ? fmtAgo(new Date(h.at)) : '—') + '</span></span>' +
+              '<span class="chip ok small">' + (prev ? 'diff r' + prev : '首版快照') + '</span></div>';
+          }).join('') + '</div>';
+      }
+      boxEl.innerHTML = '<div id="hist-diff-box" hidden style="border:1px solid var(--border-2);border-radius:8px;margin-bottom:10px;padding:8px;background:var(--bg)"></div>' +
+        (rows || '<div class="faint small" style="padding:8px 2px">归档窗内暂无应用流水（该对象尚未 Apply 过）</div>') +
+        dhHtml +
+        '<div class="small faint" style="margin-top:8px">数据源=应用流水（apply_log：ok/noop/conflict/denied 全在账）' +
+        (dh ? ' + 逐次正文快照账（doc_history）' : '') + '；ok 行与快照行均可点=与上一版对比（零副作用）。</div>';
+    }).catch(function (e) {
+      var boxEl = $('#ed-history');
+      if (boxEl) boxEl.innerHTML = '<div class="faint small">历史暂不可读（' + esc(String((e && e.message) || e)) + '）</div>';
+    });
   }
-  // 点行 diff 上一版（v0.63 rev-content 读面）：rv+prev 两快照现读 → diff 呈现（面板只开一处，
-  // 复点/它行换内容；读面退化行内如实降级）。零写路径零缓存（渲染数据无双源红线 §5 规则 2）。
+  // 点行 diff 上一版（rev-content 现读）：rv+prev 两快照现读 → diff 呈现（面板只开一处，
+  // 复点/它行换内容；source 如实区分 sqlite-doc-history 与 git；prev 快照缺席时仍展示当前版正文）。
   ACTIONS['hist-diff'] = function (el) {
     var ctx = edCtx();
     if (!ctx) return;
@@ -3165,23 +3209,35 @@
     var box = $('#hist-diff-box');
     if (!box || !rv) return;
     box.hidden = false;
-    box.innerHTML = '<div class="small faint">rev-content 读取中（r' + rv + (prev ? ' vs r' + prev : '——对象起点，无上一版') + '）…</div>';
+    box.innerHTML = '<div class="small faint">正文快照读取中（r' + rv + (prev ? ' vs r' + prev : '——对象起点，无上一版') + '）…</div>';
     var path = function (r) {
       return 'v1/rev-content/' + encodeURIComponent(ctx.kind) + '/' + encodeURIComponent(ctx.name) +
         '?scope=' + encodeURIComponent(ctx.scope) + '&rv=' + r;
     };
-    var newP = rv === 1 ? Promise.resolve(null) : LIVE.get(path(rv)).then(function (b) { return String(b.content || ''); });
-    var oldP = prev ? LIVE.get(path(prev)).then(function (b) { return String(b.content || ''); }) : Promise.resolve(null);
+    var fetchSnap = function (r) {
+      return LIVE.get(path(r)).then(function (b) {
+        return { content: String((b && b.content) || ''), source: String((b && b.source) || '') };
+      });
+    };
+    var newP = fetchSnap(rv);
+    var oldP = prev ? fetchSnap(prev).catch(function (e) { return { missing: true, err: String((e && e.message) || e) }; }) : Promise.resolve(null);
     Promise.all([newP, oldP]).then(function (rs) {
       var cur = rs[0], old = rs[1];
-      if (cur == null) { box.innerHTML = '<span class="faint small">快照暂不可读（数据退化）</span>'; return; }
-      var head = '<div class="sec-title">r' + rv + (prev ? ' ← r' + prev : ' ← 对象起点（create，无上一版）') +
-        ' <span class="faint mono small">rev-content 现读（git 权威正文快照）</span></div>';
+      if (!cur) { box.innerHTML = '<span class="faint small">快照暂不可读（数据退化）</span>'; return; }
+      var OBJ = window.__CC && window.__CC.obj;
+      var srcText = OBJ && OBJ.revSourceLabel ? OBJ.revSourceLabel(cur.source) : (cur.source || '正文快照');
+      var head = '<div class="sec-title" data-rev-source="' + esc(cur.source || '') + '">r' + rv + (prev ? ' ← r' + prev : ' ← 对象起点（create，无上一版）') +
+        ' <span class="faint mono small">rev-content 现读（' + esc(srcText) + '）</span></div>';
+      if (old && old.missing) {
+        box.innerHTML = head + '<div class="small faint" style="padding:4px 0">上一版 r' + prev + ' 正文快照缺席（' + esc(old.err) + '），以下展示 r' + rv + ' 全文（' + cur.content.split('\n').length + ' 行）：</div>' +
+          renderDiff(diffLines('', cur.content), 40);
+        return;
+      }
       box.innerHTML = head + (old == null
-        ? '<div class="small faint" style="padding:4px 0">起点行=首版全文（' + cur.split('\n').length + ' 行）——无上一版可 diff，全文首览：</div>' + renderDiff(diffLines('', cur), 40)
-        : (old === cur
+        ? '<div class="small faint" style="padding:4px 0">起点行=首版全文（' + cur.content.split('\n').length + ' 行）——无上一版可 diff，全文首览：</div>' + renderDiff(diffLines('', cur.content), 40)
+        : (old.content === cur.content
           ? '<span class="faint small">两版快照一致（rv 反写行推进——正文零变更）</span>'
-          : renderDiff(diffLines(old, cur), 60)));
+          : renderDiff(diffLines(old.content, cur.content), 60)));
     }).catch(function (e) {
       box.innerHTML = '<span class="faint small">快照暂不可读（数据退化：' + esc(String((e && e.message) || e)) + '）</span>';
     });
@@ -6547,6 +6603,25 @@
           });
         });
       });
+      if (__CC.obj.setTraceLoader) {
+        __CC.obj.setTraceLoader(function (kind, scope, name) {
+          var sPath = String(scope || 'global').split('/').map(encodeURIComponent).join('/');
+          return LIVE.get('v1/trace/' + encodeURIComponent(kind) + '/' + sPath + '/' + encodeURIComponent(name))
+            .catch(function (e) {
+              if (e && e.status === 404) return { missing: true };
+              throw e;
+            });
+        });
+      }
+      if (__CC.obj.setContextFindLoader) {
+        __CC.obj.setContextFindLoader(function (q, tags) {
+          var qs = [];
+          if (q) qs.push('q=' + encodeURIComponent(String(q)));
+          if (tags && tags.length) qs.push('tags=' + encodeURIComponent(tags.join(',')));
+          qs.push('k=6');
+          return LIVE.get('v1/context/find?' + qs.join('&'));
+        });
+      }
     }
     /* 任务中心/任务详情/关注报告（R-UX-6）：tasks/单任务/attention loader 注入（同 obj/ctx 范式——
      * 词形模块零直接网络依赖；清单缓存 15s、attention 60s、详情恒现读）。 */

@@ -144,10 +144,25 @@
    * 会话内缓存 120s（同 ctx 索引口径）；失败=降级不缓存失败态。 */
   var ruleLoader = null;
   var tagLoader = null;
+  var traceLoader = null;
+  var findLoader = null;
   var ridx = { rules: null, at: 0, promise: null };
   var tidx = { map: null, at: 0, promise: null };
   function setRuleDocsLoader(fn) { ruleLoader = fn; ridx = { rules: null, at: 0, promise: null }; }
   function setTagTypesLoader(fn) { tagLoader = fn; tidx = { map: null, at: 0, promise: null }; }
+  function setTraceLoader(fn) { traceLoader = fn; }
+  function setContextFindLoader(fn) { findLoader = fn; }
+  function ensureTrace(kind, scope, name) {
+    if (!traceLoader) return Promise.resolve(undefined);
+    return Promise.resolve().then(function () { return traceLoader(kind, scope || 'global', name); }).catch(function () { return null; });
+  }
+  function ensureRelated(q, tags) {
+    if (!findLoader) return Promise.resolve(undefined);
+    return Promise.resolve().then(function () { return findLoader(q || '', tags || []); }).then(function (b) {
+      if (!b) return null;
+      return Array.isArray(b) ? b : (b.hits || []);
+    }, function () { return null; });
+  }
   function ensureRules() {
     if (ridx.rules && (Date.now() - ridx.at) < 120000) return Promise.resolve(ridx.rules);
     if (!ruleLoader) return Promise.resolve(null);
@@ -190,16 +205,20 @@
   }
 
   /* ---------- 六片渲染（纯 HTML 串——app 侧 assemble 注水；一切动态值先 esc） ---------- */
-  function tagPanel(groups) {
+  function tagPanel(groups, opts) {
+    var editRoute = opts && opts.editRoute ? String(opts.editRoute) : '';
+    var editBtn = editRoute
+      ? ' <button class="btn sm" data-act="go" data-go="' + esc(editRoute) + '" data-obj-tag-edit="1" title="去编辑器补充标签（经 Apply 落库）">补标</button>'
+      : '';
     if (!groups || !groups.length) {
-      return '<div class="ob-empty" data-obj-tags-empty="1">暂无标签——对象正文未声明 spec.metadata.tags（声明经 Apply 落库后此处现读）。</div>';
+      return '<div class="ob-empty" data-obj-tags-empty="1">暂无标签——对象正文未声明 spec.metadata.tags（声明经 Apply 落库后此处现读）。' + editBtn + '</div>';
     }
     return '<div data-obj-tags="1">' + groups.map(function (g) {
       return '<div class="ob-tagrow"><span class="chip mute tiny">' + esc(g.type) + '</span> ' +
         g.tags.map(function (t) {
           return '<span class="tag click" data-act="obj-tag" data-t="' + esc(t) + '" title="看同 tag 对象">#' + esc(t) + '</span>';
         }).join(' ') + '</div>';
-    }).join('') + '</div>';
+    }).join('') + (editBtn ? '<div class="ob-tagrow" style="margin-top:6px">' + editBtn + '</div>' : '') + '</div>';
   }
   function rulePanel(res) {
     if (res.degraded) {
@@ -222,12 +241,95 @@
     if (!m) return 'docs';
     return 'designdoc/' + encodeURIComponent(m[1]) + '/' + encodeURIComponent(m[2] + '.md');
   }
-  function ctxPanel(sum) {
+
+  /* ---------- v0.65 trace 双向追踪 + context/find 相关对象（R-DOC-9 / R-UX-7） ----------
+   * docStr='Kind/scope/name'（scope 允许多段）→ 'obj/<Kind>/<scope>/<name>'；非三段=空串（不编假路由）。 */
+  function traceRouteOf(docStr) {
+    var s = String(docStr || '').trim();
+    var segs = s.split('/');
+    if (segs.length < 3 || !segs[0] || !segs[segs.length - 1]) return '';
+    var kind = segs[0];
+    var name = segs[segs.length - 1];
+    var scope = segs.slice(1, segs.length - 1).join('/');
+    if (!scope) return '';
+    return 'obj/' + encodeURIComponent(kind) + '/' + encodeURIComponent(scope) + '/' + encodeURIComponent(name);
+  }
+  function traceEntryHtml(e) {
+    var doc = String((e && e.doc) || '');
+    var route = (e && e.resolved !== false) ? traceRouteOf(doc) : '';
+    var link = route
+      ? '<span class="lk mono" data-act="go" data-go="' + esc(route) + '">' + esc(doc) + '</span>'
+      : '<span class="mono">' + esc(doc || '—') + '</span>' + (e && e.resolved === false ? ' <span class="chip mute tiny">未解析</span>' : '');
+    var stale = (e && e.stale) ? ' <span class="chip warn tiny" data-trace-stale="1">待对齐</span>' : '';
+    var rev = (e && e.designRev) ? ' <span class="chip mute tiny">对齐 r' + esc(e.designRev) + '</span>' : '';
+    var secs = (e && Array.isArray(e.sections) && e.sections.length)
+      ? ' <span class="faint tiny">[' + e.sections.map(esc).join(' · ') + ']</span>' : '';
+    return '<div class="ob-trace-row">' + link + stale + rev + secs + '</div>';
+  }
+  function tracePanel(trace) {
+    if (trace === undefined) return '';
+    if (trace === null) {
+      return '<div class="ob-sub" data-obj-trace-degraded="1"><span class="small faint">上下游追踪暂不可达（不冒充无关联）。</span></div>';
+    }
+    if (trace.missing) {
+      return '<div class="ob-sub" data-obj-trace-missing="1"><span class="small faint">上下游追踪：当前对象未入上下文索引。</span></div>';
+    }
+    var groups = [
+      { id: 'implements', label: '实现自', rows: Array.isArray(trace.implements) ? trace.implements : [] },
+      { id: 'implemented_by', label: '被实现', rows: Array.isArray(trace.implemented_by) ? trace.implemented_by : [] },
+      { id: 'verified_by', label: '验证关联', rows: Array.isArray(trace.verified_by) ? trace.verified_by : [] }
+    ];
+    var total = groups.reduce(function (n, g) { return n + g.rows.length; }, 0);
+    if (!total) {
+      return '<div class="ob-sub" data-obj-trace-empty="1"><span class="chip mute tiny">追踪</span> <span class="small faint">无上下游追踪声明（未声明 implements / verified_by，且暂无下游引用）。</span></div>';
+    }
+    return '<div class="ob-sub ob-trace" data-obj-trace="1">' + groups.map(function (g) {
+      if (!g.rows.length) return '';
+      return '<div class="ob-trace-grp" data-trace-dir="' + esc(g.id) + '"><div class="ob-trace-h small muted">' +
+        esc(g.label) + ' <span class="chip mute tiny">' + g.rows.length + '</span></div>' +
+        g.rows.map(traceEntryHtml).join('') + '</div>';
+    }).join('') + '</div>';
+  }
+  function relatedPanel(hits, selfKey) {
+    if (hits === undefined) return '';
+    if (hits === null) {
+      return '<div class="ob-sub" data-obj-related-degraded="1"><span class="small faint">相关对象检索暂不可达。</span></div>';
+    }
+    var list = (hits || []).filter(function (h) {
+      if (!h || !h.kind || !h.name) return false;
+      var k = h.kind + '/' + (h.scope || 'global') + '/' + h.name;
+      return !selfKey || k !== selfKey;
+    }).slice(0, 5);
+    if (!list.length) {
+      return '<div class="ob-sub" data-obj-related-empty="1"><span class="chip mute tiny">相关</span> <span class="small faint">暂无高相关在册对象。</span></div>';
+    }
+    return '<div class="ob-sub ob-rel" data-obj-related="1"><div class="ob-trace-h small muted">相关对象（相关性检索）</div>' +
+      list.map(function (h) {
+        var scope = h.scope || 'global';
+        var route = 'obj/' + encodeURIComponent(h.kind) + '/' + encodeURIComponent(scope) + '/' + encodeURIComponent(h.name);
+        var sc = h.score != null ? Number(h.score).toFixed(1) : '0';
+        return '<div class="ob-rel-row"><span class="lk mono" data-act="go" data-go="' + esc(route) + '">' +
+          esc(h.name) + '</span> <span class="chip mute tiny">' + esc(h.kind) + '</span> ' +
+          '<span class="chip acc tiny">' + esc(sc) + '</span>' +
+          (h.why ? ' <span class="faint tiny">' + esc(h.why) + '</span>' : '') + '</div>';
+      }).join('') + '</div>';
+  }
+
+  /* 历史正文快照来源人话标注（双后端分立：sqlite-doc-history vs git——不冒充同源）。 */
+  function revSourceLabel(src) {
+    var s = String(src || '');
+    if (s === 'sqlite-doc-history') return 'sqlite 逐次正文账';
+    if (s === 'git') return 'git 正文快照';
+    return s || '正文快照';
+  }
+
+  function ctxPanel(sum, trace, related, selfKey) {
     var s = sum || { state: 'none', text: '本会话未装配。' };
     var cls = s.state === 'ok' ? 'ok' : 'mute';
     return '<div class="ob-ctx" data-obj-ctx="' + esc(s.state) + '"><span class="chip ' + cls + ' tiny">' +
       (s.state === 'ok' ? '已装配' : '未装配') + '</span> <span class="small">' + esc(s.text || '') + '</span>' +
-      (s.state === 'ok' ? ' <button class="btn sm" data-act="obj-chat" data-obj-chat="1">就地续聊</button>' : '') + '</div>';
+      (s.state === 'ok' ? ' <button class="btn sm" data-act="obj-chat" data-obj-chat="1">就地续聊</button>' : '') + '</div>' +
+      tracePanel(trace) + relatedPanel(related, selfKey);
   }
   function opsPanel(ops) {
     if (!ops || !ops.length) return '';
@@ -265,7 +367,11 @@
     esc: esc, keyOf: keyOf, tagGroups: tagGroups, rulesFor: rulesFor,
     sectionCompletion: sectionCompletion, ctxSummary: ctxSummary,
     setRuleDocsLoader: setRuleDocsLoader, setTagTypesLoader: setTagTypesLoader,
-    ensureRules: ensureRules, ensureTagTypes: ensureTagTypes, refreshIndex: refreshIndex,
+    setTraceLoader: setTraceLoader, setContextFindLoader: setContextFindLoader,
+    ensureRules: ensureRules, ensureTagTypes: ensureTagTypes,
+    ensureTrace: ensureTrace, ensureRelated: ensureRelated, refreshIndex: refreshIndex,
+    traceRouteOf: traceRouteOf, tracePanel: tracePanel, relatedPanel: relatedPanel,
+    revSourceLabel: revSourceLabel,
     tagPanel: tagPanel, rulePanel: rulePanel, ctxPanel: ctxPanel, opsPanel: opsPanel,
     schemePanel: schemePanel, contentPanel: contentPanel, objRouteOfRef: objRouteOfRef,
     kindRegYaml: kindRegYaml
