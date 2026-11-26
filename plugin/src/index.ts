@@ -48,6 +48,7 @@ export {
 } from './routes/console-write.ts'
 export { createCommHandler } from './routes/comm-read.ts'
 export { createEventPubHandler } from './routes/console-write.ts'
+export { createChatTranscriptReadHandler, createChatCreateHandler, projectTranscript, projectSessions, type SessionControllerDeps } from './bridges/transcript.ts'
 export type { CommState } from './tools/agent-comm.ts'
 export { createCommState, AGENT_COMM_TOOL_NAMES, mountAgentCommTools } from './tools/agent-comm.ts'
 // 协议判别集（AGENT_COMM_KINDS 四 op 名=工具名裸用；E5a 客户端判别器引用声明集——bundle 静态面锚点）。

@@ -19,7 +19,8 @@ import { makeErrorReply } from '../src/agent-comm.ts'
 import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH } from '../src/config.ts'
+import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
+  CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH } from '../src/config.ts'
 
 function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
   const calls: string[] = []
@@ -125,10 +126,14 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_CHAT_SEND_PATH],
     ['exact', CONSOLE_CHATFACES_CLIENT_PATH],
     ['exact', CONSOLE_EVENT_PUB_PATH],
+    ['exact', CONSOLE_CHAT_SESSIONS_PATH],
+    ['exact', CONSOLE_CHAT_TRANSCRIPT_PATH],
+    ['exact', CONSOLE_CHAT_STATE_PATH],
+    ['exact', CONSOLE_CHAT_CREATE_PATH],
     ['exact', CONSOLE_V2_PREFIX],
     ['exact', CONSOLE_V2_PREFIX + '/'],
     ['prefix', CONSOLE_V2_ASSETS_PREFIX],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ web v2 载体面（exact+prefix，产物在册）成套注册')
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由（sessions/transcript/state/create）+ web v2 载体面（exact+prefix，产物在册）成套注册')
   assert.equal(disposed, 0)
   delete process.env.CORE_CONSOLE_WEB_DIST
 
@@ -529,4 +534,78 @@ test('createEventPubHandler：白名单四类型 ∧ involved 三段强制 ∧ �
   const r4 = pubRes()
   await h({ method: 'GET', url: CONSOLE_EVENT_PUB_PATH, headers: {}, body: '' }, r4)
   assert.equal(r4.statusCode, 405, '非 POST=405')
+})
+
+// ─────── 自有对话面转录桥（transcript.ts——sc.list/page/state/create 直调面）───────
+import { createChatTranscriptReadHandler, createChatCreateHandler, projectTranscript, projectSessions } from '../src/index.ts'
+
+const scFake = {
+  list: async () => ({ items: [{ sessionId: 's-1', updatedAt: 1700000000000, running: true, blank: false, agentAvailable: true }, { sessionId: '' }, { sessionId: 's-blank', updatedAt: 1, running: false, blank: true, agentAvailable: true }] }),
+  create: async () => ({ sessionId: 's-new' }),
+  state: async () => ({ active: true, running: false, queue: null, pendingInput: [] }),
+  page: async () => ({ cursor: 42, events: [
+    { type: 'event', event: { type: 'user/message', seq: 7, time: 1700000001000, data: { id: 'm1', source: { kind: 'user' }, content: [{ type: 'text', text: 'hi' }] } } },
+    { type: 'event', event: { type: 'assistant/live-chunk', seq: 8, time: 1700000002000, data: {}, ignorable: true } },
+    { type: 'event', event: { type: 'assistant/message', seq: 9, time: 1700000003000, data: { content: [{ type: 'text', text: 'done' }] } } },
+  ] }),
+}
+
+test('transcript 读面：sessions 投影剥空 id ∧ transcript 剥 delta/ignorable 留渲染词形 ∧ state 透传 ∧ 缺 sc=503', async () => {
+  const allow = () => undefined as 401 | 403 | undefined
+  const deps = { sc: scFake as never }
+  for (const [kind, path, want] of [
+    ['sessions', CONSOLE_CHAT_SESSIONS_PATH, 'items'],
+    ['transcript', CONSOLE_CHAT_TRANSCRIPT_PATH + '?sessionId=s-1', 'events'],
+    ['state', CONSOLE_CHAT_STATE_PATH + '?sessionId=s-1', 'running'],
+  ] as const) {
+    let out = ''
+    const res = { statusCode: 0, setHeader() {}, end(t?: string) { out = String(t ?? '') } } as unknown as HttpResLike
+    const h = createChatTranscriptReadHandler({ deps, kind, reject: allow })
+    await h({ method: 'GET', url: path, headers: {} }, res)
+    assert.equal(res.statusCode, 200, kind + '=200')
+    assert.ok(out.includes(want), kind + ' 载荷含 ' + want)
+  }
+  // transcript 投影：user/message+assistant/message 留、live-chunk ignorable 剥
+  let out = ''
+  const res = { statusCode: 0, setHeader() {}, end(t?: string) { out = String(t ?? '') } } as unknown as HttpResLike
+  const h = createChatTranscriptReadHandler({ deps, kind: 'transcript', reject: allow })
+  await h({ method: 'GET', url: CONSOLE_CHAT_TRANSCRIPT_PATH + '?sessionId=s-1', headers: {} }, res)
+  const j = JSON.parse(out)
+  assert.equal(j.events.length, 2, 'delta/ignorable 剥除后=2')
+  assert.equal(j.events[0].type, 'user/message')
+  assert.equal(j.cursor, 42)
+  // 非 GET=405；缺 sc=503
+  const res405 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await h({ method: 'POST', url: CONSOLE_CHAT_TRANSCRIPT_PATH, headers: {} }, res405)
+  assert.equal(res405.statusCode, 405)
+  const hNoDeps = createChatTranscriptReadHandler({ deps: { sc: null }, kind: 'sessions', reject: allow })
+  const res503 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await hNoDeps({ method: 'GET', url: CONSOLE_CHAT_SESSIONS_PATH, headers: {} }, res503)
+  assert.equal(res503.statusCode, 503, 'sc 缺席=503 显式')
+})
+
+test('transcript 纯投影：projectTranscript/projectSessions 直测（零事件页/损坏页=诚实空词形）', () => {
+  assert.deepEqual(projectTranscript(null), { cursor: undefined, events: [] })
+  assert.deepEqual(projectTranscript({ events: 'x' }), { cursor: undefined, events: [] })
+  const bad = projectTranscript({ cursor: 1, events: [{ type: 'event' }, { nope: 1 }] })
+  assert.equal(bad.events?.length, 0)
+  const sess = projectSessions({ items: [{ sessionId: 'a' }, 'junk', null] })
+  assert.equal(sess.items?.length, 1)
+})
+
+test('chat-create：POST 受理回 sessionId ∧ 非 POST=405 ∧ 宿主空回执=502', async () => {
+  const allow = () => undefined as 401 | 403 | undefined
+  const h = createChatCreateHandler({ deps: { sc: scFake as never }, reject: allow })
+  let out = ''
+  const res = { statusCode: 0, setHeader() {}, end(t?: string) { out = String(t ?? '') } } as unknown as HttpResLike
+  await h({ method: 'POST', url: CONSOLE_CHAT_CREATE_PATH, headers: {}, body: '{}' }, res)
+  assert.equal(res.statusCode, 200)
+  assert.ok(out.includes('s-new'))
+  const res405 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await h({ method: 'GET', url: CONSOLE_CHAT_CREATE_PATH, headers: {} }, res405)
+  assert.equal(res405.statusCode, 405)
+  const hEmpty = createChatCreateHandler({ deps: { sc: { ...scFake, create: async () => ({}) } as never }, reject: allow })
+  const res502 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await hEmpty({ method: 'POST', url: CONSOLE_CHAT_CREATE_PATH, headers: {}, body: '{}' }, res502)
+  assert.equal(res502.statusCode, 502, '空 sessionId=502 不冒充创建')
 })

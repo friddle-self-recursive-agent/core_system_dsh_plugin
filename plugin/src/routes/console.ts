@@ -14,10 +14,12 @@ import {
   createApplyHandler, createDraftsHandler, createDesignDocsHandler,
   createIntakeHandler, createSessionHeartbeatHandler, createEventPubHandler,
 } from './console-write.ts'
+import { createChatTranscriptReadHandler, createChatCreateHandler, type SessionControllerDeps } from '../bridges/transcript.ts'
 import { createConsoleWsUpgradeHandler } from './wsproxy.ts'
 import { mountConsoleV2 } from './console-v2.ts'
 import { createChatFacesClientHandler, createChatSendHandler, type ChatFacesDeps } from '../bridges/chatfaces.ts'
-import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH } from '../config.ts'
+import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
+  CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH } from '../config.ts'
 import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -173,10 +175,13 @@ export function mountConsoleRoutes(ctx: {
 }, bridge: { url: string }, applySubject: ApplySubject = DEFAULT_APPLY_SUBJECT, comm?: CommState, serviceProjectsRoot?: string): void {  if (typeof ctx.inject !== 'function') return // 防御面：无 inject 能力的宿主（测试假体/极简壳）零影响
   // 对话通路 prompt 面（chat-send 后端——sessionController.queue；selfheal 桥同款软出现）
   const chatDeps: ChatFacesDeps = { prompt: null }
+  const transcriptDeps: SessionControllerDeps = { sc: null }
   ctx.inject(['sessionController'], (sub: any) => {
     const sc = Reflect.get(sub, 'sessionController')
     if (sc && typeof sc.prompt === 'function') {
       chatDeps.prompt = (req) => sc.prompt(req, AbortSignal.timeout(10_000))
+      // 自有对话面转录桥（§对话界面批——sc.list/create/page/state 直调面）
+      transcriptDeps.sc = sc as unknown as SessionControllerDeps['sc']
       console.error('[core-system-diag] chatfaces prompt 面已接（sessionController 就绪）')
     }
   })
@@ -237,6 +242,23 @@ export function mountConsoleRoutes(ctx: {
     unregisters.push(webServer.register({
       kind: 'exact', path: CONSOLE_EVENT_PUB_PATH,
       handler: createEventPubHandler({ bridge, reject, subject: applySubject }),
+    }))
+    // 自有对话面四路由（转录/清单/状态=读；新会话=POST——宿主发 id 零手填）
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_CHAT_SESSIONS_PATH,
+      handler: createChatTranscriptReadHandler({ deps: transcriptDeps, kind: 'sessions', reject }),
+    }))
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_CHAT_TRANSCRIPT_PATH,
+      handler: createChatTranscriptReadHandler({ deps: transcriptDeps, kind: 'transcript', reject }),
+    }))
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_CHAT_STATE_PATH,
+      handler: createChatTranscriptReadHandler({ deps: transcriptDeps, kind: 'state', reject }),
+    }))
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_CHAT_CREATE_PATH,
+      handler: createChatCreateHandler({ deps: transcriptDeps, reject }),
     }))
     const wsUnregister = mountConsoleWsUpgrade(webServer, { bridge, reject })
     if (wsUnregister) unregisters.push(wsUnregister)
