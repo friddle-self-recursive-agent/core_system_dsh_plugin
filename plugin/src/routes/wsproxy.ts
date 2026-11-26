@@ -33,6 +33,9 @@ export function createConsoleWsUpgradeHandler(opts: {
 }) {
   const netMod = opts.netImpl ?? net
   return function consoleWsUpgradeHandler(req: HttpReqLike, socket: WsSocketLike, head: Buffer): void {
+    const hs = (req.headers ?? {}) as Record<string, string | string[] | undefined>
+    const cookie = typeof hs.cookie === 'string' ? hs.cookie : ''
+    console.error('[core-system-diag] ws upgrade 到达插件 url=%s cookie=%s upgrade=%s', String(req.url ?? '/'), cookie ? 'yes(' + cookie.length + ')' : 'no', String(hs.upgrade ?? ''))
     // fail-closed 拒绝：直写 HTTP 错误行（升级握手未完成，无 101 即断）。
     const fail = (status: number, reason: string) => {
       try {
@@ -44,6 +47,7 @@ export function createConsoleWsUpgradeHandler(opts: {
     if (!opts.reject) return fail(401, 'Unauthorized')
     const rejection = opts.reject({ headers: req.headers })
     if (rejection !== undefined) {
+      console.error('[core-system-diag] ws upgrade 被宿主栅栏拒绝 status=%s', rejection)
       return fail(rejection, rejection === 401 ? 'Unauthorized' : 'Forbidden')
     }
     if (!opts.bridge.url) return fail(503, 'Service Unavailable')
