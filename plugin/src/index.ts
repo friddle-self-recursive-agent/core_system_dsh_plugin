@@ -7,7 +7,7 @@
 //      只发 GET，不引入新写路径——写路径唯一入口仍是 cored 的 POST /v1/apply 且缺省关闭）
 //   5. 插件退场时回收子进程
 // 部署锚点一律经配置或环境注入，不内置真实路径（rule.md R-PUB-1/2）。
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, execFile, type ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -32,6 +32,11 @@ export interface Config {
   applySubject?: ApplySubject
   /** Service project 的本地目录根（Workspace 注册用）；缺省=$DSH_HOME/service-projects。 */
   serviceProjectsRoot?: string
+  /** 自循环拉起命令（部署侧；LoopRequested 唤醒到达时执行；空=wake 桥禁用——
+   *  只落唤醒投影不拉起会话；命令是配置项，事件载荷不参与命令构造）。 */
+  loopCommand?: string
+  /** 单飞检测模式（pgrep -f；空=不检测，由部署侧 loop 命令自行保证单飞）。 */
+  loopRunningPattern?: string
 }
 
 /** 对象引用（/v1/objects list 投影，瘦身载荷无正文；契约 cored-bridge.md §2）。 */
@@ -1142,6 +1147,114 @@ export async function mountSelfHealBridge(
   }
 }
 
+/**
+ * Wake 桥（事件→自循环拉起；core_design concepts/cli.md / R-UX-8）：
+ *   ① cored 侧 wake 桥（CORE_SYSTEM_WAKE_ADDR）把白名单唤醒（缺省 LoopRequested）POST 到本桥；
+ *   ② 本桥只做单飞检测（pgrep -f 运行模式）→ 执行部署侧配置的 loop 命令（config.loopCommand /
+ *      CORE_SYSTEM_LOOP_CMD）拉起自循环会话；**命令是配置项，载荷不参与命令构造**；
+ *   ③ 无命令=桥禁用（503 诚实降级）；已有循环=already-running（不重复拉起）；失败=502。
+ * 红线：不新增自主判定/定时器/队列——唯一触发源=cored 已受理的唤醒事件（事件驱动，非外部点火）。
+ */
+export const WAKE_SPAWN_PATH = '/wake/spawn'
+
+export interface WakeBridgeHandle {
+  /** loopback 监听地址（host:port——cored 侧 CORE_SYSTEM_WAKE_ADDR 回填值）。 */
+  addr: string
+  stop(): void
+}
+
+export async function mountWakeBridge(
+  _ctx: any,
+  opts: {
+    /** loopback 监听地址（host:port）；缺省 127.0.0.1 随机口。 */
+    addr?: string
+    /** 部署侧 loop 启动命令（绝对路径或 PATH 名）；空=桥禁用。 */
+    command?: string
+    /** 单飞检测模式（pgrep -f）；空=不检测（部署侧自行保证单飞）。 */
+    runningPattern?: string
+    /** node:child_process 注入面（测试用）。 */
+    spawnImpl?: typeof spawn
+    execFileImpl?: typeof execFile
+    /** node:http 注入面（测试用——缺省真实模块）。 */
+    httpModule?: typeof import('node:http')
+  } = {},
+): Promise<WakeBridgeHandle> {
+  const httpMod = opts.httpModule ?? (await import('node:http'))
+  const spawnImpl = opts.spawnImpl ?? spawn
+  const execFileImpl = opts.execFileImpl ?? execFile
+  const command = (opts.command ?? '').trim()
+  const runningPattern = (opts.runningPattern ?? '').trim()
+
+  const server = httpMod.createServer((req, res) => {
+    const url = String(req.url ?? '/').split('?')[0]
+    const reply = (status: number, body: Record<string, unknown>) => {
+      res.statusCode = status
+      res.setHeader('content-type', 'application/json')
+      res.end(JSON.stringify(body))
+    }
+    if (req.method !== 'POST' || url !== WAKE_SPAWN_PATH) {
+      reply(404, { error: `not found（wake 桥只收 POST ${WAKE_SPAWN_PATH}）` })
+      return
+    }
+    let raw = ''
+    req.on('data', (c: Buffer | string) => { raw += c.toString() })
+    req.on('end', async () => {
+      let body: Record<string, unknown>
+      try {
+        body = JSON.parse(raw || '{}') as Record<string, unknown>
+      } catch {
+        reply(400, { error: '载荷不可解析（需 JSON 对象）' })
+        return
+      }
+      const type = String(body.type ?? '')
+      const agent = String(body.agent ?? '')
+      if (type !== 'LoopRequested') {
+        reply(400, { error: `事件类型不支持（${type}）` })
+        return
+      }
+      if (!agent.startsWith('root')) {
+        reply(400, { error: `agent 锚不支持（${agent}）` })
+        return
+      }
+      if (!command) {
+        reply(503, { error: 'loop 命令未配置（config.loopCommand / CORE_SYSTEM_LOOP_CMD）' })
+        return
+      }
+      if (runningPattern) {
+        const running = await new Promise<boolean>((resolve) => {
+          execFileImpl('pgrep', ['-f', runningPattern], { timeout: 2000 }, (err, stdout) => {
+            resolve(!err && String(stdout).trim() !== '')
+          })
+        })
+        if (running) {
+          reply(200, { ok: true, status: 'already-running', pattern: runningPattern })
+          return
+        }
+      }
+      try {
+        // 命令是部署侧配置项；载荷只用于日志，绝不拼接进命令（零注入面）。
+        const child = spawnImpl(command, [], { detached: true, stdio: 'ignore', env: process.env })
+        child.unref()
+        console.error('[core-system-diag] wake 桥已拉起自循环 command=%s pid=%s event=%s', command, child.pid ?? '?', String(body.eventId ?? ''))
+        reply(202, { ok: true, status: 'spawned', pid: child.pid ?? null })
+      } catch (e) {
+        reply(502, { error: `loop 命令拉起失败: ${String((e as Error)?.message ?? e)}` })
+      }
+    })
+  })
+  const listenHost = (opts.addr ?? '127.0.0.1:0').split(':')[0] || '127.0.0.1'
+  const wantPort = Number((opts.addr ?? '127.0.0.1:0').split(':')[1] ?? 0) || 0
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(wantPort, listenHost, () => resolve())
+  })
+  server.unref()
+  const address = server.address()
+  const bound = typeof address === 'object' && address !== null ? `${address.address}:${address.port}` : String(opts.addr ?? '')
+  console.error('[core-system-diag] wake 桥 listener=%s（CORE_SYSTEM_WAKE_ADDR 回填——cored LoopRequested 路由）', bound)
+  return { addr: bound, stop: () => { server.close() } }
+}
+
 /** 宿主侧装配（软出现：web profile 才有 webServer/connection；headless 宿主零影响）。
  *  用 ctx.inject 等待依赖可用——依赖缺席的 profile 上回调永不启动，插件本体不受影响。 */
 export function mountConsoleRoutes(ctx: {
@@ -1310,6 +1423,19 @@ export default async function apply(ctx: any, config: Config = {}) {
   } catch (e) {
     ctx.logger.warn('core-system: selfheal 桥装配失败（纯观测词形）: %s', String((e as Error)?.message ?? e))
   }
+  // Wake 桥（R-UX-8）：cored 侧 CORE_SYSTEM_WAKE_ADDR 回填；LoopRequested→部署侧 loop 命令。
+  // 与 selfheal 同款：装配失败=warn 不阻断宿主；无命令=桥禁用（503 诚实降级）。
+  let wake: WakeBridgeHandle | null = null
+  try {
+    wake = await mountWakeBridge(ctx, {
+      addr: process.env.CORE_SYSTEM_WAKE_ADDR || undefined,
+      command: config.loopCommand || process.env.CORE_SYSTEM_LOOP_CMD || '',
+      runningPattern: config.loopRunningPattern || process.env.CORE_SYSTEM_LOOP_RUNNING_PATTERN || '',
+    })
+    if (wake) process.env.CORE_SYSTEM_WAKE_ADDR = wake.addr
+  } catch (e) {
+    ctx.logger.warn('core-system: wake 桥装配失败（纯投影词形）: %s', String((e as Error)?.message ?? e))
+  }
   if (config.coredUrl) {
     const bridge = makeBridge()
     bridgeRef = bridge
@@ -1319,6 +1445,12 @@ export default async function apply(ctx: any, config: Config = {}) {
     mountAgentCommTools(ctx, bridge, comm)
     if (typeof ctx.effect === 'function' && selfheal) {
       ctx.effect(() => () => selfheal?.stop(), 'core-system:selfheal-bridge')
+    }
+    if (typeof ctx.effect === 'function' && wake) {
+      ctx.effect(() => () => wake?.stop(), 'core-system:wake-bridge')
+    }
+    if (wake) {
+      ctx.logger.info('core-system: wake 桥已起 %s（attach 模式需 cored 侧 CORE_SYSTEM_WAKE_ADDR 指向同址）', wake.addr)
     }
     await probeScheme(bridge.url, bridge)
     ctx.logger.info('core-system: 已接入运行中的 cored %s（kinds=%s）', bridge.url, bridge.kinds?.length ?? '?')
@@ -1358,6 +1490,7 @@ export default async function apply(ctx: any, config: Config = {}) {
     return () => {
       if (child.exitCode === null && !child.killed) child.kill('SIGTERM')
       if (selfheal) selfheal.stop() // selfheal 桥 listener 随插件退场（v0.56）
+      if (wake) wake.stop() // wake 桥 listener 随插件退场（R-UX-8）
     }
   }, 'core-system:cored-child')
 
