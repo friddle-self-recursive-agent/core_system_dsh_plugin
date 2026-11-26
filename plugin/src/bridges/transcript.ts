@@ -6,7 +6,9 @@
 //   GET  /core-console/chat-transcript → sc.page({address…})  转录页（原始事件投影——
 //       user/message|assistant/message|tool/call|tool/result|system|developer 词形；
 //       ignorable/delta 噪声服务端剥除——传输面只留渲染面词形）
-//   GET  /core-console/chat-state     → sc.state({sessionId}) 被动状态（running/queue/pendingInput）
+//   GET  /core-console/chat-state     → sc.state + sc.page 尾推导 → 活体状态（running/queue/
+//       queueDepth/currentTool/currentToolSince/lastSeq——C-03 活体行数据面；推导缺席=仅
+//       passive state 词形诚实降级）
 // 红线：sc 为宿主注入（inject(['sessionController'])）；缺席=503 显式缺席不冒充；
 // 读面只读（零写旁路）；转录面 fail-closed 同款栅栏。
 import { sendJson, type HttpReqLike, type HttpResLike } from '../http.ts'
@@ -61,6 +63,50 @@ export function projectSessions(value: unknown): { items?: unknown[] } {
   }).filter((x) => x.sessionId) }
 }
 
+/** 转录页尾 → 活体行投影（C-03）：lastSeq=尾事件 seq；currentTool=最后一个未闭合 tool/call
+ * （journal 无 tool/result 闭合=正在调用）；startedAt=该 call 时刻——UI 据此渲染
+ * 「正在调用 X…（已 N 秒）」。宿主 state 的 queue 数组长度=队列深度（含 steering 词形计数）。 */
+export function projectLive(events: unknown[]): { lastSeq?: number; currentTool?: string; currentToolSince?: number } {
+  let lastSeq: number | undefined
+  let currentTool: string | undefined
+  let currentToolSince: number | undefined
+  const open = new Set<string>()
+  for (const ev of Array.isArray(events) ? events : []) {
+    const e = ev && typeof ev === 'object' ? ev as Record<string, unknown> : {}
+    const seq = Number(e.seq) || 0
+    if (seq > 0) lastSeq = seq
+    const type = String(e.type ?? '')
+    const data = e.data && typeof e.data === 'object' ? e.data as Record<string, unknown> : {}
+    if (type === 'tool/call') {
+      const id = String(data.callId ?? data.id ?? '')
+      if (id) { open.add(id); currentTool = String(data.name ?? '') || currentTool; currentToolSince = Number(e.time) || currentToolSince }
+    } else if (type === 'tool/result') {
+      const id = String(data.callId ?? data.id ?? '')
+      if (id) { open.delete(id); if (!open.size) { currentTool = undefined; currentToolSince = undefined } }
+    } else if (type === 'assistant/message') {
+      if (!open.size) { currentTool = undefined; currentToolSince = undefined }
+    }
+  }
+  return {
+    ...(lastSeq !== undefined ? { lastSeq } : {}),
+    ...(currentTool !== undefined ? { currentTool, currentToolSince } : {}),
+  }
+}
+
+/** 宿主 passive state → 活体状态词形（C-03）：queue 数组深度=排队量（steering/queued 分列）；
+ * passive state 是宿主权威词形——桥只投影计数不造状态。 */
+export function projectStateLive(value: unknown): { queueDepth?: number; steerDepth?: number } {
+  const v = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  const queue = Array.isArray(v.queue) ? v.queue : null
+  if (!queue) return {}
+  let steerDepth = 0
+  for (const it of queue) {
+    const q = it && typeof it === 'object' ? it as Record<string, unknown> : {}
+    if (q.placement === 'steering') steerDepth++
+  }
+  return { queueDepth: queue.length, ...(steerDepth ? { steerDepth } : {}) }
+}
+
 function json<T>(req: HttpReqLike): T | null {
   try { return JSON.parse(String((req as { body?: unknown }).body ?? '{}')) as T } catch { return null }
 }
@@ -87,7 +133,19 @@ export function createChatTranscriptReadHandler(opts: {
       const sessionId = String(u.searchParams.get('sessionId') ?? '').trim()
       if (!sessionId) { sendJson(res, 400, { error: 'sessionId 必填' }); return }
       if (opts.kind === 'state') {
-        sendJson(res, 200, await opts.deps.sc.state({ sessionId }, signal))
+        // C-03 活体状态：passive state（running/queue）+ journal 尾推导（lastSeq/正在调用 X）
+        // 双源合成——队列深度=宿主 queue 投影；工具词形=转录尾未闭合 tool/call（不造状态）。
+        const stateValue = await opts.deps.sc.state({ sessionId }, signal)
+        let live: { lastSeq?: number; currentTool?: string; currentToolSince?: number } = {}
+        try {
+          const page = await opts.deps.sc.page({ address: { kind: 'session', sessionId }, maxMessages: 60 }, signal)
+          live = projectLive(projectTranscript(page).events ?? [])
+        } catch { /* 尾推导缺席=仅 passive state 词形（诚实降级，不冒充） */ }
+        sendJson(res, 200, {
+          ...stateValue as Record<string, unknown>,
+          ...projectStateLive(stateValue),
+          ...live,
+        })
         return
       }
       const maxRaw = Number(u.searchParams.get('max') ?? '60')

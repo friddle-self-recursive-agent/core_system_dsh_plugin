@@ -19,7 +19,7 @@ import { makeErrorReply } from '../src/agent-comm.ts'
 import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
+import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHAT_STOP_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
   CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH } from '../src/config.ts'
 
 function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
@@ -125,6 +125,7 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_SERVICE_PROJECTS_PATH],
     ['exact', CONSOLE_CHAT_SEND_PATH],
     ['exact', CONSOLE_CHATFACES_CLIENT_PATH],
+    ['exact', CONSOLE_CHAT_STOP_PATH],
     ['exact', CONSOLE_EVENT_PUB_PATH],
     ['exact', CONSOLE_CHAT_SESSIONS_PATH],
     ['exact', CONSOLE_CHAT_TRANSCRIPT_PATH],
@@ -133,7 +134,7 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_V2_PREFIX],
     ['exact', CONSOLE_V2_PREFIX + '/'],
     ['prefix', CONSOLE_V2_ASSETS_PREFIX],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由（sessions/transcript/state/create）+ web v2 载体面（exact+prefix，产物在册）成套注册')
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由+chat-stop（sessions/transcript/state/create/stop）+ web v2 载体面（exact+prefix，产物在册）成套注册')
   assert.equal(disposed, 0)
   delete process.env.CORE_CONSOLE_WEB_DIST
 
@@ -608,4 +609,86 @@ test('chat-create：POST 受理回 sessionId ∧ 非 POST=405 ∧ 宿主空回�
   const res502 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
   await hEmpty({ method: 'POST', url: CONSOLE_CHAT_CREATE_PATH, headers: {}, body: '{}' }, res502)
   assert.equal(res502.statusCode, 502, '空 sessionId=502 不冒充创建')
+})
+
+// ─────── C 批通路扩展（chatfaces.ts chat-stop + mode;transcript.ts 活体投影）───────
+import { createChatSendHandler, createChatStopHandler, projectLive, projectStateLive, type ChatFacesDeps } from '../src/index.ts'
+
+test('C-01 chat-send：mode 透传（steer/queue 双词形如实落投）∧ 回执携 mode+requestId ∧ 非 POST=405 ∧ prompt 缺席=503', async () => {
+  const allow = () => undefined as 401 | 403 | undefined
+  const seen: { mode?: string; text?: string }[] = []
+  const deps: ChatFacesDeps = { prompt: async (req) => { seen.push({ mode: req.mode, text: req.content[0]?.text }) } }
+  const h = createChatSendHandler({ deps, reject: allow })
+  let out = ''
+  const res = { statusCode: 0, setHeader() {}, end(t?: string) { out = String(t ?? '') } } as unknown as HttpResLike
+  await h({ method: 'POST', url: CONSOLE_CHAT_SEND_PATH, headers: {}, body: JSON.stringify({ sessionId: 's-9', text: '插话', mode: 'steer' }) }, res)
+  assert.equal(res.statusCode, 200)
+  const j = JSON.parse(out)
+  assert.equal(j.mode, 'steer', '回执 mode=steer 如实回显')
+  assert.ok(j.requestId, '回执 requestId 在册（C-05 销账锚）')
+  assert.equal(seen[0]?.mode, 'steer')
+  // 缺省 mode=queue（非 running 调用侧显式落 queue）
+  const res2 = { statusCode: 0, setHeader() {}, end(t?: string) { out = String(t ?? '') } } as unknown as HttpResLike
+  await h({ method: 'POST', url: CONSOLE_CHAT_SEND_PATH, headers: {}, body: JSON.stringify({ sessionId: 's-9', text: '排队' }) }, res2)
+  assert.equal(seen[1]?.mode, 'queue', '缺省 mode=queue')
+  // 非 POST=405；prompt 缺席=503
+  const res405 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await h({ method: 'GET', url: CONSOLE_CHAT_SEND_PATH, headers: {} }, res405)
+  assert.equal(res405.statusCode, 405)
+  const hNo = createChatSendHandler({ deps: { prompt: null }, reject: allow })
+  const res503 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await hNo({ method: 'POST', url: CONSOLE_CHAT_SEND_PATH, headers: {}, body: '{"sessionId":"s","text":"x"}' }, res503)
+  assert.equal(res503.statusCode, 503)
+})
+
+test('C-02 chat-stop：cancel 真通路受理 ∧ cancel 缺席=503 显式缺席 ∧ 非 POST=405 ∧ sessionId 必填', async () => {
+  const allow = () => undefined as 401 | 403 | undefined
+  const stopped: string[] = []
+  const h = createChatStopHandler({ deps: { prompt: null, cancel: (req) => { stopped.push(req.sessionId) } }, reject: allow })
+  let out = ''
+  const res = { statusCode: 0, setHeader() {}, end(t?: string) { out = String(t ?? '') } } as unknown as HttpResLike
+  await h({ method: 'POST', url: CONSOLE_CHAT_STOP_PATH, headers: {}, body: JSON.stringify({ sessionId: 's-live' }) }, res)
+  assert.equal(res.statusCode, 200, '停止受理=200')
+  assert.ok(out.includes('"ok":true') && out.includes('s-live'))
+  assert.deepEqual(stopped, ['s-live'])
+  // cancel 面缺席=503（不冒充停止）
+  const hNo = createChatStopHandler({ deps: { prompt: null, cancel: null }, reject: allow })
+  const res503 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await hNo({ method: 'POST', url: CONSOLE_CHAT_STOP_PATH, headers: {}, body: '{"sessionId":"s"}' }, res503)
+  assert.equal(res503.statusCode, 503, 'cancel 缺席=503 显式')
+  // 非 POST=405；sessionId 缺席=400
+  const hOk = createChatStopHandler({ deps: { prompt: null, cancel: () => undefined }, reject: allow })
+  const res405 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await hOk({ method: 'GET', url: CONSOLE_CHAT_STOP_PATH, headers: {} }, res405)
+  assert.equal(res405.statusCode, 405)
+  const res400 = { statusCode: 0, setHeader() {}, end() {} } as unknown as HttpResLike
+  await hOk({ method: 'POST', url: CONSOLE_CHAT_STOP_PATH, headers: {}, body: '{}' }, res400)
+  assert.equal(res400.statusCode, 400)
+})
+
+test('C-03 projectLive/projectStateLive：尾事件 lastSeq ∧ 未闭合 tool/call=正在调用 ∧ steering/queued 分列', () => {
+  // 未闭合 tool/call → currentTool 在册（活体行数据面）
+  const live = projectLive([
+    { seq: 1, type: 'user/message', time: 1, data: {} },
+    { seq: 2, type: 'tool/call', time: 2, data: { callId: 'c1', name: 'read' } },
+  ])
+  assert.equal(live.lastSeq, 2)
+  assert.equal(live.currentTool, 'read')
+  assert.equal(live.currentToolSince, 2)
+  // tool/result 闭合 → currentTool 退场
+  const closed = projectLive([
+    { seq: 1, type: 'tool/call', time: 1, data: { callId: 'c1', name: 'read' } },
+    { seq: 2, type: 'tool/result', time: 3, data: { callId: 'c1' } },
+  ])
+  assert.equal(closed.currentTool, undefined)
+  assert.equal(closed.lastSeq, 2)
+  // 静止页=无 currentTool
+  assert.deepEqual(projectLive([{ seq: 5, type: 'assistant/message', data: {} }]), { lastSeq: 5 })
+  assert.deepEqual(projectLive([]), {})
+  assert.deepEqual(projectLive(null), {})
+  // queue 投影：steering 与 queued 分列计数
+  assert.deepEqual(projectStateLive({ queue: [{ placement: 'steering' }, { placement: 'queued' }, { placement: 'queued' }] }),
+    { queueDepth: 3, steerDepth: 1 })
+  assert.deepEqual(projectStateLive({ queue: null }), {})
+  assert.deepEqual(projectStateLive('x'), {})
 })

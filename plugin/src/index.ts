@@ -48,7 +48,7 @@ export {
 } from './routes/console-write.ts'
 export { createCommHandler } from './routes/comm-read.ts'
 export { createEventPubHandler } from './routes/console-write.ts'
-export { createChatTranscriptReadHandler, createChatCreateHandler, projectTranscript, projectSessions, type SessionControllerDeps } from './bridges/transcript.ts'
+export { createChatTranscriptReadHandler, createChatCreateHandler, projectTranscript, projectSessions, projectLive, projectStateLive, type SessionControllerDeps } from './bridges/transcript.ts'
 export type { CommState } from './tools/agent-comm.ts'
 export { createCommState, AGENT_COMM_TOOL_NAMES, mountAgentCommTools } from './tools/agent-comm.ts'
 // 协议判别集（AGENT_COMM_KINDS 四 op 名=工具名裸用；E5a 客户端判别器引用声明集——bundle 静态面锚点）。
@@ -57,7 +57,7 @@ export type { SelfHealBridgeHandle } from './bridges/selfheal.ts'
 export { mountSelfHealBridge } from './bridges/selfheal.ts'
 export type { WakeBridgeHandle } from './bridges/wake.ts'
 export { mountWakeBridge } from './bridges/wake.ts'
-export { createChatFacesClientHandler, createChatSendHandler } from './bridges/chatfaces.ts'
+export { createChatFacesClientHandler, createChatSendHandler, createChatStopHandler } from './bridges/chatfaces.ts'
 export type { TaskSpawnBridgeHandle } from './bridges/task-spawn.ts'
 export { mountTaskSpawnBridge } from './bridges/task-spawn.ts'
 

@@ -17,8 +17,8 @@ import {
 import { createChatTranscriptReadHandler, createChatCreateHandler, type SessionControllerDeps } from '../bridges/transcript.ts'
 import { createConsoleWsUpgradeHandler } from './wsproxy.ts'
 import { mountConsoleV2 } from './console-v2.ts'
-import { createChatFacesClientHandler, createChatSendHandler, type ChatFacesDeps } from '../bridges/chatfaces.ts'
-import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
+import { createChatFacesClientHandler, createChatSendHandler, createChatStopHandler, type ChatFacesDeps } from '../bridges/chatfaces.ts'
+import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHAT_STOP_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
   CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH } from '../config.ts'
 import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -173,13 +173,15 @@ export function createConsoleApiHandler(opts: {
 export function mountConsoleRoutes(ctx: {
   inject?(deps: string[], apply: (sub: any) => void | (() => void)): unknown
 }, bridge: { url: string }, applySubject: ApplySubject = DEFAULT_APPLY_SUBJECT, comm?: CommState, serviceProjectsRoot?: string): void {  if (typeof ctx.inject !== 'function') return // 防御面：无 inject 能力的宿主（测试假体/极简壳）零影响
-  // 对话通路 prompt 面（chat-send 后端——sessionController.queue；selfheal 桥同款软出现）
-  const chatDeps: ChatFacesDeps = { prompt: null }
+  // 对话通路 prompt/cancel 面（chat-send/chat-stop 后端——sessionController 直调；selfheal 桥同款软出现）
+  const chatDeps: ChatFacesDeps & { cancel?: ((req: { sessionId: string }) => unknown) | null } = { prompt: null, cancel: null }
   const transcriptDeps: SessionControllerDeps = { sc: null }
   ctx.inject(['sessionController'], (sub: any) => {
     const sc = Reflect.get(sub, 'sessionController')
     if (sc && typeof sc.prompt === 'function') {
       chatDeps.prompt = (req) => sc.prompt(req, AbortSignal.timeout(10_000))
+      // C-02 停止通路（cancel 面=agent-comm interrupt 同源真通路；缺席宿主=503 诚实词形）
+      if (typeof sc.cancel === 'function') chatDeps.cancel = (req) => sc.cancel(req)
       // 自有对话面转录桥（§对话界面批——sc.list/create/page/state 直调面）
       transcriptDeps.sc = sc as unknown as SessionControllerDeps['sc']
       console.error('[core-system-diag] chatfaces prompt 面已接（sessionController 就绪）')
@@ -238,6 +240,11 @@ export function mountConsoleRoutes(ctx: {
     unregisters.push(webServer.register({
       kind: 'exact', path: CONSOLE_CHATFACES_CLIENT_PATH,
       handler: createChatFacesClientHandler({ reject }),
+    }))
+    // C-02 停止通路（cancel 真接线；面缺席 handler 内 503 显式缺席）
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_CHAT_STOP_PATH,
+      handler: createChatStopHandler({ deps: chatDeps, reject }),
     }))
     unregisters.push(webServer.register({
       kind: 'exact', path: CONSOLE_EVENT_PUB_PATH,
