@@ -2306,8 +2306,90 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     if (!hit) return '<span class="faint small">未关联在册任务</span>';
     var id = taskIdOf(hit);
     var name = id.split('/').pop();
+    // §16.1 D 增强（loop-82）：命中任务随行相位徽+最近一句话（人话状态不再只给锚）；词形零新增工程词。
+    var last = String(statusOf(hit).lastAction || '').trim();
     return '<span class="chip acc tiny click" data-act="go" data-go="' + esc(taskRoute(id)) + '" title="' + esc(id) + '——查看任务详情">Task: ' + esc(name) + '</span>' +
+      phaseChip(hit) +
+      (last ? '<span class="faint small" data-sess-task-last="1">' + esc(last.slice(0, 48)) + '</span>' : '') +
       '<span class="faint small">会话型任务（无 workflow 关联）</span>';
+  }
+
+  /* ---------- Task↔workflow 关联（§16.1 E①：节点/流程图视图叠加关联活跃 Task 计数+快速跳达） ----------
+   * 机械键=Task.spec.touches.objects（scheme.yaml 在册 `objects: []ref`；Go Touches.Objects 同源）——
+   * ref 词形 Kind/scope/name 三段或 Kind/name 两段（global scope 缺省），Kind 命中即关联。
+   * 节点级映射：契约未携带 Task↔节点字段（loop 会话型任务无 workflow run，无节点落点）——
+   * 不猜；workflow 级关联=写集声明真实命中，计数与跳达全是真实对象。 */
+  function refText(r) {
+    if (r == null) return '';
+    if (typeof r === 'string') return r;
+    if (typeof r === 'object') {
+      var k = String(r.kind || ''), sc = String(r.scope || ''), nm = String(r.name || '');
+      if (k && nm) return sc ? k + '/' + sc + '/' + nm : k + '/' + nm;
+    }
+    return '';
+  }
+  function taskObjRefs(t) {
+    var s = specOf(t);
+    var arr = (s.touches && s.touches.objects) || (t && t.touches && t.touches.objects) || [];
+    return (Array.isArray(arr) ? arr : []).map(refText).filter(Boolean);
+  }
+  function taskMatchesWf(t, wfName) {
+    var nm = String(wfName || '');
+    return taskObjRefs(t).some(function (ref) {
+      var segs = ref.split('/');
+      return segs[0] === 'Workflow' && segs[segs.length - 1] === nm;
+    });
+  }
+  function wfTaskRelHtml(tasks, wfName) {
+    if (tasks == null) return '<div class="small faint">任务清单暂不可读——关联不显示（零编造）</div>';
+    var hits = (tasks || []).filter(function (t) { return taskMatchesWf(t, wfName); });
+    var active = hits.filter(function (t) {
+      var p = String(statusOf(t).phase || '');
+      return p !== 'done' && p !== 'canceled';
+    });
+    var head = '<div class="small faint" data-wf-task-rel-head="1" style="margin-bottom:4px">在册任务 ' + esc(hits.length) + ' 关联 · 活跃 ' + esc(active.length) +
+      ' · 关联源=任务写集声明（spec.touches.objects） · 节点级映射未携带（会话型任务无 workflow run）——按 workflow 级写集关联</div>';
+    if (!hits.length) return head + '<div class="small faint">暂无在册任务声明触及本 workflow——零关联不编造</div>';
+    var rows = hits.map(function (t) {
+      var id = taskIdOf(t);
+      var doing = groupOf(t) === 'doing';
+      return '<span class="chip ' + (doing ? 'acc' : 'mute') + ' tiny click" data-wf-task-ref="1" data-act="go" data-go="' + esc(taskRoute(id)) +
+        '" title="' + esc(id) + '——查看任务详情">' + esc(taskTitle(t)) + ' · ' + phaseChip(t) + '</span>';
+    }).join(' ');
+    return head + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + rows + '</div>';
+  }
+
+  /* ---------- 会话触发上下文卡（§16.1 D②：会话页头串联触发 wake 上下文） ----------
+   * 数据=GET /v1/agents/wakes 最新 LoopRequested 行。诚实口径：sessionId↔wake 无机械键
+   * （宿主会话记录不携带触发 wake 锚）——卡只呈现最近在册唤醒上下文，并显式标注
+   * 「非断言本会话由其触发」；唤醒缺席/读面不可达=对应诚实词形，零编造。 */
+  function sessWakeCard(wakesBody, opts) {
+    var o = opts || {};
+    var nowMs = o.now || Date.now();
+    if (wakesBody == null) return '<div class="small faint">唤醒记录暂不可读——触发上下文不显示（零编造）</div>';
+    var wakes = (Array.isArray(wakesBody.wakes) ? wakesBody.wakes : []).filter(function (w) {
+      return w && String(w.type || '') === 'LoopRequested';
+    });
+    if (!wakes.length) return '<div class="small faint">在册无 LoopRequested 唤醒——本会话页暂无触发上下文可给</div>';
+    wakes.sort(function (a, b) {
+      var dt = (Date.parse(String(b.at || '')) || 0) - (Date.parse(String(a.at || '')) || 0);
+      return dt || (Number(b.wake || 0) - Number(a.wake || 0));
+    });
+    var w = wakes[0];
+    var age = relAge(w.at, nowMs);
+    var evBtn = w.eventId
+      ? '<button class="btn sm" data-act="go" data-go="event/' + encodeURIComponent(String(w.eventId)) + '">触发事件</button>'
+      : '';
+    return '<div data-sess-wake="1"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+      '<span class="chip acc tiny">最近 loop 唤醒</span>' +
+      '<span class="mono small">' + esc(String(w.dedupKey || ('wake #' + (w.wake || '')))) + '</span>' +
+      (age ? '<span class="chip mute tiny">' + esc(age) + '</span>' : '') +
+      '<span class="chip mute tiny">' + esc(String(w.status || '状态未知')) + '</span>' +
+      (w.route ? '<span class="chip mute tiny">路由 ' + esc(String(w.route)) + '</span>' : '') +
+      '<span class="chip mute tiny">累计 ' + esc(wakes.length) + ' 次唤醒</span>' +
+      (evBtn ? '<span data-sess-wake-acts="1">' + evBtn + '<button class="btn sm" data-act="go" data-go="tasks">任务中心</button></span>' : '') +
+      '</div>' +
+      '<div class="small faint" style="margin-top:4px">本会话与唤醒无直接映射键（宿主会话记录不携带触发锚）——此处呈现最近在册唤醒上下文，非断言本会话由其触发</div></div>';
   }
 
   /* ---------- attention：severity 词形与排序 ---------- */
@@ -2591,7 +2673,8 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
     esc: esc, phaseChip: phaseChip, groupOf: groupOf, groupTasks: groupTasks,
     runningCount: runningCount, taskIdOf: taskIdOf, taskRoute: taskRoute,
     sessionRoute: sessionRoute, taskTitle: taskTitle, taskRow: taskRow,
-    sessionChips: sessionChips, sevView: sevView, sevRank: sevRank, sortAttention: sortAttention,
+    sessionChips: sessionChips, wfTaskRelHtml: wfTaskRelHtml, sessWakeCard: sessWakeCard,
+    taskObjRefs: taskObjRefs, taskMatchesWf: taskMatchesWf, sevView: sevView, sevRank: sevRank, sortAttention: sortAttention,
     evidenceRoute: evidenceRoute, attentionCard: attentionCard, factsHtml: factsHtml,
     degradedBanner: degradedBanner, generatedByLabel: generatedByLabel, windowLabel: windowLabel,
     reportFooter: reportFooter, clearPanel: clearPanel, loopCard: loopCard, relAge: relAge,
@@ -6048,6 +6131,18 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         return '<div class="fstep ' + cls + '"><div class="fs-dot"></div><div class="fs-name mono">' + esc(p) + '</div></div>';
       }).join('<div class="fs-arrow">→</div>') + '</div></div></div>' +
       '<div class="small faint" style="margin-top:8px">声明表=transitions（物化相邻行+审批边——runs 载荷 transitions 键可查）；当前相位=' + esc(cur || '无') + '</div>';
+    /* §16.1 E①（loop-82）：流程图视图叠加在册任务关联（机械键=spec.touches.objects 写集声明命中
+     * Workflow/<scope>/<name>——scheme.yaml `objects: []ref`；节点级映射契约未携带=不猜，按
+     * workflow 级写集关联呈现，计数与跳达全真实对象；任务清单不可读=诚实降级词形零编造）。 */
+    var TK = __CC.tasks;
+    TK.ensureTasks().then(function (list) {
+      if (S.route !== 'wf' || S.params.name !== row.name) return;
+      var slot = $('#wf-task-rel');
+      if (slot) slot.innerHTML = TK.wfTaskRelHtml(list, row.name);
+    });
+    var taskRel = '<div class="card" style="margin-top:12px" data-wf-task-rel="1"><div class="card-h">' +
+      '<span class="h-title">关联在册任务</span><span class="h-sub">机械键=任务写集声明（spec.touches.objects）触及本 workflow</span></div>' +
+      '<div class="card-b" id="wf-task-rel">' + liveSkeletonRows(2, 0) + '</div></div>';
     var recon = '';
     if (bound) {
       // run 相位序列=runs 面该锚最新 run 的 phases 投影（聚合面 latest 无 phases 键——
@@ -6074,7 +6169,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       recon = '<div class="card" style="margin-top:12px"><div class="card-b"><div class="small faint" style="padding:6px 0">骨架节点对账缺席：execution=' +
         esc(ex.state || '—') + '（' + (ex.state === 'unbound' ? '绑定对象缺席=unbound 缺口可见' : '绑定缺席——不冒充') + '）——物化后骨架节点接线在此对账呈现</div></div></div>';
     }
-    return head + recon;
+    return head + taskRel + recon;
   }
 
   /* --- 事件 tab：该 workflow 触发与消费的事件流=触发留痕过滤（route→该锚） --- */
@@ -8047,6 +8142,7 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       '<div class="dh"><div class="dh-main"><div class="dh-title"><h1 class="mono" style="font-size:18px">' + esc(sid) + '</h1>' +
       (row && row.running ? '<span class="chip ok tiny">running</span>' : '') + (row && row.blank ? '<span class="chip mute tiny">blank</span>' : '') +
       '<span id="sess-task-chips" class="sess-chips"></span></div>' +
+      '<div id="sess-wake-slot" style="margin-top:6px"></div></div>' +
       '<div class="dh-sub mono">' + (row ? esc(row.title) + ' · cwd: ' + esc(row.cwd || '—') : '宿主清单行缺席（roster 投影范围外）') +
       ' · agent: ' + (owner ? '<span class="lk" data-act="go" data-go="chat/' + esc(owner) + '">' + esc(owner) + '</span>' : '未归属（归属证据缺席=不冒充）') + '</div></div>' +
       '<div class="dh-actions"><button class="btn primary" data-act="chat-sess-go" data-id="' + esc(sid) + '"' + (owner ? ' data-agent="' + esc(owner) + '"' : ' disabled') + '>切回 Chat 视图 →</button></div></div>' +
@@ -8059,6 +8155,27 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
       var el = $('#sess-task-chips');
       if (el) el.innerHTML = __CC.tasks.sessionChips(list, sid);
     });
+    // §16.1 D②（loop-82）：触发 wake 上下文卡——最新在册 LoopRequested 唤醒（事件深链+状态/路由/相对时刻）；
+    // sessionId↔wake 无机械键=卡上显式标注「非断言本会话由其触发」（诚实呈现不误导）。
+    // 唤醒读面=LIVE.state.wakes 既有 15s 缓存；缺席时挂 onChange 补一笔（会话屏不在 live 重渲列表）。
+    var wakeStamp = S.route + '|' + S.segs.join('/');
+    var paintWake = function () {
+      if ((S.route + '|' + S.segs.join('/')) !== wakeStamp) return;
+      var slot = $('#sess-wake-slot');
+      if (slot) slot.innerHTML = __CC.tasks.sessWakeCard(LIVE.state.wakes, {});
+    };
+    if (LIVE.state.wakes) paintWake();
+    else {
+      LIVE.ensure();
+      if (!S.sessWakeHooked) { // 只装一次（防多会话进入链式累积包装；陈旧笔已带 stamp 守卫零副作用）
+        S.sessWakeHooked = true;
+        var prevOnChange = __CC.live.onChange;
+        __CC.live.onChange = function () {
+          if (typeof prevOnChange === 'function') prevOnChange();
+          if (S.route === 'session') paintWake();
+        };
+      }
+    }
     // 转录注水（retain 持有+事件窗快照）：归属 agent 缺席时用空声明集（工具卡按普通卡渲染——不冒充判据）
     var declaredOps = owner ? agentDeclaredOps(owner) : [];
     var paint = function (snap) {
@@ -8357,12 +8474,46 @@ var CC_SHELL = "<div id=\"app\" class=\"app\">\n\n  <!-- ===== SVG 图标 sprite
         '<span class="small faint" style="align-self:center">批准=dry-run 三检查→fromDraft 落库（Revision+1 · DocApplied）；驳回=弃稿（零文档动作）</span></div></div>';
     }
     var e = it.event;
+    // §16.1 F③（loop-82）：ApprovalNeeded 归档行补充关联任务状态摘要——机械键=involved 对象键
+    // 命中在册任务 spec.touches.objects 写集声明（'Workflow/...' 词形），或 involved 本身即 Task。
+    // 摘要=在册任务数+活跃数+逐任务相位徽可点跳达；清单不可读/零关联=对应诚实词形零编造。
+    var TK = __CC.tasks;
+    var relSlot = '<div class="ap-task-rel" id="aprel-' + esc(cssId(it.key)) + '" style="margin:6px 0">' + liveSkeletonRows(1, 0) + '</div>';
+    TK.ensureTasks().then(function (list) {
+      var slot = $('#aprel-' + cssId(it.key));
+      if (!slot) return;
+      if (list == null) { slot.innerHTML = '<span class="faint small">任务清单暂不可读——关联任务摘要不显示（零编造）</span>'; return; }
+      var inv = String(e.involved || '');
+      var segs = inv.split('/');
+      var isTaskObj = segs[0] === 'Task';
+      var nm = isTaskObj ? (segs.length >= 3 ? inv : '') : '';
+      var hits = (list || []).filter(function (t) {
+        var id = TK.taskIdOf(t);
+        if (isTaskObj && nm && id === nm) return true; // involved=Task/scope/name → 任务本身
+        return TK.taskMatchesWf(t, segs.length >= 3 && segs[0] === 'Workflow' ? segs[segs.length - 1] : '§none§');
+      });
+      if (!hits.length) {
+        slot.innerHTML = '<span class="faint small">无在册任务关联（写集声明未触及' + esc(isTaskObj ? '本任务' : '本对象') + '）——零关联不编造</span>';
+        return;
+      }
+      var activeN = hits.filter(function (t) {
+        var ph = String((t && t.status && t.status.phase) || (t && t.phase) || '');
+        return ph !== 'done' && ph !== 'canceled';
+      }).length;
+      var rows = hits.slice(0, 4).map(function (t) {
+        var id = TK.taskIdOf(t);
+        return '<span class="chip mute tiny click" data-act="go" data-go="' + esc(TK.taskRoute(id)) + '">' +
+          esc(TK.taskTitle(t)) + ' · ' + TK.phaseChip(t) + '</span>';
+      }).join(' ');
+      slot.innerHTML = '<span class="small" data-ap-task-rel="1">关联任务 ' + hits.length + '（活跃 ' + activeN + '）：</span>' + rows;
+    });
     return '<div class="ap-card resolved" id="apcard-' + esc(cssId(it.key)) + '">' +
       '<div class="ap-head"><span class="ap-title mono">' + esc(e.involved) + '</span>' +
       '<span class="chip warn small">待审（人审档）</span><span class="chip danger small small">无稿</span></div>' +
       '<div class="ap-meta"><span>来源：<b class="mono">' + esc(e.source) + '</b></span><span>level：<b class="mono">' + esc(e.level) + '</b></span>' +
       '<span class="mono faint">' + esc(String(e.ts || '').replace('T', ' ').slice(0, 19)) + '</span>' +
       '<span class="lk mono small" data-act="go" data-go="' + esc(involvedRoute(e.involved)) + '">对象编辑器 →</span>' + approvalBgLink(e.involved) + '</div>' +
+      relSlot +
       '<div class="ap-body small faint">批准缺席（该对象无草稿在稿）——变更未进稿不可批准（不冒充 diff）；落稿后本页即出现 diff 预览与批准动作。</div></div>';
   }
   function involvedRoute(inv) {

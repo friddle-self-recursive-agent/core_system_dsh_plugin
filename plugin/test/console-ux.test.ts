@@ -615,3 +615,61 @@ test('L81-04 运行抽屉 SessionLog 空态会话深链+接线锚（console-ui.m
   assert.ok(APP.includes('wfLoopCard') && APP.includes("attr: 'data-wf-loop'"), 'workflow 页头环绕循环卡接线在册')
   assert.ok(APP.includes('data-wf-run-kind="reconcile"'), 'run 型徽（事件对账 run）在册')
 })
+
+test('L82-01 流程图视图关联在册任务+会话页 wake 上下文卡+审批行任务摘要（console-ui.md §16.1 D/E/F③——loop-82）纯函数直测', () => {
+  const window: any = {}
+  new Function('window', readFileSync(join(CLIENT, 'console-tasks.js'), 'utf8'))(window)
+  const tk = window.__CC.tasks
+  const now = Date.parse('2026-11-26T08:00:00Z')
+  // ① taskObjRefs/taskMatchesWf：机械键=spec.touches.objects（scheme.yaml `objects: []ref`）——
+  //    三段/两段 ref 词形（末段=名），Kind!==Workflow=不命中；非 Workflow 触及=零关联不编造
+  const task = { name: 'wf-fix', scope: 'dev', spec: { title: '修工作流', touches: { objects: ['Workflow/dev/dev-delivery', 'ConnectorOps/global/agent-comm'] } } }
+  assert.deepEqual(tk.taskObjRefs(task), ['Workflow/dev/dev-delivery', 'ConnectorOps/global/agent-comm'])
+  assert.equal(tk.taskMatchesWf(task, 'dev-delivery'), true, '写集声明命中=关联')
+  assert.equal(tk.taskMatchesWf(task, 'core-workflow'), false, '不同名=不命中')
+  assert.equal(tk.taskMatchesWf({ name: 'x', spec: { touches: { objects: ['ConnectorOps/global/agent-comm'] } } }, 'agent-comm'), false, 'Kind!==Workflow=不命中（对象名撞名不误判）')
+  // 对象形态 ref（kind/scope/name 字段——调度器 any 投影兼容）
+  assert.equal(tk.taskMatchesWf({ name: 'y', spec: { touches: { objects: [{ kind: 'Workflow', scope: 'dev', name: 'dev-delivery' }] } } }, 'dev-delivery'), true, '对象形态 ref 命中')
+  // ② wfTaskRelHtml：命中=计数头+任务 chip 跳达；零命中=显式词形；清单不可读=降级词形零编造
+  const rel = tk.wfTaskRelHtml([task, { name: 'done1', scope: 'dev', status: { phase: 'done' }, spec: { touches: { objects: ['Workflow/dev/dev-delivery'] } } }], 'dev-delivery')
+  assert.ok(rel.includes('data-wf-task-ref="1"') && rel.includes('task/dev%2Fwf-fix'), '任务 chip=详情深链')
+  assert.ok(rel.includes('关联源=任务写集声明') && rel.includes('节点级映射未携带'), '关联源与节点级缺席口径显式')
+  const relEmpty = tk.wfTaskRelHtml([], 'dev-delivery')
+  assert.ok(relEmpty.includes('零关联不编造'), '零命中=显式词形')
+  assert.ok(tk.wfTaskRelHtml(null, 'x').includes('零编造'), '清单不可读=降级词形')
+  // ③ sessWakeCard：最新 LoopRequested=dedupKey+相对时刻+事件深链；无键机制=显式非断言词形
+  const card = tk.sessWakeCard({ wakes: [
+    { type: 'LoopRequested', wake: 2, dedupKey: 'cli-next-99', at: '2026-11-26T07:50:00Z', status: 'accepted', route: 'root-agent', eventId: 'evt-2' },
+    { type: 'LoopRequested', wake: 1, dedupKey: 'cli-next-1', at: '2026-11-26T07:00:00Z', status: 'accepted' }
+  ] }, { now })
+  assert.ok(card.includes('data-sess-wake="1"') && card.includes('cli-next-99'), '最新唤醒 dedupKey 在卡')
+  assert.ok(card.includes('event/evt-2'), '触发事件深链在册')
+  assert.ok(card.includes('非断言本会话由其触发'), '无键机制=显式非断言词形（不误导）')
+  assert.ok(card.includes('累计 2 次唤醒'), '累计唤醒计数')
+  assert.ok(tk.sessWakeCard({ wakes: [] }, { now }).includes('暂无触发上下文可给'), '零唤醒=诚实词形')
+  assert.ok(tk.sessWakeCard(null, { now }).includes('零编造'), '读面不可读=降级词形')
+  // ④ sessionChips 增强：命中=相位徽+最近一句话（零丢失既有词形）
+  const chips = tk.sessionChips([{ name: 't1', scope: 'dev', status: { agentSession: 's1', phase: 'running', lastAction: '正在跑 gate' } }], 's1')
+  assert.ok(chips.includes('Task: t1') && chips.includes('data-sess-task-last="1"') && chips.includes('正在跑 gate'), '相位/最近动作随行（§16.1 D 增强）')
+  assert.ok(chips.includes('会话型任务（无 workflow 关联）'), '既有词形保留')
+})
+
+test('L82-02 接线锚：流程图任务关联卡+会话页 wake 卡槽+审批行任务摘要（回潮即红）', () => {
+  const APP = readFileSync(join(CLIENT, 'console-app.js'), 'utf8')
+  // ① 流程图 tab：关联任务卡（骨架→注水）+防陈旧守卫（ wf 屏且同名才注入）
+  assert.ok(APP.includes('data-wf-task-rel="1"') && APP.includes('id="wf-task-rel"'), '流程图任务关联卡在册')
+  assert.ok(APP.includes('TK.wfTaskRelHtml(list, row.name)'), '注水接 wfTaskRelHtml 在册')
+  assert.ok(APP.includes("if (S.route !== 'wf' || S.params.name !== row.name) return;"), '异步注水防陈旧守卫在册')
+  assert.ok(APP.includes('机械键=任务写集声明（spec.touches.objects）触及本 workflow'), 'h-sub 机械键口径在册')
+  // ② 会话页头：wake 卡槽 + onChange 单次挂钩守卫
+  assert.ok(APP.includes('id="sess-wake-slot"'), '会话页 wake 卡槽在册')
+  assert.ok(APP.includes('sessWakeCard(LIVE.state.wakes'), 'wake 卡注水接线在册')
+  assert.ok(APP.includes('非断言本会话由其触发'), '非断言词形在册（session+tasks 双侧）')
+  assert.ok(APP.includes('S.sessWakeHooked'), 'onChange 挂钩单次守卫在册（防链式累积）')
+  // ③ 审批行：关联任务摘要槽（data-ap-task-rel）+不可读降级+零关联词形
+  assert.ok(APP.includes('data-ap-task-rel="1"'), '审批行任务摘要锚在册')
+  assert.ok(APP.includes('任务清单暂不可读——关联任务摘要不显示'), '清单不可读降级词形在册')
+  assert.ok(APP.includes('无在册任务关联（写集声明未触及'), '零关联诚实词形在册')
+  // ④ 拼接序与 bundle：新词形入 dist
+  assert.ok(SRC.includes('wfTaskRelHtml') && SRC.includes('sessWakeCard') && SRC.includes('data-ap-task-rel'), '新词形入 bundle（dist 重建在册）')
+})

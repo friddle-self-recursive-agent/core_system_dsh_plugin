@@ -121,8 +121,90 @@
     if (!hit) return '<span class="faint small">未关联在册任务</span>';
     var id = taskIdOf(hit);
     var name = id.split('/').pop();
+    // §16.1 D 增强（loop-82）：命中任务随行相位徽+最近一句话（人话状态不再只给锚）；词形零新增工程词。
+    var last = String(statusOf(hit).lastAction || '').trim();
     return '<span class="chip acc tiny click" data-act="go" data-go="' + esc(taskRoute(id)) + '" title="' + esc(id) + '——查看任务详情">Task: ' + esc(name) + '</span>' +
+      phaseChip(hit) +
+      (last ? '<span class="faint small" data-sess-task-last="1">' + esc(last.slice(0, 48)) + '</span>' : '') +
       '<span class="faint small">会话型任务（无 workflow 关联）</span>';
+  }
+
+  /* ---------- Task↔workflow 关联（§16.1 E①：节点/流程图视图叠加关联活跃 Task 计数+快速跳达） ----------
+   * 机械键=Task.spec.touches.objects（scheme.yaml 在册 `objects: []ref`；Go Touches.Objects 同源）——
+   * ref 词形 Kind/scope/name 三段或 Kind/name 两段（global scope 缺省），Kind 命中即关联。
+   * 节点级映射：契约未携带 Task↔节点字段（loop 会话型任务无 workflow run，无节点落点）——
+   * 不猜；workflow 级关联=写集声明真实命中，计数与跳达全是真实对象。 */
+  function refText(r) {
+    if (r == null) return '';
+    if (typeof r === 'string') return r;
+    if (typeof r === 'object') {
+      var k = String(r.kind || ''), sc = String(r.scope || ''), nm = String(r.name || '');
+      if (k && nm) return sc ? k + '/' + sc + '/' + nm : k + '/' + nm;
+    }
+    return '';
+  }
+  function taskObjRefs(t) {
+    var s = specOf(t);
+    var arr = (s.touches && s.touches.objects) || (t && t.touches && t.touches.objects) || [];
+    return (Array.isArray(arr) ? arr : []).map(refText).filter(Boolean);
+  }
+  function taskMatchesWf(t, wfName) {
+    var nm = String(wfName || '');
+    return taskObjRefs(t).some(function (ref) {
+      var segs = ref.split('/');
+      return segs[0] === 'Workflow' && segs[segs.length - 1] === nm;
+    });
+  }
+  function wfTaskRelHtml(tasks, wfName) {
+    if (tasks == null) return '<div class="small faint">任务清单暂不可读——关联不显示（零编造）</div>';
+    var hits = (tasks || []).filter(function (t) { return taskMatchesWf(t, wfName); });
+    var active = hits.filter(function (t) {
+      var p = String(statusOf(t).phase || '');
+      return p !== 'done' && p !== 'canceled';
+    });
+    var head = '<div class="small faint" data-wf-task-rel-head="1" style="margin-bottom:4px">在册任务 ' + esc(hits.length) + ' 关联 · 活跃 ' + esc(active.length) +
+      ' · 关联源=任务写集声明（spec.touches.objects） · 节点级映射未携带（会话型任务无 workflow run）——按 workflow 级写集关联</div>';
+    if (!hits.length) return head + '<div class="small faint">暂无在册任务声明触及本 workflow——零关联不编造</div>';
+    var rows = hits.map(function (t) {
+      var id = taskIdOf(t);
+      var doing = groupOf(t) === 'doing';
+      return '<span class="chip ' + (doing ? 'acc' : 'mute') + ' tiny click" data-wf-task-ref="1" data-act="go" data-go="' + esc(taskRoute(id)) +
+        '" title="' + esc(id) + '——查看任务详情">' + esc(taskTitle(t)) + ' · ' + phaseChip(t) + '</span>';
+    }).join(' ');
+    return head + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + rows + '</div>';
+  }
+
+  /* ---------- 会话触发上下文卡（§16.1 D②：会话页头串联触发 wake 上下文） ----------
+   * 数据=GET /v1/agents/wakes 最新 LoopRequested 行。诚实口径：sessionId↔wake 无机械键
+   * （宿主会话记录不携带触发 wake 锚）——卡只呈现最近在册唤醒上下文，并显式标注
+   * 「非断言本会话由其触发」；唤醒缺席/读面不可达=对应诚实词形，零编造。 */
+  function sessWakeCard(wakesBody, opts) {
+    var o = opts || {};
+    var nowMs = o.now || Date.now();
+    if (wakesBody == null) return '<div class="small faint">唤醒记录暂不可读——触发上下文不显示（零编造）</div>';
+    var wakes = (Array.isArray(wakesBody.wakes) ? wakesBody.wakes : []).filter(function (w) {
+      return w && String(w.type || '') === 'LoopRequested';
+    });
+    if (!wakes.length) return '<div class="small faint">在册无 LoopRequested 唤醒——本会话页暂无触发上下文可给</div>';
+    wakes.sort(function (a, b) {
+      var dt = (Date.parse(String(b.at || '')) || 0) - (Date.parse(String(a.at || '')) || 0);
+      return dt || (Number(b.wake || 0) - Number(a.wake || 0));
+    });
+    var w = wakes[0];
+    var age = relAge(w.at, nowMs);
+    var evBtn = w.eventId
+      ? '<button class="btn sm" data-act="go" data-go="event/' + encodeURIComponent(String(w.eventId)) + '">触发事件</button>'
+      : '';
+    return '<div data-sess-wake="1"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+      '<span class="chip acc tiny">最近 loop 唤醒</span>' +
+      '<span class="mono small">' + esc(String(w.dedupKey || ('wake #' + (w.wake || '')))) + '</span>' +
+      (age ? '<span class="chip mute tiny">' + esc(age) + '</span>' : '') +
+      '<span class="chip mute tiny">' + esc(String(w.status || '状态未知')) + '</span>' +
+      (w.route ? '<span class="chip mute tiny">路由 ' + esc(String(w.route)) + '</span>' : '') +
+      '<span class="chip mute tiny">累计 ' + esc(wakes.length) + ' 次唤醒</span>' +
+      (evBtn ? '<span data-sess-wake-acts="1">' + evBtn + '<button class="btn sm" data-act="go" data-go="tasks">任务中心</button></span>' : '') +
+      '</div>' +
+      '<div class="small faint" style="margin-top:4px">本会话与唤醒无直接映射键（宿主会话记录不携带触发锚）——此处呈现最近在册唤醒上下文，非断言本会话由其触发</div></div>';
   }
 
   /* ---------- attention：severity 词形与排序 ---------- */
@@ -406,7 +488,8 @@
     esc: esc, phaseChip: phaseChip, groupOf: groupOf, groupTasks: groupTasks,
     runningCount: runningCount, taskIdOf: taskIdOf, taskRoute: taskRoute,
     sessionRoute: sessionRoute, taskTitle: taskTitle, taskRow: taskRow,
-    sessionChips: sessionChips, sevView: sevView, sevRank: sevRank, sortAttention: sortAttention,
+    sessionChips: sessionChips, wfTaskRelHtml: wfTaskRelHtml, sessWakeCard: sessWakeCard,
+    taskObjRefs: taskObjRefs, taskMatchesWf: taskMatchesWf, sevView: sevView, sevRank: sevRank, sortAttention: sortAttention,
     evidenceRoute: evidenceRoute, attentionCard: attentionCard, factsHtml: factsHtml,
     degradedBanner: degradedBanner, generatedByLabel: generatedByLabel, windowLabel: windowLabel,
     reportFooter: reportFooter, clearPanel: clearPanel, loopCard: loopCard, relAge: relAge,
