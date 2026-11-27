@@ -11,7 +11,7 @@ import {
   createApplyHandler, createConsoleApiHandler, mountConsoleRoutes,
   CONSOLE_COMM_PATH, CONSOLE_DESIGN_DOCS_PATH, CONSOLE_INTAKE_PATH, CONSOLE_SERVICE_PROJECTS_PATH,
   createCommHandler, createCommState, createDesignDocsHandler, createIntakeHandler, createServiceProjectsHandler,
-  createSessionHeartbeatHandler,
+  createSessionHeartbeatHandler, createTaskSessionsHandler, taskIdsOfText, taskIdsOfEvents,
   type FetchLike, type HttpReqLike, type HttpResLike,
   CONSOLE_SESSION_HEARTBEAT_PATH,
 } from '../src/index.ts'
@@ -134,12 +134,13 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_CHAT_TRANSCRIPT_PATH],
     ['exact', CONSOLE_CHAT_STATE_PATH],
     ['exact', CONSOLE_CHAT_CREATE_PATH],
+    ['exact', '/core-console/task-sessions'],
     ['exact', '/core-console'],
     ['exact', '/core-console/'],
     ['exact', CONSOLE_LEGACY_V2_PATH],
     ['exact', CONSOLE_LEGACY_V2_PATH + '/'],
     ['prefix', CONSOLE_WEB_ASSETS_PREFIX],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由+chat-stop（sessions/transcript/state/create/stop）+ 控制台 Web 默认入口（exact×2 公开壳 + v2 兼容 302×2 + assets prefix）成套注册')
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由+chat-stop（sessions/transcript/state/create/stop）+ Task→真实 session 反查 + 控制台 Web 默认入口（exact×2 公开壳 + v2 兼容 302×2 + assets prefix）成套注册')
   assert.equal(disposed, 0)
   delete process.env.CORE_CONSOLE_WEB_DIST
 
@@ -501,8 +502,10 @@ test('Service project 路由：GET 从 cored ServiceDesc 投影；POST 只为已
 // ─────── §19 R3：/core-console/event-pub（批闸/点火/取消白名单通路）───────
 import { createEventPubHandler } from '../src/index.ts'
 
-function pubRes(): HttpResLike {
-  return { statusCode: 0, setHeader() {}, end() {} }
+function pubRes(): HttpResLike & { body: string } {
+  const res = { statusCode: 0, setHeader() {}, body: '' } as HttpResLike & { body: string }
+  res.end = ((b?: unknown) => { res.body = String(b ?? '') }) as HttpResLike['end']
+  return res
 }
 
 test('createEventPubHandler：白名单四类型 ∧ involved 三段强制 ∧ 透传 dedupKey/data ∧ origin 注入', async () => {
@@ -697,4 +700,47 @@ test('C-03 projectLive/projectStateLive：尾事件 lastSeq ∧ 未闭合 tool/c
     { queueDepth: 3, steerDepth: 1 })
   assert.deepEqual(projectStateLive({ queue: null }), {})
   assert.deepEqual(projectStateLive('x'), {})
+})
+
+
+// ─────── Task→真实 dsh session 映射（journal taskId 反查）───────
+
+test('taskIdsOfText/Events：只认用户消息 taskId 词形（工具输出不算任务卡）', () => {
+  assert.deepEqual(taskIdsOfText('taskId: dev/task-1 and Task: ops/task-2'), ['dev/task-1', 'ops/task-2'])
+  assert.deepEqual(taskIdsOfEvents([
+    { type: 'user/message', data: { content: [{ type: 'text', text: 'taskId: dev/task-1' }] } },
+    { type: 'tool/result', data: { content: [{ type: 'text', text: 'taskId: fake/tool' }] } },
+  ]), ['dev/task-1'])
+})
+
+test('createTaskSessionsHandler：真实会话反查 + 60s 缓存 + 缺 sc=503', async () => {
+  const allow = () => undefined
+  let listCalls = 0
+  const deps = { sc: {
+    list: async () => { listCalls++; return { items: [
+      { sessionId: 'session-a', updatedAt: 200, running: false },
+      { sessionId: 'session-b', updatedAt: 100, running: false },
+    ] } },
+    page: async () => {
+      const event = { type: 'user/message', time: 1234, data: { content: [{ type: 'text', text: 'taskId: dev/x' }] } }
+      return { records: [{ event }] }
+    },
+    create: async () => ({}), state: async () => ({}),
+  } }
+  const cache = new Map()
+  const h = createTaskSessionsHandler({ deps: deps as any, reject: allow as any, cache, now: () => 1000 })
+  const r1 = pubRes()
+  await h({ method: 'GET', url: '/core-console/task-sessions?taskIds=dev/x', headers: {} }, r1)
+  assert.equal(r1.statusCode, 200)
+  const body1 = JSON.parse(r1.body || '{}')
+  assert.equal(body1.count, 2)
+  assert.deepEqual(body1.items.map((x) => x.sessionId), ['session-a', 'session-b'])
+  assert.deepEqual(body1.items.map((x) => x.startedAt), [1234, 1234], '任务卡首条消息时刻随行（run→session 最近匹配）')
+  const r2 = pubRes()
+  await h({ method: 'GET', url: '/core-console/task-sessions?taskIds=dev/x', headers: {} }, r2)
+  assert.equal(listCalls, 1)
+  const r3 = pubRes()
+  const hNo = createTaskSessionsHandler({ deps: { sc: null }, reject: allow as any })
+  await hNo({ method: 'GET', url: '/core-console/task-sessions?taskIds=dev/x', headers: {} }, r3)
+  assert.equal(r3.statusCode, 503)
 })

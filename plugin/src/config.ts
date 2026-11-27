@@ -96,6 +96,8 @@ export const CONSOLE_CHAT_TRANSCRIPT_PATH = '/core-console/chat-transcript'
 export const CONSOLE_CHAT_STATE_PATH = '/core-console/chat-state'
 export const CONSOLE_CHAT_STOP_PATH = '/core-console/chat-stop'
 export const CONSOLE_CHATFACES_CLIENT_PATH = '/core-console/chatfaces.js'
+// Task→真实 dsh session 映射（journal taskId 反查；旧 agentSession=taskId 不是 sessionId）
+export const CONSOLE_TASK_SESSIONS_PATH = '/core-console/task-sessions'
 // 无尾斜杠——宿主 prefix 匹配语义= url===path || url.startsWith(path+'/')，尾斜杠致双斜杠永不匹配
 // （CT116 活体实证：registered=2 而子路径 404）。
 export const CONSOLE_WEB_ASSETS_PREFIX = '/core-console/assets'

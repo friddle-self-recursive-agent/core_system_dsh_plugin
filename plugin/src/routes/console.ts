@@ -15,13 +15,14 @@ import {
   createIntakeHandler, createSessionHeartbeatHandler, createEventPubHandler,
 } from './console-write.ts'
 import { createChatTranscriptReadHandler, createChatCreateHandler, type SessionControllerDeps } from '../bridges/transcript.ts'
+import { createTaskSessionsHandler } from '../bridges/task-sessions.ts'
 import { createConsoleWsUpgradeHandler } from './wsproxy.ts'
 import { mountConsoleWeb } from './console-web.ts'
 import { createChatFacesClientHandler, createChatSendHandler, createChatStopHandler, type ChatFacesDeps } from '../bridges/chatfaces.ts'
 import { createChatUploadHandler, createChatUploadAssetHandler,
   CONSOLE_CHAT_UPLOAD_PATH, CONSOLE_CHAT_UPLOAD_ASSETS } from '../bridges/chatupload.ts'
 import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHAT_STOP_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
-  CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH } from '../config.ts'
+  CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH, CONSOLE_TASK_SESSIONS_PATH } from '../config.ts'
 import { mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -277,6 +278,11 @@ export function mountConsoleRoutes(ctx: {
     unregisters.push(webServer.register({
       kind: 'exact', path: CONSOLE_CHAT_CREATE_PATH,
       handler: createChatCreateHandler({ deps: transcriptDeps, reject }),
+    }))
+    // Task→真实 dsh session 映射（journal taskId 反查——workflow 任务节点会话深链）
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_TASK_SESSIONS_PATH,
+      handler: createTaskSessionsHandler({ deps: transcriptDeps, reject }),
     }))
     const wsUnregister = mountConsoleWsUpgrade(webServer, { bridge, reject })
     if (wsUnregister) unregisters.push(wsUnregister)
