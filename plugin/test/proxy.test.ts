@@ -519,13 +519,14 @@ test('createEventPubHandler：白名单四类型 ∧ involved 三段强制 ∧ �
   })
   // 受理：ApprovalGranted（批闸信号——run 恢复的唯一人工通路）
   const r1 = pubRes()
-  await h({ method: 'POST', url: CONSOLE_EVENT_PUB_PATH, headers: {}, body: JSON.stringify({ type: 'ApprovalGranted', involved: 'Workflow/global/core-workflow', dedupKey: 'd1', data: { note: 'ok' } }) }, r1)
+  await h({ method: 'POST', url: CONSOLE_EVENT_PUB_PATH, headers: {}, body: JSON.stringify({ type: 'ApprovalGranted', involved: 'Workflow/global/core-workflow', dedupKey: 'd1', run: 11, data: { note: 'ok' } }) }, r1)
   assert.equal(r1.statusCode, 200, '白名单类型受理')
   assert.ok(seen[0].url.endsWith('/v1/events'), '上游=/v1/events')
   const up1 = JSON.parse(seen[0].body)
   assert.equal(up1.type, 'ApprovalGranted')
   assert.equal(up1.involved, 'Workflow/global/core-workflow')
   assert.equal(up1.dedupKey, 'd1')
+  assert.equal(up1.run, 11, '审批信号定向 run 透传（per-run 批闸）')
   assert.equal(up1.data.note, 'ok')
   assert.equal(up1.data.origin, 'console-ui', 'origin 注入')
   // 非白名单类型=400

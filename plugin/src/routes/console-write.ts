@@ -472,6 +472,7 @@ export function createEventPubHandler(opts: {
     const type = String(body.type ?? '')
     const involved = String(body.involved ?? '')
     const dedupKey = String(body.dedupKey ?? '')
+    const run = Number(body.run) > 0 ? Math.trunc(Number(body.run)) : 0
     const data = (body.data && typeof body.data === 'object' && !Array.isArray(body.data)) ? body.data as Record<string, unknown> : {}
     if (!ALLOWED.has(type)) { res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: '类型不在白名单（LoopRequested/ApprovalGranted/ApprovalRejected/TaskCancelRequested）' })); return }
     if (!involved || !INVOLVED_RE.test(involved)) { res.statusCode = 400; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: 'involved 须为 Kind/scope/name 三段词形（信号按锚寻径）' })); return }
@@ -480,7 +481,7 @@ export function createEventPubHandler(opts: {
       const up = await fetchImpl(opts.bridge.url.replace(/\/+$/, '') + '/v1/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Core-Subject': JSON.stringify(opts.subject) },
-        body: JSON.stringify({ type, involved, ...(dedupKey ? { dedupKey } : {}), data: { origin: 'console-ui', ...data } }),
+        body: JSON.stringify({ type, involved, ...(dedupKey ? { dedupKey } : {}), ...(run > 0 ? { run } : {}), data: { origin: 'console-ui', ...data } }),
       })
       const text = await up.text()
       res.statusCode = up.status
