@@ -21,6 +21,7 @@ import { mountConsoleRoutes } from './routes/console.ts'
 import { mountSelfHealBridge, type SelfHealBridgeHandle } from './bridges/selfheal.ts'
 import { mountWakeBridge, type WakeBridgeHandle } from './bridges/wake.ts'
 import { mountTaskSpawnBridge, type TaskSpawnBridgeHandle } from './bridges/task-spawn.ts'
+import { mountServiceSpawnBridge, type ServiceSpawnBridgeHandle } from './bridges/service-spawn.ts'
 
 // ── 既有导出面兼容（名字与拆分前一致；类型走 export type——type-stripping 安全）────────
 export type { Config } from './config.ts'
@@ -29,7 +30,7 @@ export {
   CONSOLE_INTAKE_PATH, CONSOLE_SESSION_HEARTBEAT_PATH, CONSOLE_COMM_PATH, CONSOLE_SERVICE_PROJECTS_PATH,
   CONSOLE_WS_PATH, CONSOLE_WS_UPSTREAM_PATH, SELFHEAL_BOUNCE_PATH, SELFHEAL_HEARTBEAT_PHASE,
   DEFAULT_HEAL_WORD, DEFAULT_DRAFT_FIELD_MANAGER, DEFAULT_APPLY_SUBJECT,
-  WAKE_SPAWN_PATH, TASK_SPAWN_PATH,
+  WAKE_SPAWN_PATH, TASK_SPAWN_PATH, SERVICE_SPAWN_PATH,
   CONSOLE_CHAT_SEND_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
 } from './config.ts'
 export type { ApplySubject, FetchLike, HttpReqLike, HttpResLike, WebServerLike, ConnectionLike } from './http.ts'
@@ -61,6 +62,7 @@ export { mountWakeBridge } from './bridges/wake.ts'
 export { createChatFacesClientHandler, createChatSendHandler, createChatStopHandler } from './bridges/chatfaces.ts'
 export type { TaskSpawnBridgeHandle } from './bridges/task-spawn.ts'
 export { mountTaskSpawnBridge } from './bridges/task-spawn.ts'
+export { mountServiceSpawnBridge } from './bridges/service-spawn.ts'
 
 export default async function apply(ctx: any, config: Config = {}) {
   // agent-comm 运行时落账状态（一次激活一份：mailbox=v0.1 既有 + journal=E6 comm 流水）——
@@ -122,6 +124,24 @@ export default async function apply(ctx: any, config: Config = {}) {
   } catch (e) {
     ctx.logger.warn('core-system: task spawn 桥装配失败（调度器退化纯状态投影）: %s', String((e as Error)?.message ?? e))
   }
+  // Service spawn 桥（2026-11-27 session 裁决——workflow.md §1.3）：cored run 落 unit=service
+  // 节点挂起 → POST /service/spawn → 固定命令拉起 service 的 agent 执行会话（载荷 JSON 只经
+  // stdin；单飞=workflow:run:node 锁文件+进程活性）。与 task-spawn 同款：装配失败=warn 不阻断
+  // 宿主；无命令=桥禁用（503 诚实降级）；地址经 CORE_SYSTEM_SERVICE_SPAWN_ADDR 环境回填。
+  let serviceSpawn: ServiceSpawnBridgeHandle | null = null
+  try {
+    serviceSpawn = await mountServiceSpawnBridge(ctx, {
+      addr: process.env.CORE_SYSTEM_SERVICE_SPAWN_ADDR || undefined,
+      command: config.serviceSpawnCommand || process.env.CORE_SYSTEM_SERVICE_SPAWN_CMD || '',
+      lockDir: config.serviceSpawnLockDir || process.env.CORE_SYSTEM_SERVICE_SPAWN_LOCK_DIR || '',
+    })
+    if (serviceSpawn) {
+      process.env.CORE_SYSTEM_SERVICE_SPAWN_ADDR = serviceSpawn.addr
+      writeCoredAddr(config.serviceSpawnAddrFile, serviceSpawn.addr)
+    }
+  } catch (e) {
+    ctx.logger.warn('core-system: service spawn 桥装配失败（service 节点零翻转纯查表推进）: %s', String((e as Error)?.message ?? e))
+  }
   if (config.coredUrl) {
     const bridge = makeBridge()
     bridgeRef = bridge
@@ -138,6 +158,12 @@ export default async function apply(ctx: any, config: Config = {}) {
     }
     if (typeof ctx.effect === 'function' && taskSpawn) {
       ctx.effect(() => () => taskSpawn?.stop(), 'core-system:task-spawn-bridge')
+    }
+    if (typeof ctx.effect === 'function' && serviceSpawn) {
+      ctx.effect(() => () => serviceSpawn?.stop(), 'core-system:service-spawn-bridge')
+    }
+    if (serviceSpawn) {
+      ctx.logger.info('core-system: service spawn 桥已起 %s（attach 模式需 cored 侧 CORE_SYSTEM_SERVICE_SPAWN_ADDR 指向同址）', serviceSpawn.addr)
     }
     if (wake) {
       ctx.logger.info('core-system: wake 桥已起 %s（attach 模式需 cored 侧 CORE_SYSTEM_WAKE_ADDR 指向同址）', wake.addr)

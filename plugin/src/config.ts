@@ -36,6 +36,14 @@ export interface Config {
   taskSpawnLockDir?: string
   /** task spawn 桥地址发现文件（就绪后写入实际监听地址，0600；空=不写）。 */
   taskSpawnAddrFile?: string
+  /** service spawn 桥固定命令（部署侧；cored run 落 unit=service 节点 POST /service/spawn
+   *  到达时执行；空=桥禁用——载荷 JSON 只经 stdin 喂给命令，2026-11-27 session 裁决
+   *  workflow.md §1.3：builtin service 的 agent 用 session 执行）。 */
+  serviceSpawnCommand?: string
+  /** service 单飞锁目录（按 workflow:run:node 锁文件+进程活性判定；空=不落锁）。 */
+  serviceSpawnLockDir?: string
+  /** service spawn 桥地址发现文件（就绪后写入实际监听地址，0600；空=不写）。 */
+  serviceSpawnAddrFile?: string
   /** cored 地址发现文件（部署侧；就绪后写入基址，corectl 缺省读取；
    *  空=不写（仅 core-system 等主控制面 profile 配置——避免多 profile 互相覆盖））。 */
   coredAddrFile?: string
@@ -148,3 +156,8 @@ export const WAKE_SPAWN_PATH = '/wake/spawn'
 /** Task spawn 桥监听面路径（多任务并发调度宿主面——task-scheduler.md §4；与 wake 桥同族）：
  *  cored 侧调度器租约命中任务 → POST /task/spawn {taskId, taskPath, workspace, agent}。 */
 export const TASK_SPAWN_PATH = '/task/spawn'
+
+/** Service spawn 桥监听面路径（2026-11-27 session 裁决——workflow.md §1.3；与 task-spawn 桥同族）：
+ *  cored 侧 run 落 unit=service 节点挂起 → POST /service/spawn {spawnSeq, workflow, run, node,
+ *  phase, service, op, agent, role, context}（载荷 JSON 经 stdin 递给部署侧命令）。 */
+export const SERVICE_SPAWN_PATH = '/service/spawn'
