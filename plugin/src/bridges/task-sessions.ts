@@ -3,12 +3,12 @@
 // sessionController 的真实 journal 反查 taskId 首次用户消息，返回 session-* 会话锚。
 // GET /core-console/task-sessions?taskIds=scope/name,scope/name
 //   → {items:[{taskId,sessionId,updatedAt,startedAt,running}]}
-// 只读；fail-closed；扫描上限 200 会话×40 消息，结果 60s 缓存；找不到=空数组（不编造）。
+// 只读；fail-closed；扫描上限 200 会话×200 消息，结果 60s 缓存；找不到=空数组（不编造）。
 import { sendJson, type HttpReqLike, type HttpResLike } from '../http.ts'
 import { projectSessions, projectTranscript, type SessionControllerDeps } from './transcript.ts'
 
 const MAX_SESSIONS = 200
-const MAX_MESSAGES = 40
+const MAX_MESSAGES = 200
 const CACHE_MS = 60_000
 
 type TaskSessionRow = { taskId: string; sessionId: string; updatedAt: number | null; startedAt: number | null; running: boolean }
