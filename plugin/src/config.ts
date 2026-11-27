@@ -81,10 +81,11 @@ export const CONSOLE_SESSION_HEARTBEAT_PATH = '/core-console/session-heartbeat'
  *  cored <bridge.url>/v1/stream（事件/trace 活体流）。宿主零旁路：鉴权在栅栏，
  *  流帧内容不经宿主解析（纯 pipe）。 */
 export const CONSOLE_WS_PATH = '/core-console/ws'
-// web/ 新前端并行载体面（G-02 载体切换第一段——产物=workservice submodule web/dist）。
-// assets 用非嵌套兄弟前缀——避免 exact(/v2) 与 prefix(/v2/assets) 同树嵌套的宿主路由匹配歧义
+// 控制台 Web 前端产物面（默认入口——产物=workservice submodule web/dist；2026-11-27 用户裁决：
+// v1 旧 client 载体删除、v2 名称退役，console 即默认入口）。
+// assets 用非嵌套兄弟前缀——避免 exact(/core-console) 与 prefix(/core-console/assets) 同树嵌套的宿主路由匹配歧义
 // （CT116 活体实证：嵌套形态壳页在册而 assets 404）。
-export const CONSOLE_V2_PREFIX = '/core-console/v2'
+export const CONSOLE_LEGACY_V2_PATH = '/core-console/v2'
 // 控制台对话通路（bridge chatfaces——send=sessionController.prompt queue|steer；stop=cancel）
 export const CONSOLE_CHAT_SEND_PATH = '/core-console/chat-send'
 export const CONSOLE_EVENT_PUB_PATH = '/core-console/event-pub'
@@ -97,7 +98,7 @@ export const CONSOLE_CHAT_STOP_PATH = '/core-console/chat-stop'
 export const CONSOLE_CHATFACES_CLIENT_PATH = '/core-console/chatfaces.js'
 // 无尾斜杠——宿主 prefix 匹配语义= url===path || url.startsWith(path+'/')，尾斜杠致双斜杠永不匹配
 // （CT116 活体实证：registered=2 而子路径 404）。
-export const CONSOLE_V2_ASSETS_PREFIX = '/core-console/assets'
+export const CONSOLE_WEB_ASSETS_PREFIX = '/core-console/assets'
 
 /** cored 实时流上游路径（WS 代理透传目标；bridge.url + 本路径）。 */
 export const CONSOLE_WS_UPSTREAM_PATH = '/v1/stream'

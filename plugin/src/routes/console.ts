@@ -16,7 +16,7 @@ import {
 } from './console-write.ts'
 import { createChatTranscriptReadHandler, createChatCreateHandler, type SessionControllerDeps } from '../bridges/transcript.ts'
 import { createConsoleWsUpgradeHandler } from './wsproxy.ts'
-import { mountConsoleV2 } from './console-v2.ts'
+import { mountConsoleWeb } from './console-web.ts'
 import { createChatFacesClientHandler, createChatSendHandler, createChatStopHandler, type ChatFacesDeps } from '../bridges/chatfaces.ts'
 import { createChatUploadHandler, createChatUploadAssetHandler,
   CONSOLE_CHAT_UPLOAD_PATH, CONSOLE_CHAT_UPLOAD_ASSETS } from '../bridges/chatupload.ts'
@@ -280,8 +280,8 @@ export function mountConsoleRoutes(ctx: {
     }))
     const wsUnregister = mountConsoleWsUpgrade(webServer, { bridge, reject })
     if (wsUnregister) unregisters.push(wsUnregister)
-    // web/ 新前端并行载体面（产物缺席=软出现零 v2 面——不炸宿主）。
-    unregisters.push(...mountConsoleV2(webServer, reject))
+    // 控制台 Web 前端默认入口（产物缺席=软出现零 console-web 面——不炸宿主）。
+    unregisters.push(...mountConsoleWeb(webServer, reject))
     return () => unregisters.forEach((u) => u())
   })
 }

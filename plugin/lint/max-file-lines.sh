@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # max-file-lines.sh —— 本仓最小 lint：源文件 ≤800 行红线（R-ENG-7）。
 # 语义同 core_design lint/max-file-lines.sh：git ls-files 过滤代码扩展，超 800 行=红。
-# 豁免：dist/（生成物——dist/client.js 随源入库但属构建产物）、lockfile、go.sum；
-# 另支持仓根 .max-file-lines-allowlist 白名单（一行一个路径；本期豁免过渡期 client/ 巨石
-# ——core_system_workservice web/ 前端接管后随 client/ 目录一并删除）。
+# 豁免：dist/（生成物）、lockfile、go.sum；
+# 另支持仓根 .max-file-lines-allowlist 白名单（一行一个路径；2026-11-27 起 v1 旧 client
+# 已删除，清单为空——后续如需过渡豁免仍可加行）。
 # 用法：bash plugin/lint/max-file-lines.sh [--allowlist <file>]
 set -euo pipefail
 

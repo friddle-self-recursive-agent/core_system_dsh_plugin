@@ -20,7 +20,7 @@ import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CONSOLE_CHAT_UPLOAD_PATH, CONSOLE_CHAT_UPLOAD_ASSETS } from '../src/bridges/chatupload.ts'
-import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHAT_STOP_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
+import { CONSOLE_LEGACY_V2_PATH, CONSOLE_WEB_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHAT_STOP_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
   CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH } from '../src/config.ts'
 
 function okFetch(body: unknown, status = 200): FetchLike & { calls: string[]; lastBody?: string } {
@@ -96,8 +96,8 @@ test('cored 未就绪=503；上游不可达=502（读面关断口径，不冒充
 })
 
 test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply exact 成对注册；缺席=不注册（headless 软出现）', () => {
-  // v2 载体面产物经 env 指路（hermetic——不依赖 submodule 是否 checkout）；
-  // v2 pair 注册于队尾（壳页 exact + assets prefix）。
+  // console-web 产物经 env 指路（hermetic——不依赖 submodule 是否 checkout）；
+  // 默认入口壳页 exact + v2 兼容 302 + assets prefix 注册于队尾。
   const dist = mkdtempSync(join(tmpdir(), 'proxy-v2-'))
   writeFileSync(join(dist, 'console.js'), '/* t */')
   writeFileSync(join(dist, 'console.css'), '/* t */')
@@ -134,12 +134,12 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_CHAT_TRANSCRIPT_PATH],
     ['exact', CONSOLE_CHAT_STATE_PATH],
     ['exact', CONSOLE_CHAT_CREATE_PATH],
-    ['exact', CONSOLE_V2_PREFIX],
-    ['exact', CONSOLE_V2_PREFIX + '/'],
-    ['prefix', CONSOLE_V2_ASSETS_PREFIX],
     ['exact', '/core-console'],
     ['exact', '/core-console/'],
-  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由+chat-stop（sessions/transcript/state/create/stop）+ web v2 载体面（exact+prefix，产物在册）+ F-01 入口转正（exact×2 公开壳）成套注册')
+    ['exact', CONSOLE_LEGACY_V2_PATH],
+    ['exact', CONSOLE_LEGACY_V2_PATH + '/'],
+    ['prefix', CONSOLE_WEB_ASSETS_PREFIX],
+  ], '读代理（prefix）+ Apply 写路由（exact）+ 草稿路由（prefix，E4）+ 设计文档路由（prefix，v0.52 能力 A）+ 对话录入路由（prefix，v0.53 能力 D）+ 会话活性心跳注册（exact，v0.54 KI-003）+ Service project 映射（exact，能力 C）+ 自有对话面转录桥四路由+chat-stop（sessions/transcript/state/create/stop）+ 控制台 Web 默认入口（exact×2 公开壳 + v2 兼容 302×2 + assets prefix）成套注册')
   assert.equal(disposed, 0)
   delete process.env.CORE_CONSOLE_WEB_DIST
 

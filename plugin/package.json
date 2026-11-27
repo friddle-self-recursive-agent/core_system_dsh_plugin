@@ -6,24 +6,15 @@
   "description": "core_system dsh plugin: workflow engine host + core bridge (cored binary built from core_system submodule)",
   "main": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./client": "./dist/client.js"
+    ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "node build-client.mjs",
-    "test": "node --test test/bridge.test.ts test/e2e.test.ts test/client-shell.test.ts test/proxy.test.ts test/live.test.ts test/chat.test.ts test/chatupload.test.ts test/agent-comm.test.ts test/scenario.test.ts test/projects.test.ts test/selfheal.test.ts test/inbox.test.ts test/console-ux.test.ts test/console-v2.test.ts test/wake.test.ts test/taskspawn.test.ts test/wsproxy.test.ts"
+    "test": "node --test test/bridge.test.ts test/e2e.test.ts test/proxy.test.ts test/chatupload.test.ts test/agent-comm.test.ts test/selfheal.test.ts test/console-web.test.ts test/wake.test.ts test/taskspawn.test.ts test/wsproxy.test.ts"
   },
   "dsh": {
     "bundle": {
       "patch": [
         "cordis.patch.yml"
-      ]
-    },
-    "client": {
-      "platform": "web",
-      "immediately": true,
-      "inject": [
-        "@deepseek-ai/dsh-api-session-controller"
       ]
     }
   }

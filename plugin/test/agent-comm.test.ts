@@ -341,12 +341,10 @@ test('装配：撞名工具=warn+跳过其余 op（防御式注册）', () => {
 })
 
 // ---------- bundle 静态面 ----------
-test('bundle 静态面：src/index.ts 装配 agent-comm 四工具（comm 状态共享=E6 落账面）+ client 判别器零改动引用声明集', () => {
+test('bundle 静态面：src/index.ts 装配 agent-comm 四工具（comm 状态共享=E6 落账面）+ 声明集导出在册', () => {
   const indexSrc = readFileSync(join(PLUGIN, 'src/index.ts'), 'utf8')
   assert.match(indexSrc, /mountAgentCommTools\(ctx, bridge, comm\)/, 'apply 双分支装配 agent-comm（共享 CommState）')
   assert.match(indexSrc, /AGENT_COMM_KINDS/)
-  const chatSrc = readFileSync(join(PLUGIN, 'client/console-chat.js'), 'utf8')
-  assert.match(chatSrc, /declaredOpsOf/, 'E5a 判别器在册（op 名命中声明集→ConnectorOps 卡，零改动）')
 })
 
 // ---------- comm 落账面（E6：console-adoption.md §1.13 L42-04 静态面） ----------
