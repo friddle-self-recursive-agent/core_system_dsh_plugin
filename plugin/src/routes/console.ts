@@ -18,6 +18,8 @@ import { createChatTranscriptReadHandler, createChatCreateHandler, type SessionC
 import { createConsoleWsUpgradeHandler } from './wsproxy.ts'
 import { mountConsoleV2 } from './console-v2.ts'
 import { createChatFacesClientHandler, createChatSendHandler, createChatStopHandler, type ChatFacesDeps } from '../bridges/chatfaces.ts'
+import { createChatUploadHandler, createChatUploadAssetHandler,
+  CONSOLE_CHAT_UPLOAD_PATH, CONSOLE_CHAT_UPLOAD_ASSETS } from '../bridges/chatupload.ts'
 import { CONSOLE_CHAT_SEND_PATH, CONSOLE_CHAT_STOP_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
   CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH } from '../config.ts'
 import { mkdirSync } from 'node:fs'
@@ -245,6 +247,15 @@ export function mountConsoleRoutes(ctx: {
     unregisters.push(webServer.register({
       kind: 'exact', path: CONSOLE_CHAT_STOP_PATH,
       handler: createChatStopHandler({ deps: chatDeps, reject }),
+    }))
+    // 聊天图片上传 + 静态 serve（2026-11-27：发图走上传 + markdown 引用，agent prompt 契约不变）
+    unregisters.push(webServer.register({
+      kind: 'exact', path: CONSOLE_CHAT_UPLOAD_PATH,
+      handler: createChatUploadHandler({ reject }),
+    }))
+    unregisters.push(webServer.register({
+      kind: 'prefix', path: CONSOLE_CHAT_UPLOAD_ASSETS,
+      handler: createChatUploadAssetHandler({ reject }),
     }))
     unregisters.push(webServer.register({
       kind: 'exact', path: CONSOLE_EVENT_PUB_PATH,

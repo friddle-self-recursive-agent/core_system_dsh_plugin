@@ -35,6 +35,25 @@ const CLIENT_JS = `/* chatfaces.js —— 控制台对话通路页面端（windo
       body: JSON.stringify({ sessionId: String(sessionId || '') }),
     });
   };
+  /* 图片上传（2026-11-27）：文件 → base64 data url → POST chat-upload → {url}。
+   * 发送端把 url 以 ![image](url) 附在文本里，agent prompt 契约保持 text-only。 */
+  f.uploadImage = function (file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onerror = function () { reject(new Error('图片读取失败')); };
+      r.onload = function () {
+        call('/core-console/chat-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: String(r.result || ''), mime: String(file.type || ''), name: String(file.name || '') }),
+        }).then(function (res) {
+          if (res.status === 200 && res.data && res.data.ok) resolve(res.data.url);
+          else reject(new Error((res.data && res.data.error) || ('上传失败 HTTP ' + res.status)));
+        }, reject);
+      };
+      r.readAsDataURL(file);
+    });
+  };
   f.sessions = function () { return call('/core-console/chat-sessions'); };
   f.transcript = function (sessionId, max, beforeSeq) {
     var q = '?sessionId=' + encodeURIComponent(String(sessionId || ''));

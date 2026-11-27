@@ -19,6 +19,7 @@ import { makeErrorReply } from '../src/agent-comm.ts'
 import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { CONSOLE_CHAT_UPLOAD_PATH, CONSOLE_CHAT_UPLOAD_ASSETS } from '../src/bridges/chatupload.ts'
 import { CONSOLE_V2_PREFIX, CONSOLE_V2_ASSETS_PREFIX, CONSOLE_CHAT_SEND_PATH, CONSOLE_CHAT_STOP_PATH, CONSOLE_CHATFACES_CLIENT_PATH, CONSOLE_EVENT_PUB_PATH,
   CONSOLE_CHAT_SESSIONS_PATH, CONSOLE_CHAT_CREATE_PATH, CONSOLE_CHAT_TRANSCRIPT_PATH, CONSOLE_CHAT_STATE_PATH } from '../src/config.ts'
 
@@ -126,6 +127,8 @@ test('mountConsoleRoutes：webServer+connection 在场=读代理 prefix + Apply 
     ['exact', CONSOLE_CHAT_SEND_PATH],
     ['exact', CONSOLE_CHATFACES_CLIENT_PATH],
     ['exact', CONSOLE_CHAT_STOP_PATH],
+    ['exact', CONSOLE_CHAT_UPLOAD_PATH],
+    ['prefix', CONSOLE_CHAT_UPLOAD_ASSETS],
     ['exact', CONSOLE_EVENT_PUB_PATH],
     ['exact', CONSOLE_CHAT_SESSIONS_PATH],
     ['exact', CONSOLE_CHAT_TRANSCRIPT_PATH],
