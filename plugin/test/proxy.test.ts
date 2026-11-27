@@ -603,6 +603,19 @@ test('transcript 纯投影：projectTranscript/projectSessions 直测（零事�
   assert.equal(sess.items?.length, 1)
 })
 
+test('transcript 保留集（2026-11-27 D 批 chat-ds.md D4）：todo/write 入渲染面词形', () => {
+  const page = {
+    records: [
+      { event: { seq: 1, time: 1, type: 'todo/write', data: { todos: [{ content: 'a', status: 'pending' }] } } },
+      { event: { seq: 2, time: 2, type: 'assistant/chunk', data: {} } },
+    ],
+  }
+  const out = projectTranscript(page)
+  assert.equal(out.events?.length, 1, 'todo/write 保留 ∧ chunk 噪声剥除')
+  assert.equal((out.events?.[0] as { type?: string }).type, 'todo/write')
+  assert.deepEqual((out.events?.[0] as { data?: unknown }).data, { todos: [{ content: 'a', status: 'pending' }] })
+})
+
 test('chat-create：POST 受理回 sessionId ∧ 非 POST=405 ∧ 宿主空回执=502', async () => {
   const allow = () => undefined as 401 | 403 | undefined
   const h = createChatCreateHandler({ deps: { sc: scFake as never }, reject: allow })

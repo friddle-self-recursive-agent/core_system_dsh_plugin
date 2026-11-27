@@ -23,10 +23,12 @@ export interface SessionControllerDeps {
 }
 
 /** 转录渲染面保留的事件词形（durable journal——dsh-client-ui-chat conversation-nodes 同族；
- * delta/live-chunk/ignorable 是过程噪声，控制台渲染面不要）。 */
+ * delta/live-chunk/ignorable 是过程噪声，控制台渲染面不要）。
+ * 2026-11-27 D 批（chat-ds.md D4）：todo/write 入保留集——待办清单展示类型的数据面。 */
 const KEEP = new Set([
   'user/message', 'assistant/message', 'tool/call', 'tool/result',
   'system/message', 'developer/message', 'turn/start', 'turn/end', 'llm/retry',
+  'todo/write',
 ])
 
 /** 事件 → 渲染面词形（剥 surfaceOp/sourceEventSeqs/ignorable 包装；data 原样透传）。 */

@@ -161,7 +161,8 @@ test('入口转正：/core-console 与 /core-console/ 公开 200 同壳', () => 
 })
 
 test('repoRoot 推导：以 import.meta.url 上溯三级=插件仓根', () => {
-  assert.equal(repoRoot().endsWith('core_system_dsh_plugin'), true)
+  // R-ENG-6 worktree 布局（worktrees/core_system_dsh_plugin/<slug>）路径中段含仓名——两种布局都收
+  assert.match(repoRoot(), /core_system_dsh_plugin(\/|$)/)
 })
 
 test('resolveWebDistDir 解析序：env 命中即返；缺席回落 submodule pin 面', () => {
