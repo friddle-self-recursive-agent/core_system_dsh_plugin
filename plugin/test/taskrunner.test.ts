@@ -26,16 +26,19 @@ status:
 探针正文，不参与 status 改写。
 `
 
-function fakeEnv({ outputs, taskId = 'self-recursive-core/probe-502', applyFails = 0 }: {
+function fakeEnv({ outputs, taskId = 'self-recursive-core/probe-502', applyFails = 0, initialContent, doneAfterApplies = 0, exitGraceMs = 15 }: {
   outputs: Array<{ code: number; output: string }>
   taskId?: string
   applyFails?: number
+  initialContent?: string
+  doneAfterApplies?: number   // 第 N 次 apply 后执行体落终态 phase=done（模拟执行体收尾）
+  exitGraceMs?: number
 }) {
   const applies: any[] = []
   const events: any[] = []
   const sleeps: number[] = []
   const beats: string[] = []
-  let content = DOC
+  let content = initialContent ?? DOC
   let rv = 1
   let spawned = 0
   const fetchImpl = async (url: string, init?: any) => {
@@ -50,6 +53,9 @@ function fakeEnv({ outputs, taskId = 'self-recursive-core/probe-502', applyFails
       }
       applies.push(body)
       content = body.content
+      if (doneAfterApplies > 0 && applies.length >= doneAfterApplies) {
+        content = patchTaskStatus(content, { phase: 'done' as any })
+      }
       rv++
       return { ok: true, status: 200, text: async () => 'ok' } as any
     }
@@ -88,6 +94,7 @@ function fakeEnv({ outputs, taskId = 'self-recursive-core/probe-502', applyFails
       fetchImpl: fetchImpl as any, spawnImpl,
       sleep: async (ms: number) => { sleeps.push(ms) },
       log: () => {},
+      exitGraceMs,
     },
   }
 }
@@ -119,12 +126,12 @@ test('瞬态 502 两次后退避重试成功：心跳逐次回写、上限内不
     { code: 1, output: 'dsh: SERVER: 502 ZCode did not stream code=0/empty' },
     { code: 1, output: 'dsh: SERVER: 502 ZCode did not stream code=0/empty' },
     { code: 0, output: 'done' },
-  ] })
+  ], doneAfterApplies: 1 })
   const res = await runTaskAgent({ ...env.opts, taskPath: '/fake/task.yaml' })
   assert.equal(res.ok, true)
   assert.equal(res.attempts, 3)
   assert.equal(env.count(), 3)
-  assert.deepEqual(env.sleeps, [1000, 2000], '指数退避 1s→2s')
+  assert.deepEqual(env.sleeps, [1000, 2000, 15000], '指数退避 1s→2s + 规则12 终态轮询一拍')
   assert.ok(env.applies.length >= 6, '每次拉起/重试/成功均有 lastAction 心跳写面')
   assert.ok(env.applies.some((a) => a.content.includes('第 2/3 次拉起')), '细粒度进度=第几次拉起')
   assert.ok(env.applies.some((a) => a.content.includes('退避 1000ms')), '退避进度入账')
@@ -162,10 +169,40 @@ test('非瞬态失败不重试：一次即 failed+Escalate；重跑成功不复�
   assert.equal(fatal.count(), 1, '非瞬态不做退避重试')
   assert.equal(fatal.events.length, 2, '异常退出同样 failed+Escalate 不静默')
 
-  // 重跑（复位为 ready 后同一 runner 再执行一次）：正常退出 → 只心跳无升级
-  const rerun = fakeEnv({ outputs: [{ code: 0, output: 'ok' }] })
+  // 重跑（复位为 ready 后同一 runner 再执行一次）：正常退出+执行体落终态 → 收尾注记无升级
+  const rerun = fakeEnv({ outputs: [{ code: 0, output: 'ok' }], doneAfterApplies: 1 })
   const r2 = await runTaskAgent({ ...rerun.opts, taskPath: '/fake/task.yaml' })
   assert.equal(r2.ok, true)
   assert.equal(rerun.events.length, 0)
-  assert.ok(rerun.applies.some((a) => a.content.includes('headless 正常退出')))
+  assert.ok(rerun.applies.some((a) => a.content.includes('执行体已落终态 phase=done')), '规则12：退出注记带现势终态词形')
+})
+
+test('规则12 回收：正常退出但执行体未落终态 → phase=ready 重拉（attempts 未耗尽）', async () => {
+  const env = fakeEnv({ outputs: [{ code: 0, output: 'ok' }], exitGraceMs: 15 })
+  const res = await runTaskAgent({ ...env.opts, taskPath: '/fake/task.yaml' })
+  assert.equal(res.ok, false)
+  assert.equal((res as any).recycled, 'ready', '未落终态=回收重拉')
+  const readyApplies = env.applies.filter((a) => a.content.includes('"ready"'))
+  assert.equal(readyApplies.length, 1, 'ready 写面恰好一次')
+  assert.match(readyApplies[0].content, /headless 正常退出但执行体未落终态/)
+  const types = env.events.map((e) => e.type)
+  assert.deepEqual(types, ['TaskStateChanged'])
+  assert.equal(env.events[0].dedupKey, 'task:self-recursive-core/probe-502:ready')
+})
+
+test('规则12 兜底：重拉预算耗尽（attempts≥3）→ failed+Escalate 转人工', async () => {
+  const env = fakeEnv({
+    outputs: [{ code: 0, output: 'ok' }],
+    initialContent: DOC.replace('lastError: ""', 'lastError: ""\n  attempts: 3'),
+    exitGraceMs: 15,
+  })
+  const res = await runTaskAgent({ ...env.opts, taskPath: '/fake/task.yaml' })
+  assert.equal(res.ok, false)
+  assert.equal((res as any).recycled, 'failed', 'attempts 耗尽=failed 人工兜底')
+  const failedApplies = env.applies.filter((a) => a.content.includes('"failed"'))
+  assert.equal(failedApplies.length, 1, 'failed 写面恰好一次')
+  assert.match(failedApplies[0].content, /重拉预算耗尽/)
+  const types = env.events.map((e) => e.type)
+  assert.deepEqual(types, ['TaskStateChanged', 'Escalate'])
+  assert.equal(env.events[1].dedupKey, 'task-watchdog:self-recursive-core/probe-502:1')
 })

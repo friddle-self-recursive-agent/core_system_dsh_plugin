@@ -115,9 +115,24 @@ export async function writeStatus(opts, taskId, patch) {
   return false
 }
 
+/** 读 Task status 区现势字段（Task watchdog 规则12 判据：退出时执行体是否已落终态）。 */
+export async function readTaskStatusField(opts, taskId, field) {
+  const { fetchImpl, coredUrl } = opts
+  if (!coredUrl || !taskId) return ''
+  const [scope, name] = taskId.includes('/') ? taskId.split('/', 2) : ['global', taskId]
+  try {
+    const res = await fetchImpl(`${coredUrl}/v1/objects/Task/${encodeURIComponent(name)}?scope=${encodeURIComponent(scope)}`)
+    if (!res.ok) return ''
+    const row = await res.json()
+    const m = String(row?.content || '').match(new RegExp(`^\\s*${field}\\s*:\\s*"?([^"\\n]*)"?,?\\s*$`, 'm'))
+    return m ? m[1].trim() : ''
+  } catch {
+    return ''
+  }
+}
+
 /** 事件注入（TaskStateChanged / Escalate；dedup 键人读可回查）。 */
-export async function publishEvent(opts, type, taskId, dedupKey, level) {
-  const { fetchImpl, coredUrl, subject, log } = opts
+export async function publishEvent(opts, type, taskId, dedupKey, level) {  const { fetchImpl, coredUrl, subject, log } = opts
   if (!coredUrl || !taskId) return false
   try {
     const res = await fetchImpl(`${coredUrl}/v1/events`, {
@@ -200,13 +215,54 @@ export async function runTaskAgent(userOpts = {}) {
       lastAction: `第 ${attempt}/${attempts} 次拉起 headless（task-agent-runner 心跳，${opts.now().toISOString()}）`,
       lastError: '',
     })
+    // Task watchdog 规则12 心跳（2026-11-28）：headless 长跑期间每 5m 写一次 lastAction——
+    // docs 对象 rv 推进=调度器租约活性锚（watchLeases rv 真相源）；停更超 leaseTtl 才判悬挂。
+    const hb = setInterval(() => {
+      void writeStatus(opts, taskId, {
+        lastAction: `runner 心跳（headless 在跑，attempt=${attempt}/${attempts}，${opts.now().toISOString()}）`,
+      }).catch(() => {})
+    }, 5 * 60 * 1000)
     last = await runOnce(opts, opts.taskPath)
+    clearInterval(hb)
     const kind = classifyExit(last.output, last.code)
     opts.log(`[task-runner] task=${taskId} attempt=${attempt}/${attempts} exit=${last.code} class=${kind}`)
     if (kind === 'success') {
+      // Task watchdog 规则12（2026-11-28 用户裁定「自动保活，理论不能解决的必须人来介入」/
+      // workservice issue #1）：正常退出≠任务完成——旧词形写死 phase=running 赌执行体落终态，
+      // 执行体忘了=永久悬挂。新词形：宽限窗内轮询现势 phase，落了终态（done/verifying/
+      // failed/canceled）=收尾注记；仍 running=执行体未收尾 → 回收。回收去向：attempts
+      // 已达上限（≥3，调度器重拉预算收敛）→ phase=failed+Escalate（人介入）；否则 phase=ready
+      // 交调度器重拉（保活链）。runner 不编造 done，不冒充完成。
+      const graceMs = Number(userOpts.exitGraceMs ?? 90000)
+      const step = 15000
+      let ph = ''
+      for (let waited = 0; waited < graceMs; waited += step) {
+        await opts.sleep(step)
+        ph = await readTaskStatusField(opts, taskId, 'phase')
+        if (ph && ph !== 'running') break
+      }
+      if (!ph || ph === 'running') {
+        const att = Number(await readTaskStatusField(opts, taskId, 'attempts') || '0') || 0
+        if (att >= 3) {
+          const written = await writeStatus(opts, taskId, {
+            phase: 'failed',
+            lastError: `重拉预算耗尽（attempts=${att}）：headless 正常退出但执行体始终未落终态——按规则12 转人工介入`,
+            lastAction: `headless 退出回收终态：failed+Escalate（attempt=${attempt}，规则12 人工兜底）`,
+          })
+          await publishEvent(opts, 'TaskStateChanged', taskId, `task:${taskId}:failed`, 'info')
+          await publishEvent(opts, 'Escalate', taskId, `task-watchdog:${taskId}:${attempt}`, 'error')
+          return { ok: false, attempts: attempt, taskId, classification: kind, recycled: 'failed', statusWritten: written }
+        }
+        const written = await writeStatus(opts, taskId, {
+          phase: 'ready',
+          lastError: `headless 正常退出但执行体未落终态（宽限 ${graceMs}ms 内 phase 仍 running）——回收重拉（规则12）`,
+          lastAction: `headless 退出回收：phase=ready 重拉（attempt=${attempt}，attempts=${att}）`,
+        })
+        await publishEvent(opts, 'TaskStateChanged', taskId, `task:${taskId}:ready`, 'info')
+        return { ok: false, attempts: attempt, taskId, classification: kind, recycled: 'ready', statusWritten: written }
+      }
       await writeStatus(opts, taskId, {
-        phase: 'running',
-        lastAction: `headless 正常退出（attempt=${attempt}，验证/落地由执行体继续）`,
+        lastAction: `headless 正常退出（attempt=${attempt}，执行体已落终态 phase=${ph}）`,
       })
       return { ok: true, attempts: attempt, taskId, classification: kind }
     }
