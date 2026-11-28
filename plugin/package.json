@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "node --test test/bridge.test.ts test/e2e.test.ts test/proxy.test.ts test/chatupload.test.ts test/agent-comm.test.ts test/selfheal.test.ts test/console-web.test.ts test/wake.test.ts test/taskspawn.test.ts test/wsproxy.test.ts"
+    "test": "node --test test/bridge.test.ts test/e2e.test.ts test/proxy.test.ts test/chatupload.test.ts test/agent-comm.test.ts test/selfheal.test.ts test/console-web.test.ts test/wake.test.ts test/taskspawn.test.ts test/wsproxy.test.ts test/taskrunner.test.ts"
   },
   "dsh": {
     "bundle": {
